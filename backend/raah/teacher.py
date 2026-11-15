@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 from functools import lru_cache
 
 import numpy as np
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
 try:
@@ -41,8 +41,9 @@ class _NumpyLogReg:
         return np.column_stack([1 - p, p])
 
 from . import dataset, engine
+from .auth import teacher_only
 
-router = APIRouter(prefix="/api/teacher", tags=["teacher"])
+router = APIRouter(prefix="/api/teacher", tags=["teacher"], dependencies=[Depends(teacher_only)])
 
 FIRST = ["Aarti", "Sakshi", "Pooja", "Komal", "Rutuja", "Sneha", "Pranali", "Vaishnavi", "Shital", "Dipali",
          "Kiran", "Rahul", "Omkar", "Sagar", "Akash", "Ganesh", "Tejas", "Vishal", "Sanket", "Nikhil",
