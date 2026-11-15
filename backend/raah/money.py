@@ -23,7 +23,8 @@ from .auth import current_user, teacher_only
 router = APIRouter(prefix="/api/money", tags=["money (sandbox)"])
 
 NS = "urn:iso:std:iso:20022:tech:xsd:pain.001.001.09"
-XSD = Path(__file__).resolve().parent.parent / "schemas" / "pain.001.001.09.xsd"
+XSD = Path(os.environ.get("RAAH_PAIN001_XSD", Path(__file__).resolve().parent.parent / "schemas" / "pain.001.001.09.xsd"))
+_schema_cache: dict[tuple, object] = {}
 SIGNING_KEY = os.environ.get("RAAH_SIGNING_KEY", "dev-only-signing-key-change-me-in-env-file")
 LEDGER: list[dict] = []
 CONSENTS: dict[str, dict] = {}
@@ -110,11 +111,20 @@ def validate(xml: str) -> dict:
     except ImportError:  # pragma: no cover
         etree = None
     if etree is not None and XSD.exists():
-        schema = etree.XMLSchema(etree.parse(str(XSD)))
+        key = (str(XSD), XSD.stat().st_mtime)
+        if key not in _schema_cache:
+            tree = etree.parse(str(XSD))
+            target = tree.getroot().get("targetNamespace")
+            if target != NS:
+                return {"method": f"XSD at {XSD.name}", "valid": False,
+                        "errors": [f"schema namespace is {target}, expected {NS}"]}
+            _schema_cache.clear()
+            _schema_cache[key] = etree.XMLSchema(tree)
+        schema = _schema_cache[key]
         doc = etree.fromstring(xml.encode())
         ok = schema.validate(doc)
         return {"method": "official XSD pain.001.001.09", "valid": ok,
-                "errors": [str(e) for e in schema.error_log][:5]}
+                "errors": [f"line {e.line}: {e.message}" for e in schema.error_log][:5]}
     root = ET.fromstring(xml)
     need = ["GrpHdr/MsgId", "GrpHdr/CreDtTm", "GrpHdr/NbOfTxs", "PmtInf/PmtInfId", "PmtInf/Dbtr", "PmtInf/CdtTrfTxInf"]
     ns = {"p": NS}
