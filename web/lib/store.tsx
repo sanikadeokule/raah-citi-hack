@@ -1,5 +1,5 @@
 "use client";
-// App-wide state: dataset (from the spreadsheet), profile, language, online status.
+// App-wide state: dataset (from the spreadsheet), signed-in user, profile, language, online status.
 // The dataset is fetched from /api/data, cached in IndexedDB for offline use, and
 // re-fetched whenever /api/version reports the spreadsheet was saved.
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -17,6 +17,9 @@ export const LANGS = [
   { code: "en", label: "English", speech: "en-IN" },
 ];
 
+export interface AuthUser { id: number; role: "student" | "teacher"; name: string | null; phone: string }
+interface Auth { token: string; user: AuthUser }
+
 interface Ctx {
   data: any | null;
   profile: any | null;
@@ -29,6 +32,11 @@ interface Ctx {
   showToast: (m: string) => void;
   queueAction: (kind: string, payload: unknown) => Promise<void>;
   refresh: () => Promise<void>;
+  auth: Auth | null;
+  authReady: boolean;
+  signIn: (token: string, user: AuthUser) => Promise<void>;
+  signOut: () => Promise<void>;
+  authFetch: (path: string, init?: RequestInit) => Promise<Response>;
 }
 
 const C = createContext<Ctx | null>(null);
@@ -45,7 +53,11 @@ export function Provider({ children }: { children: React.ReactNode }) {
   const [lang, setLangState] = useState("en");
   const [online, setOnline] = useState(true);
   const [toast, setToast] = useState<string | null>(null);
+  const [auth, setAuth] = useState<Auth | null>(null);
+  const [authReady, setAuthReady] = useState(false);
   const version = useRef<string | null>(null);
+  const authRef = useRef<Auth | null>(null);
+  authRef.current = auth;
 
   const showToast = useCallback((m: string) => {
     setToast(m);
@@ -57,6 +69,21 @@ export function Provider({ children }: { children: React.ReactNode }) {
     if (vars) for (const [a, b] of Object.entries(vars)) s = s.replaceAll(`{${a}}`, String(b));
     return s;
   }, [lang]);
+
+  const signOut = useCallback(async () => {
+    setAuth(null);
+    await setKV("auth", null);
+  }, []);
+
+  /** fetch with the signed-in user's token; a 401 from the server signs the user out. */
+  const authFetch = useCallback(async (path: string, init: RequestInit = {}) => {
+    const headers = new Headers(init.headers);
+    if (authRef.current) headers.set("Authorization", `Bearer ${authRef.current.token}`);
+    if (init.body && !headers.has("Content-Type")) headers.set("Content-Type", "application/json");
+    const r = await fetch(`${API}${path}`, { ...init, headers });
+    if (r.status === 401 && authRef.current) await signOut();
+    return r;
+  }, [signOut]);
 
   const fetchData = useCallback(async (announce: boolean) => {
     try {
@@ -73,13 +100,15 @@ export function Provider({ children }: { children: React.ReactNode }) {
     }
   }, [lang, showToast]);
 
-  // boot: cached data first (instant + offline), then network
+  // boot: cached data, session and profile first (instant + offline), then network
   useEffect(() => {
     (async () => {
-      const [cached, p, l] = await Promise.all([getKV<any>("data"), getKV<any>("profile"), getKV<string>("lang")]);
+      const [cached, p, l, a] = await Promise.all([getKV<any>("data"), getKV<any>("profile"), getKV<string>("lang"), getKV<Auth | null>("auth")]);
       if (cached) { setData(cached); version.current = cached.version?.modified ?? null; }
       if (p) setProfileState(p);
       if (l) setLangState(l);
+      if (a) setAuth(a);
+      setAuthReady(true);
       setOnline(navigator.onLine);
       await fetchData(false);
     })();
@@ -106,37 +135,51 @@ export function Provider({ children }: { children: React.ReactNode }) {
     return () => clearInterval(id);
   }, [fetchData]);
 
+  const flushQueue = useCallback(async (announce: boolean) => {
+    if (!authRef.current || !navigator.onLine) return;
+    try {
+      const items = await db.queue.toArray();
+      if (!items.length) return;
+      const r = await authFetch("/api/sync", { method: "POST", body: JSON.stringify(items) });
+      if (!r.ok) return;
+      await db.queue.bulkDelete(items.map((i) => i.id!));
+      if (announce) showToast((LOCALES[lang]?.synced_toast ?? "{n} changes synced").replace("{n}", String(items.length)));
+    } catch { /* stay queued */ }
+  }, [authFetch, lang, showToast]);
+
   // online / offline + sync queue flush
   useEffect(() => {
-    const flush = async () => {
-      setOnline(true);
-      try {
-        const items = await db.queue.toArray();
-        if (!items.length) return;
-        await fetch(`${API}/api/sync`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(items) }).catch(() => null);
-        await db.queue.clear();
-        showToast((LOCALES[lang]?.synced_toast ?? "{n} changes synced").replace("{n}", String(items.length)));
-      } catch { /* ignore */ }
-    };
+    const on = () => { setOnline(true); flushQueue(true); };
     const off = () => setOnline(false);
-    window.addEventListener("online", flush);
+    window.addEventListener("online", on);
     window.addEventListener("offline", off);
-    return () => { window.removeEventListener("online", flush); window.removeEventListener("offline", off); };
-  }, [lang, showToast]);
+    return () => { window.removeEventListener("online", on); window.removeEventListener("offline", off); };
+  }, [flushQueue]);
 
   const setProfile = useCallback((p: any) => { setProfileState(p); setKV("profile", p); }, []);
   const setLang = useCallback((l: string) => { setLangState(l); setKV("lang", l); }, []);
   const queueAction = useCallback(async (kind: string, payload: unknown) => {
     await enqueue(kind, payload);
-    if (navigator.onLine) {
-      const items = await db.queue.toArray();
-      await fetch(`${API}/api/sync`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(items) }).then(() => db.queue.clear()).catch(() => null);
-    }
-  }, []);
+    await flushQueue(false);
+  }, [flushQueue]);
+
+  const signIn = useCallback(async (token: string, user: AuthUser) => {
+    const a = { token, user };
+    setAuth(a);
+    authRef.current = a;
+    await setKV("auth", a);
+    try {
+      const r = await authFetch("/api/auth/profile");
+      const j = await r.json();
+      if (j.profile) setProfile(j.profile);
+    } catch { /* keep local profile */ }
+    await flushQueue(false);
+  }, [authFetch, flushQueue, setProfile]);
 
   const value = useMemo(() => ({
     data, profile, setProfile, lang, setLang, t, online, toast, showToast, queueAction, refresh: () => fetchData(true),
-  }), [data, profile, setProfile, lang, setLang, t, online, toast, showToast, queueAction, fetchData]);
+    auth, authReady, signIn, signOut, authFetch,
+  }), [data, profile, setProfile, lang, setLang, t, online, toast, showToast, queueAction, fetchData, auth, authReady, signIn, signOut, authFetch]);
 
   return <C.Provider value={value}>{children}</C.Provider>;
 }
