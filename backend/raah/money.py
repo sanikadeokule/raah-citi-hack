@@ -14,10 +14,11 @@ from pathlib import Path
 from xml.etree import ElementTree as ET
 
 import jwt
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from . import dataset
+from .auth import current_user, teacher_only
 
 router = APIRouter(prefix="/api/money", tags=["money (sandbox)"])
 
@@ -122,7 +123,7 @@ def validate(xml: str) -> dict:
             "valid": not missing, "errors": missing}
 
 
-@router.post("/payments")
+@router.post("/payments", dependencies=[Depends(teacher_only)])
 def create_payment(body: PaymentIn):
     d = dataset.get()
     purpose = body.purpose or ""
@@ -147,7 +148,7 @@ def create_payment(body: PaymentIn):
             "ledger": entry, "sandbox": True}
 
 
-@router.get("/ledger")
+@router.get("/ledger", dependencies=[Depends(teacher_only)])
 def ledger():
     # pacs.002-style progression for the demo: initiated -> accepted -> credited
     now = datetime.now(timezone.utc)
@@ -167,7 +168,7 @@ class ConsentIn(BaseModel):
 
 
 @router.post("/aa/consent")
-def aa_consent(body: ConsentIn):
+def aa_consent(body: ConsentIn, user: dict = Depends(current_user)):
     cid = str(uuid.uuid4())
     now = datetime.now(timezone.utc)
     c = {"consentId": cid, "status": "ACTIVE", "createTimestamp": now.isoformat(),
@@ -175,7 +176,7 @@ def aa_consent(body: ConsentIn):
                            "consentMode": "VIEW", "fetchType": "ONETIME", "consentTypes": ["PROFILE", "SUMMARY", "TRANSACTIONS"],
                            "fiTypes": ["DEPOSIT"], "Purpose": {"code": "105", "text": body.purpose},
                            "DataLife": {"unit": "DAY", "value": 1}, "Frequency": {"unit": "HOUR", "value": 1}},
-         "student_id": body.student_id, "declared_income_annual": body.declared_income_annual, "sandbox": True}
+         "student_id": body.student_id, "owner_id": user["id"], "declared_income_annual": body.declared_income_annual, "sandbox": True}
     CONSENTS[cid] = c
     return c
 
@@ -205,9 +206,9 @@ def _synthetic_deposit(student_id: str) -> dict:
 
 
 @router.get("/aa/fi-data")
-def aa_fi_data(consent_id: str):
+def aa_fi_data(consent_id: str, user: dict = Depends(current_user)):
     c = CONSENTS.get(consent_id)
-    if not c:
+    if not c or (c["owner_id"] != user["id"] and user["role"] != "teacher"):
         raise HTTPException(404, "consent not found or revoked")
     fi = _synthetic_deposit(c["student_id"])
     credits = [float(t["amount"]) for t in fi["Account"]["Transactions"]["Transaction"] if t["type"] == "CREDIT"]
@@ -233,7 +234,7 @@ class PassportIn(BaseModel):
 
 
 @router.post("/passport")
-def passport(body: PassportIn):
+def passport(body: PassportIn, user: dict = Depends(current_user)):
     now = datetime.now(timezone.utc)
     vc = {"@context": ["https://www.w3.org/2018/credentials/v1", "https://purl.imsglobal.org/spec/ob/v3p0/context.json"],
           "type": ["VerifiableCredential", "OpenBadgeCredential"], "issuer": {"id": "did:web:raah.example", "name": "Raah (demo)"},
