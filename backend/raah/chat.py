@@ -17,7 +17,7 @@ from typing import Literal
 from fastapi import APIRouter
 from pydantic import BaseModel, Field, ValidationError, field_validator
 
-from . import dataset, engine, llm
+from . import dataset, embed, engine, llm
 
 router = APIRouter(prefix="/api/chat", tags=["ai"])
 
@@ -82,7 +82,11 @@ def validate_profile(raw: dict, talukas: list[str], tags: list[str]) -> tuple[di
                 rejected.append(k)
                 continue
         if k == "interests":
-            v = [t for t in tags if any(t in i.lower() or i.lower() in t for i in v)] or v[:5]
+            exact = [t for t in tags if any(t in i.lower() or i.lower() in t for i in v)]
+            # words the model kept in the student's own phrasing go through the embedding matcher
+            loose = [m["tag"] for i in v if not any(t in i.lower() or i.lower() in t for t in tags)
+                     for m in embed.match(i, tags)["tags"][:1]]
+            v = list(dict.fromkeys(exact + loose)) or v[:5]
         clean[k] = v
     return clean, rejected
 
