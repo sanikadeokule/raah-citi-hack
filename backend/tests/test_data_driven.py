@@ -67,3 +67,15 @@ def test_cache_reloads_on_save():
         os.utime(p, (time.time() + 5, time.time() + 5))
         b = dataset.get(p)["assumptions"]["fare_per_km"]["value"]
         assert a != b and b == 2.5
+
+
+def test_exam_fee_and_plan_link_come_from_the_exams_sheet():
+    with tempfile.TemporaryDirectory() as tmp:
+        p = Path(tmp) / "d.xlsx"
+        shutil.copy(SRC, p)
+        _edit(p, "Exams", "EX01", "Application fee (Open / General)", "₹175")
+        _edit(p, "Plan_Inputs", "PLN03", "Exams / admissions (IDs, use ;)", "EX01; EX99")
+        d = dataset.load(p)
+        assert next(e for e in d["exams"] if e["id"] == "EX01")["fee_open"] == 175
+        assert next(pl for pl in d["plans"] if pl["id"] == "PLN03")["exams"] == ["EX01"]
+        assert any("EX99" in w for w in d["warnings"])
