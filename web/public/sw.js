@@ -1,9 +1,26 @@
 // Raah service worker: app shell + dataset cached for offline use.
-const CACHE = "raah-v1";
-const PAGES = ["/", "/discover/", "/careers/", "/plan/", "/compare/", "/eligibility/", "/learn/", "/opportunity/", "/profile/", "/teacher/", "/money/", "/data/"];
+const CACHE = "raah-v2";
+const PAGES = ["/", "/discover/", "/careers/", "/plan/", "/compare/", "/eligibility/", "/learn/", "/opportunity/", "/profile/", "/teacher/", "/money/", "/data/", "/login/"];
+
+// Cache every page plus every JS/CSS chunk those pages reference, so any screen opens offline.
+async function precache() {
+  const c = await caches.open(CACHE);
+  await c.addAll(["/api/data", "/manifest.webmanifest", "/icon.svg"]).catch(() => {});
+  const assets = new Set();
+  await Promise.all(PAGES.map(async (p) => {
+    try {
+      const r = await fetch(p, { cache: "no-store" });
+      if (!r.ok) return;
+      const html = await r.clone().text();
+      await c.put(p, r);
+      for (const m of html.matchAll(/\/_next\/static\/[^"'\s)]+/g)) assets.add(m[0]);
+    } catch { /* offline during install */ }
+  }));
+  await Promise.all([...assets].map((a) => c.add(a).catch(() => {})));
+}
 
 self.addEventListener("install", (e) => {
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll([...PAGES, "/api/data", "/manifest.webmanifest", "/icon.svg"]).catch(() => {})));
+  e.waitUntil(precache());
   self.skipWaiting();
 });
 self.addEventListener("activate", (e) => {
