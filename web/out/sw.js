@@ -1,6 +1,6 @@
 // Raah service worker: app shell + dataset cached for offline use.
-const CACHE = "raah-v2";
-const PAGES = ["/", "/discover/", "/careers/", "/plan/", "/compare/", "/eligibility/", "/learn/", "/opportunity/", "/profile/", "/teacher/", "/money/", "/data/", "/login/"];
+const CACHE = "raah-v3";
+const PAGES = ["/", "/discover/", "/careers/", "/plan/", "/compare/", "/eligibility/", "/learn/", "/opportunity/", "/profile/", "/teacher/", "/money/", "/data/", "/exams/", "/login/"];
 
 // Cache every page plus every JS/CSS chunk those pages reference, so any screen opens offline.
 async function precache() {
