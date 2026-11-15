@@ -111,5 +111,18 @@
  "plan_for": "योजना",
  "months_training": "महिने शिक्षण",
  "earn_training": "महिने प्रशिक्षणात कमाई",
- "payback_after_1": "प्रशिक्षणानंतर 1 महिन्यात"
+ "payback_after_1": "प्रशिक्षणानंतर 1 महिन्यात",
+ "login_title": "लॉगिन",
+ "phone": "मोबाइल नंबर",
+ "role_student": "विद्यार्थी",
+ "role_teacher": "शिक्षक",
+ "send_otp": "OTP पाठवा",
+ "enter_otp": "६ अंकी OTP टाका",
+ "verify_login": "तपासा आणि लॉगिन करा",
+ "your_name": "तुमचं नाव",
+ "logout": "लॉगआउट",
+ "teacher_only": "हा भाग फक्त शिक्षकांसाठी आहे.",
+ "otp_sent": "{phone} वर OTP पाठवला",
+ "change_number": "नंबर बदला",
+ "sign_in_teacher": "शिक्षक म्हणून लॉगिन"
 }

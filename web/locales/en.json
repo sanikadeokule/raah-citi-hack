@@ -111,5 +111,18 @@
  "plan_for": "Plan for",
  "months_training": "months of study",
  "earn_training": "months earning while training",
- "payback_after_1": "1 month after training"
+ "payback_after_1": "1 month after training",
+ "login_title": "Sign in",
+ "phone": "Mobile number",
+ "role_student": "Student",
+ "role_teacher": "Teacher",
+ "send_otp": "Send OTP",
+ "enter_otp": "Enter the 6-digit OTP",
+ "verify_login": "Verify and sign in",
+ "your_name": "Your name",
+ "logout": "Sign out",
+ "teacher_only": "Only teachers can open this screen.",
+ "otp_sent": "OTP sent to {phone}",
+ "change_number": "Change number",
+ "sign_in_teacher": "Sign in as teacher"
 }
