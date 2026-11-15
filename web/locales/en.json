@@ -133,5 +133,13 @@
  "your_teacher": "Your teacher",
  "teacher_recommends": "Recommends you apply for {scheme}",
  "got_it": "Got it",
- "sent_to_app": "{n} signed up in the app"
+ "sent_to_app": "{n} signed up in the app",
+ "voice_note": "Voice note for parents",
+ "make_voice_note": "Make an audio file",
+ "record_hint": "Read the message above aloud in your own voice. Your parents can play it on WhatsApp.",
+ "record_own": "Record in my voice",
+ "stop_recording": "Stop recording",
+ "share_audio": "Share audio",
+ "download_audio": "Download",
+ "redo": "Redo"
 }

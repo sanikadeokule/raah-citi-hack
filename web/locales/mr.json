@@ -133,5 +133,13 @@
  "your_teacher": "तुमचे शिक्षक",
  "teacher_recommends": "{scheme} साठी अर्ज करण्याची शिफारस",
  "got_it": "समजले",
- "sent_to_app": "{n} ॲपवर नोंदणीकृत"
+ "sent_to_app": "{n} ॲपवर नोंदणीकृत",
+ "voice_note": "पालकांसाठी आवाज संदेश",
+ "make_voice_note": "ऑडिओ फाइल बनवा",
+ "record_hint": "वरचा संदेश तुमच्या आवाजात मोठ्याने वाचा. पालक तो WhatsApp वर ऐकू शकतील.",
+ "record_own": "माझ्या आवाजात रेकॉर्ड करा",
+ "stop_recording": "रेकॉर्डिंग थांबवा",
+ "share_audio": "ऑडिओ पाठवा",
+ "download_audio": "डाउनलोड",
+ "redo": "पुन्हा"
 }
