@@ -1,11 +1,28 @@
 "use client";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Badge, Card, Shell } from "@/components/ui";
 import { computePlan, inr, rankCareers } from "@/lib/engine";
 import { useApp } from "@/lib/store";
 import { paybackText } from "@/components/plan";
+import { aiAvailable, postAi } from "@/lib/ai";
+
+/** Match reason: the template sentence first, replaced by the model's wording only if the server accepts it as grounded. */
+function WhyLine({ s, profile, lang }: { s: any; profile: any; lang: string }) {
+  const [ai, setAi] = useState<string | null>(null);
+  useEffect(() => {
+    let live = true;
+    setAi(null);
+    aiAvailable().then(async (ok) => {
+      if (!ok) return;
+      const j = await postAi("/api/chat/explain", { profile, career_id: s.career.id, lang });
+      if (live && j && !j.fallback && j.text) setAi(j.text);
+    });
+    return () => { live = false; };
+  }, [s.career.id, profile, lang]);
+  return <p className="mt-1 text-sm">{ai ? <>✨ {ai}</> : s.why}</p>;
+}
 
 function flagBadges(c: any) {
   return (
@@ -19,7 +36,7 @@ function flagBadges(c: any) {
 }
 
 export default function CareersPage() {
-  const { data, profile, t } = useApp();
+  const { data, profile, t, lang } = useApp();
   const [q, setQ] = useState("");
   const top = useMemo(() => (data && profile ? rankCareers(data, profile, 5) : []), [data, profile]);
   const plans = useMemo(() => Object.fromEntries((data?.plans || []).map((p: any) => [p.career_id, p])), [data]);
@@ -43,7 +60,7 @@ export default function CareersPage() {
                   <span className="text-xs text-[var(--muted)]">{Math.round(s.score * 100)}%</span>
                 </div>
                 <div className="mt-1">{flagBadges(s.career)}</div>
-                <p className="mt-1 text-sm">{s.why}</p>
+                <WhyLine s={s} profile={profile} lang={lang} />
                 {r ? (
                   <Link href={`/plan/?id=${s.plan_id}`} className="mt-2 flex items-center justify-between rounded-lg bg-[var(--brand)] px-3 py-2 text-sm text-white">
                     <span>{t("net_cost")}: <b>{inr(Math.max(0, r.net_cost))}</b> · {paybackText(t, r.payback.median, data)}</span><span>›</span>
