@@ -124,5 +124,10 @@
  "teacher_only": "Only teachers can open this screen.",
  "otp_sent": "OTP sent to {phone}",
  "change_number": "Change number",
- "sign_in_teacher": "Sign in as teacher"
+ "sign_in_teacher": "Sign in as teacher",
+ "ai_chat_mode": "AI chat",
+ "quick_mode": "Quick questions",
+ "use_quick_questions": "Use quick questions instead",
+ "ai_understood": "Understood",
+ "thinking": "Thinking…"
 }

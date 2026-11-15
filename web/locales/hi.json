@@ -124,5 +124,10 @@
  "teacher_only": "यह हिस्सा सिर्फ़ शिक्षकों के लिए है।",
  "otp_sent": "{phone} पर OTP भेजा",
  "change_number": "नंबर बदलें",
- "sign_in_teacher": "शिक्षक के रूप में लॉगिन"
+ "sign_in_teacher": "शिक्षक के रूप में लॉगिन",
+ "ai_chat_mode": "AI बातचीत",
+ "quick_mode": "झटपट सवाल",
+ "use_quick_questions": "झटपट सवाल इस्तेमाल करें",
+ "ai_understood": "समझा",
+ "thinking": "सोच रहा है…"
 }
