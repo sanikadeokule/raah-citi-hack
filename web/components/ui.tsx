@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { API, LANGS, useApp } from "@/lib/store";
+import { LANGS, useApp } from "@/lib/store";
+import { cachedAudio, fetchAudio } from "@/lib/audio";
 
 export function Shell({ title, back = "/", role = "any", publicPage = false, children }: {
   title?: string; back?: string | null; role?: "any" | "teacher"; publicPage?: boolean; children: React.ReactNode;
@@ -87,24 +88,26 @@ export function speechLang(lang: string) {
   return LANGS.find((l) => l.code === lang)?.speech || "en-IN";
 }
 
-/** Text-to-speech: BHASHINI via the backend when keys exist, else the browser voice. */
-export function SpeakButton({ text, label }: { text: string; label?: string }) {
-  const { lang, t } = useApp();
+/** Text-to-speech: a saved audio file if there is one, then BHASHINI via the backend, else the device voice.
+ *  With `cache`, BHASHINI audio is saved on the phone so it plays again offline. */
+export function SpeakButton({ text, label, cache }: { text: string; label?: string; cache?: boolean }) {
+  const { lang, t, online } = useApp();
   const [on, setOn] = useState(false);
   const audio = useRef<HTMLAudioElement | null>(null);
   const stop = () => { window.speechSynthesis?.cancel(); audio.current?.pause(); setOn(false); };
+  const playBlob = async (b: Blob) => {
+    const url = URL.createObjectURL(b);
+    audio.current = new Audio(url);
+    audio.current.onended = () => { setOn(false); URL.revokeObjectURL(url); };
+    await audio.current.play();
+  };
   const play = async () => {
     if (on) return stop();
     setOn(true);
     try {
-      const r = await fetch(`${API}/api/voice/tts`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text, lang }) });
-      if (r.ok) {
-        const j = await r.json();
-        audio.current = new Audio(`data:${j.mime};base64,${j.audio_b64}`);
-        audio.current.onended = () => setOn(false);
-        await audio.current.play();
-        return;
-      }
+      const saved = await cachedAudio(lang, text);
+      const blob = saved ?? (online ? await fetchAudio(lang, text, Boolean(cache)) : null);
+      if (blob) return await playBlob(blob);
     } catch { /* fall back */ }
     const u = new SpeechSynthesisUtterance(text);
     u.lang = speechLang(lang);
@@ -114,7 +117,7 @@ export function SpeakButton({ text, label }: { text: string; label?: string }) {
   };
   useEffect(() => () => { window.speechSynthesis?.cancel(); }, []);
   return (
-    <button onClick={play} className="inline-flex items-center gap-1 rounded-full bg-[var(--brand-soft)] px-3 py-1.5 text-sm font-medium text-[var(--brand-ink)]">
+    <button onClick={play} className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full bg-[var(--brand-soft)] px-3 py-1.5 text-sm font-medium text-[var(--brand-ink)]">
       {on ? "■" : "🔊"} {label ?? (on ? t("stop") : t("play"))}
     </button>
   );
