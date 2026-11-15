@@ -3,11 +3,14 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Card, MicButton, Shell, SpeakButton } from "@/components/ui";
-import { API, useApp } from "@/lib/store";
+import { useApp } from "@/lib/store";
 import { setKV } from "@/lib/db";
+import { aiAvailable, postAi, resetAiStatus } from "@/lib/ai";
 
-// Scripted question flow: the deterministic fallback from the spec (works with no LLM and offline).
-// When /api/chat is configured with an LLM key it can rephrase questions; answers always land in the same profile fields.
+// Two modes fill the same profile fields:
+// - AI chat: an open-source LLM (see backend/raah/llm.py) asks questions and returns the fields it understood;
+//   the server validates every field before it reaches the profile.
+// - Scripted questions: the deterministic fallback from the spec, used offline, with no model, or on request.
 type Q = { key: string; q: Record<string, string>; kind: "text" | "number" | "choice" | "multi"; options?: (d: any) => { v: any; label: string; icon?: string }[] };
 
 const QUESTIONS: Q[] = [
@@ -38,7 +41,15 @@ const QUESTIONS: Q[] = [
     options: () => ["aadhaar", "marksheet_10", "caste_certificate", "income_certificate", "domicile_certificate", "bank_passbook"].map((d) => ({ v: d, label: d.replaceAll("_", " ") })) },
 ];
 
-type Msg = { from: "raah" | "me"; text: string };
+type Msg = { from: "raah" | "me"; text: string; learned?: Record<string, any> };
+type Mode = "checking" | "ai" | "script";
+
+const isMissing = (v: any) => v === undefined || v === null || v === "" || (Array.isArray(v) && v.length === 0);
+const firstMissing = (p: any, from = 0) => {
+  const i = QUESTIONS.findIndex((q, k) => k >= from && isMissing(p[q.key]));
+  return i === -1 ? QUESTIONS.length : i;
+};
+const showValue = (v: any) => (Array.isArray(v) ? v.join(", ") : typeof v === "boolean" ? (v ? "✓" : "✗") : String(v));
 
 export default function Discover() {
   const { data, lang, t, profile, setProfile, queueAction } = useApp();
@@ -49,15 +60,62 @@ export default function Discover() {
   const [multi, setMulti] = useState<string[]>([]);
   const [consent, setConsent] = useState<"none" | "asking" | "done">("none");
   const [otp, setOtp] = useState("");
+  const [mode, setMode] = useState<Mode>("checking");
+  const [aiMissing, setAiMissing] = useState<string[]>([]);
+  const [busy, setBusy] = useState(false);
   const end = useRef<HTMLDivElement>(null);
-  const q = QUESTIONS[step];
-  const qText = q ? (q.q[lang] || q.q.en) : "";
+  const finished = step >= QUESTIONS.length;
+  // in AI mode the quick-answer chips follow the first field the model still needs
+  const q = finished ? undefined : mode === "ai" ? (QUESTIONS.find((x) => x.key === aiMissing[0]) ?? QUESTIONS[0]) : mode === "script" ? QUESTIONS[step] : undefined;
   const options = useMemo(() => (q?.options && data ? q.options(data) : []), [q, data]);
 
-  useEffect(() => { if (q) setMsgs((m) => [...m, { from: "raah", text: qText }]); }, [step]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { aiAvailable().then((ok) => setMode(ok ? "ai" : "script")); }, []);
+  // scripted mode asks each question; AI mode opens with the same greeting, then the model takes over
+  useEffect(() => {
+    if (mode === "script" && QUESTIONS[step]) setMsgs((m) => [...m, { from: "raah", text: QUESTIONS[step].q[lang] || QUESTIONS[step].q.en }]);
+    if (mode === "ai" && msgs.length === 0) setMsgs([{ from: "raah", text: QUESTIONS[0].q[lang] || QUESTIONS[0].q.en }]);
+  }, [step, mode]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { end.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs, consent]);
 
+  const finish = (next: any) => {
+    setStep(QUESTIONS.length);
+    setConsent(next.age && next.age < 18 ? "asking" : "done");
+    if (!(next.age < 18)) save(next);
+  };
+
+  /** Hand over to the scripted questions for whatever is still missing. */
+  const toScript = (p: any) => {
+    const i = firstMissing(p);
+    setMode("script");
+    if (i >= QUESTIONS.length) finish(p);
+    else setStep(i);
+  };
+
+  const sendAi = async (raw: string, patch: Record<string, any> = {}) => {
+    if (!raw.trim() || busy) return;
+    const base = { ...draft, ...patch };
+    const history = [...msgs, { from: "me" as const, text: raw }];
+    setMsgs(history); setDraft(base); setText(""); setMulti([]); setBusy(true);
+    const j = await postAi("/api/chat/turn", {
+      lang, profile: base,
+      messages: history.map((m) => ({ role: m.from === "me" ? "user" : "assistant", content: m.text })),
+    });
+    setBusy(false);
+    if (!j || j.fallback) { resetAiStatus(); toScript(base); return; }
+    const next = { ...base, ...j.profile };
+    setDraft(next);
+    setAiMissing(j.missing || []);
+    if (j.done || !(j.missing || []).length) {
+      setMsgs((m) => [...m, { from: "raah", text: j.reply || "👍", learned: j.learned }]);
+      toScript(next);
+    } else {
+      setMsgs((m) => [...m, { from: "raah", text: j.reply, learned: j.learned }]);
+    }
+  };
+
   const answer = (value: any, shown: string) => {
+    if (!q) return;
+    if (mode === "ai") { sendAi(shown, { [q.key]: value }); return; }
     const next = { ...draft, [q.key]: value };
     if (q.key === "taluka") {
       const tk = data.talukas.find((x: any) => x.name === value);
@@ -66,12 +124,14 @@ export default function Discover() {
     setDraft(next);
     setMsgs((m) => [...m, { from: "me", text: shown }]);
     setText(""); setMulti([]);
-    if (step + 1 < QUESTIONS.length) setStep(step + 1);
-    else { setStep(step + 1); setConsent(next.age && next.age < 18 ? "asking" : "done"); if (!(next.age < 18)) save(next); }
+    const n = firstMissing(next, step + 1);
+    if (n < QUESTIONS.length) setStep(n);
+    else finish(next);
   };
 
   const submitText = (raw: string) => {
-    if (!raw.trim()) return;
+    if (!raw.trim() || !q) return;
+    if (mode === "ai") { sendAi(raw); return; }
     if (q.kind === "number") {
       const n = Number((raw.match(/\d+(\.\d+)?/) || [])[0]);
       if (!Number.isFinite(n)) return;
@@ -103,15 +163,30 @@ export default function Discover() {
 
   return (
     <Shell title={t("home_discover")}>
+      {mode !== "checking" && !finished && (
+        <div className="flex items-center justify-between text-xs text-[var(--muted)]">
+          <span>{mode === "ai" ? `✨ ${t("ai_chat_mode")}` : `📝 ${t("quick_mode")}`}</span>
+          {mode === "ai" && <button className="underline" onClick={() => toScript(draft)}>{t("use_quick_questions")}</button>}
+        </div>
+      )}
       <div className="space-y-2">
         {msgs.map((m, i) => (
           <div key={i} className={`flex ${m.from === "me" ? "justify-end" : "justify-start"}`}>
             <div className={`max-w-[80%] rounded-2xl px-3 py-2 text-sm ${m.from === "me" ? "bg-[var(--brand)] text-white" : "bg-[var(--card)] ring-1 ring-black/5"}`}>
               {m.text}
+              {m.learned && Object.keys(m.learned).length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1">
+                  <span className="text-xs text-[var(--muted)]">{t("ai_understood")}:</span>
+                  {Object.entries(m.learned).map(([k, v]) => (
+                    <span key={k} className="rounded-full bg-[var(--brand-soft)] px-2 py-0.5 text-xs text-[var(--brand-ink)]">{k.replaceAll("_", " ")}: {showValue(v)}</span>
+                  ))}
+                </div>
+              )}
               {m.from === "raah" && i === msgs.length - 1 && <div className="mt-1"><SpeakButton text={m.text} label="" /></div>}
             </div>
           </div>
         ))}
+        {busy && <div className="text-sm text-[var(--muted)]">✨ {t("thinking")}</div>}
         <div ref={end} />
       </div>
 
@@ -134,8 +209,8 @@ export default function Discover() {
           <div className="flex items-center gap-2">
             <MicButton onText={(s) => submitText(s)} />
             <input value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => e.key === "Enter" && submitText(text)}
-              placeholder={t("type_answer")} className="min-w-0 flex-1 rounded-full bg-[var(--bg)] px-4 py-3" inputMode={q.kind === "number" ? "numeric" : "text"} />
-            <button onClick={() => submitText(text)} className="rounded-full bg-[var(--brand)] px-4 py-3 text-white">{t("send")}</button>
+              placeholder={t("type_answer")} className="min-w-0 flex-1 rounded-full bg-[var(--bg)] px-4 py-3" inputMode={mode === "script" && q.kind === "number" ? "numeric" : "text"} />
+            <button onClick={() => submitText(text)} disabled={busy} className="rounded-full bg-[var(--brand)] px-4 py-3 text-white disabled:opacity-40">{t("send")}</button>
           </div>
         </Card>
       )}
@@ -158,7 +233,6 @@ export default function Discover() {
           <Link href="/profile/" className="mt-2 block text-center text-sm underline">{t("edit_profile")}</Link>
         </Card>
       )}
-      <p className="text-center text-xs text-[var(--muted)]">{API ? "" : ""}</p>
     </Shell>
   );
 }
