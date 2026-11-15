@@ -14,6 +14,7 @@ const TILES = [
   { href: "/compare/", icon: "⚖️", key: "home_compare" },
 ];
 const STAFF = [
+  { href: "/exams/", icon: "📝", key: "home_exams" },
   { href: "/teacher/", icon: "👩‍🏫", key: "home_teacher" },
   { href: "/money/", icon: "🏦", key: "home_money" },
   { href: "/data/", icon: "📊", key: "home_data" },
@@ -59,7 +60,7 @@ export default function Home() {
         ))}
       </div>
 
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-4 gap-2">
         {STAFF.map((x) => (
           <Link key={x.href} href={x.href} className="flex flex-col items-center rounded-xl bg-[var(--card)] py-3 text-sm ring-1 ring-black/5">
             <span className="text-2xl">{x.icon}</span>{t(x.key)}
