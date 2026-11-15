@@ -1,0 +1,10 @@
+{
+  "name": "Raah",
+  "short_name": "Raah",
+  "description": "What to become, what it costs, how to pay, when it pays back",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f6f3ee",
+  "theme_color": "#0f6b5c",
+  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}
