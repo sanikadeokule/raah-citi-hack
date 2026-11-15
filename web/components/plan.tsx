@@ -4,6 +4,7 @@ import { Area, CartesianGrid, ComposedChart, Legend, Line, ReferenceLine, Respon
 import { Badge, Card, Source, SpeakButton, Stat, STATUS_TONE, docLabel } from "./ui";
 import { A, inr, type PlanOptions } from "@/lib/engine";
 import { useApp } from "@/lib/store";
+import { SERIES } from "@/lib/theme";
 
 export function paybackText(t: any, p: any, data: any) {
   if (!p) return "—";
@@ -19,7 +20,7 @@ export function PaybackCard({ r }: { r: any }) {
   const row = (label: string, v: number, extra?: React.ReactNode, sign = "") => (
     <div className="flex items-baseline justify-between gap-2 py-1">
       <span className="text-sm">{label}{extra}</span>
-      <span className="font-semibold tabular-nums">{sign}{inr(v)}</span>
+      <span className="whitespace-nowrap font-semibold tabular-nums">{sign}{inr(v)}</span>
     </div>
   );
   return (
@@ -118,7 +119,7 @@ export function WhatIf({ r, opts, setOpts }: { r: any; opts: PlanOptions; setOpt
   );
 }
 
-const COLORS = ["#0f6b5c", "#e07a1f"];
+const COLORS = SERIES;
 
 export function CashChart({ results, height = 240 }: { results: any[]; height?: number }) {
   const { t } = useApp();

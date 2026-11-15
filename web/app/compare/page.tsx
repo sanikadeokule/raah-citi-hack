@@ -32,7 +32,7 @@ function CompareView() {
       <div className="grid grid-cols-2 gap-2">
         {(["a", "b"] as const).map((w, i) => (
           <select key={w} value={rs[i].plan.id} onChange={(e) => pick(w, e.target.value)}
-            className={`rounded-xl p-2 text-sm font-semibold text-white ${i === 0 ? "bg-[#0f6b5c]" : "bg-[#e07a1f]"}`}>
+            className={`rounded-xl p-2 text-sm font-semibold text-white ${i === 0 ? "bg-[var(--brand)]" : "bg-[var(--accent)]"}`}>
             {data.plans.map((p: any) => <option key={p.id} value={p.id} className="text-black">{p.label}</option>)}
           </select>
         ))}
