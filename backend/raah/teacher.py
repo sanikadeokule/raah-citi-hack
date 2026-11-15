@@ -40,7 +40,7 @@ class _NumpyLogReg:
         p = 1 / (1 + np.exp(-(np.asarray(X) @ self.coef_[0] + self.intercept_[0])))
         return np.column_stack([1 - p, p])
 
-from . import dataset, engine
+from . import auth, dataset, engine
 from .auth import teacher_only
 
 router = APIRouter(prefix="/api/teacher", tags=["teacher"], dependencies=[Depends(teacher_only)])
@@ -149,7 +149,8 @@ def eligible_for(scheme_id: str, plan_id: str | None = None):
     scheme = next(s for s in d["scholarships"] if s["id"] == scheme_id)
     plan = next((p for p in d["plans"] if p["id"] == plan_id), None)
     res = []
-    for s in synthetic_class():
+    # signed-up students first (they get the recommendation in their app), then the synthetic demo class
+    for s in auth.student_profiles() + synthetic_class():
         ctx = dict(s)
         if plan:
             ctx["course_tags"] = plan["course_tags"]
@@ -157,7 +158,9 @@ def eligible_for(scheme_id: str, plan_id: str | None = None):
                 ctx["class"] = 11
         r = engine.check_scheme(scheme, ctx)
         if r["status"] in ("eligible", "eligible_missing_docs"):
-            res.append({"id": s["id"], "name": s["name"], "status": r["status"], "missing_docs": r["missing_docs"]})
+            real = "user_id" in s
+            res.append({"id": f"U{s['user_id']}" if real else s["id"], "user_id": s.get("user_id"), "real": real,
+                        "name": s["name"], "status": r["status"], "missing_docs": r["missing_docs"]})
     return {"scheme": {"id": scheme["id"], "name": scheme["name"]}, "students": res}
 
 
@@ -170,14 +173,23 @@ NOTIFICATIONS: list[dict] = []
 
 
 @router.post("/recommend")
-def recommend(body: Recommend):
+def recommend(body: Recommend, teacher: dict = Depends(auth.teacher_only)):
     e = eligible_for(body.scheme_id, body.plan_id)
     now = datetime.now(timezone.utc).isoformat()
+    plan = next((p for p in dataset.get()["plans"] if p["id"] == body.plan_id), None)
+    real = [s for s in e["students"] if s["real"]]
+    for s in real:
+        auth.notify([s["user_id"]], "scheme_recommendation",
+                    {"scheme_id": e["scheme"]["id"], "scheme_name": e["scheme"]["name"], "status": s["status"],
+                     "missing_docs": s["missing_docs"], "plan_id": body.plan_id, "plan_label": plan["label"] if plan else None},
+                    from_user_id=teacher["id"])
     for s in e["students"]:
+        if s["real"]:
+            continue
         NOTIFICATIONS.append({"student_id": s["id"], "scheme_id": body.scheme_id, "at": now,
                               "message": f"Your teacher recommends {e['scheme']['name']}",
                               "missing_docs": s["missing_docs"]})
-    return {"sent": len(e["students"]), "scheme": e["scheme"], "students": e["students"]}
+    return {"sent": len(e["students"]), "sent_to_app": len(real), "scheme": e["scheme"], "students": e["students"]}
 
 
 @router.get("/notifications/{student_id}")
