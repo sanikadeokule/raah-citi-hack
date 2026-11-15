@@ -2,6 +2,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import Link from "next/link";
 import { Card, Shell } from "@/components/ui";
+import { TeacherInbox } from "@/components/inbox";
 import { LANGS, useApp } from "@/lib/store";
 
 const TILES = [
@@ -46,6 +47,8 @@ export default function Home() {
           </select>
         </Card>
       )}
+
+      <TeacherInbox />
 
       <div className="grid grid-cols-2 gap-3">
         {TILES.map((x) => (
