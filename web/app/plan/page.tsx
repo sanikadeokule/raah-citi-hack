@@ -8,6 +8,7 @@ import { CashChart, ParentNote, PaybackCard, SchemeResult, WhatIf } from "@/comp
 import { computePlan, inr, type PlanOptions } from "@/lib/engine";
 import { useApp } from "@/lib/store";
 import { coursesFor } from "@/lib/helpers";
+import { PlanExams } from "@/components/exams";
 
 function PlanView() {
   const id = useSearchParams().get("id") || "PLN01";
@@ -32,6 +33,8 @@ function PlanView() {
           ))}
         </ol>
       </Card>
+
+      <PlanExams plan={plan} />
 
       <PaybackCard r={r} />
       <WhatIf r={r} opts={opts} setOpts={setOpts} />
