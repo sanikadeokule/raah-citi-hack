@@ -275,3 +275,68 @@ def nearest_centres(data: dict, profile: dict, centre_type: str | None, n: int =
         out.append({**c, "distance_km": d, "approximate": c["coord_source"] != "exact"})
     out.sort(key=lambda c: (c["distance_km"] is None, c["distance_km"] or 0))
     return out[:n]
+
+
+# ------------------------------------------------------------------ careers
+
+def _tokens(items) -> set[str]:
+    out = set()
+    for it in items or []:
+        for w in str(it).lower().replace("-", " ").split():
+            if len(w) > 2:
+                out.add(w)
+    return out
+
+
+def rank_careers(data: dict, profile: dict, n: int = 5) -> list[dict]:
+    interests = _tokens(profile.get("interests"))
+    phrases = {str(i).strip().lower() for i in profile.get("interests") or []}
+    cls = profile.get("class") or 10
+    plans_by_career = {p["career_id"]: p for p in data["plans"]}
+    fam = profile.get("family_income_annual") or 0
+    scored = []
+    for c in data["careers"]:
+        tags = _tokens(c.get("tags"))
+        tag_phrases = {str(t).strip().lower() for t in c.get("tags") or []}
+        exact = phrases & tag_phrases
+        loose = {p for p in phrases - exact if _tokens([p]) & tags}
+        interest = (len(exact) + 0.5 * len(loose)) / len(phrases) if phrases else 0
+        min_c = c.get("min_class") or 0
+        elig = 1.0 if cls >= min_c else (0.7 if min_c - cls <= 2 else 0.3)
+        afford = 0.5
+        p = plans_by_career.get(c["id"])
+        if p:
+            cost = p["fees"] + p["exam_fees"] + p["materials"]
+            afford = 1.0 if cost <= 0.25 * fam else (0.6 if cost <= fam else 0.2)
+        demand = (c.get("demand") or 3) / 5
+        score = 0.5 * interest + 0.2 * elig + 0.2 * afford + 0.1 * demand
+        scored.append({"career": c, "score": round(score, 3), "plan_id": p["id"] if p else None,
+                       "breakdown": {"interest": round(interest, 2), "eligibility": elig, "affordability": afford,
+                                     "demand": round(demand, 2)},
+                       "matched": sorted(exact) + sorted(loose)})
+    scored.sort(key=lambda s: -s["score"])
+    top = scored[:n]
+    # diversity: at least one vocational and one non-STEM / self-employment option
+    for flag in ("vocational", "non_stem"):
+        if not any(s["career"]["flags"][flag] for s in top):
+            extra = next((s for s in scored[n:] if s["career"]["flags"][flag]), None)
+            if extra:
+                top[-1] = extra
+                top.sort(key=lambda s: -s["score"])
+    for s in top:
+        s["why"] = why_line(s)
+    return top
+
+
+def why_line(s: dict) -> str:
+    """Template explanation (the LLM may rephrase this, never the numbers)."""
+    parts = []
+    if s["matched"]:
+        parts.append("matches your interest in " + ", ".join(s["matched"][:3]))
+    if s["breakdown"]["affordability"] >= 1:
+        parts.append("low cost for your family")
+    if s["breakdown"]["demand"] >= 0.8:
+        parts.append("many openings near Pune")
+    if s["career"]["flags"]["vocational"]:
+        parts.append("start earning sooner")
+    return ("Fits you: " + "; ".join(parts)) if parts else "A different option worth knowing about"
