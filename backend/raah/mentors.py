@@ -6,7 +6,7 @@ import json
 import time
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from . import auth, dataset
 
@@ -15,6 +15,10 @@ router = APIRouter(prefix="/api/mentors", tags=["student"])
 
 class MentorRequest(BaseModel):
     accept_sharing: bool
+    # what the app shows as the student's profile, used when nothing is saved on the server yet
+    name: str | None = Field(None, max_length=60)
+    class_: int | None = Field(None, alias="class", ge=1, le=12)
+    taluka: str | None = Field(None, max_length=40)
 
 
 def _contact(d: dict, mentor_id: str) -> dict:
@@ -33,8 +37,8 @@ def request_mentor(mentor_id: str, body: MentorRequest, user: dict = Depends(aut
         con = auth._db()
         row = con.execute("SELECT data FROM profiles WHERE user_id = ?", (user["id"],)).fetchone()
         prof = json.loads(row["data"]) if row else {}
-        shared = {"first_name": (prof.get("name") or user.get("name") or "").split(" ")[0], "class": prof.get("class"),
-                  "taluka": prof.get("taluka")}
+        shared = {"first_name": (prof.get("name") or body.name or user.get("name") or "").split(" ")[0],
+                  "class": prof.get("class") or body.class_, "taluka": prof.get("taluka") or body.taluka}
         con.execute("INSERT INTO mentor_requests (user_id, mentor_id, shared, created_at) VALUES (?, ?, ?, ?) "
                     "ON CONFLICT(user_id, mentor_id) DO NOTHING",
                     (user["id"], mentor_id, json.dumps(shared, ensure_ascii=False), int(time.time())))
