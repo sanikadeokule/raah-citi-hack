@@ -9,13 +9,15 @@ import os
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, HTTPException, Request, Response
+from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from . import dataset, engine
+from .auth import current_user, log_sync, save_profile
+from .auth import router as auth_router
 from .money import router as money_router
 from .partners import router as partners_router
 from .teacher import router as teacher_router
@@ -120,16 +122,17 @@ def centres(profile: Profile, centre_type: str | None = None, n: int = 3):
     return engine.nearest_centres(data(), profile.as_dict(), centre_type, n)
 
 
-SYNCED: list[dict] = []
-
-
 @app.post("/api/sync", tags=["data"])
-def sync(items: list[dict]):
+def sync(items: list[dict], user: dict = Depends(current_user)):
     """Receives actions queued while the phone was offline (quiz answers, profile edits, consents)."""
-    SYNCED.extend(items)
+    log_sync(user["id"], items)
+    profiles = [i["payload"] for i in items if i.get("kind") == "profile" and isinstance(i.get("payload"), dict)]
+    if profiles:
+        save_profile(user["id"], profiles[-1])
     return {"received": len(items)}
 
 
+app.include_router(auth_router)
 app.include_router(voice_router)
 app.include_router(teacher_router)
 app.include_router(money_router)
