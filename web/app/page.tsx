@@ -5,12 +5,12 @@ import { Card, Shell } from "@/components/ui";
 import { LANGS, useApp } from "@/lib/store";
 
 const TILES = [
-  { href: "/discover/", icon: "🗣️", key: "home_discover", color: "bg-emerald-100" },
-  { href: "/careers/", icon: "🧭", key: "home_careers", color: "bg-sky-100" },
-  { href: "/learn/", icon: "🎧", key: "home_learn", color: "bg-violet-100" },
-  { href: "/opportunity/", icon: "🛠️", key: "home_opportunity", color: "bg-amber-100" },
-  { href: "/eligibility/", icon: "🎓", key: "home_eligibility", color: "bg-rose-100" },
-  { href: "/compare/", icon: "⚖️", key: "home_compare", color: "bg-lime-100" },
+  { href: "/discover/", icon: "🗣️", key: "home_discover" },
+  { href: "/careers/", icon: "🧭", key: "home_careers" },
+  { href: "/learn/", icon: "🎧", key: "home_learn" },
+  { href: "/opportunity/", icon: "🛠️", key: "home_opportunity" },
+  { href: "/eligibility/", icon: "🎓", key: "home_eligibility" },
+  { href: "/compare/", icon: "⚖️", key: "home_compare" },
 ];
 const STAFF = [
   { href: "/teacher/", icon: "👩‍🏫", key: "home_teacher" },
@@ -49,7 +49,7 @@ export default function Home() {
 
       <div className="grid grid-cols-2 gap-3">
         {TILES.map((x) => (
-          <Link key={x.href} href={x.href} className={`flex aspect-square flex-col items-center justify-center rounded-2xl ${x.color} text-black shadow-sm active:scale-95`}>
+          <Link key={x.href} href={x.href} className="flex aspect-square flex-col items-center justify-center rounded-2xl border-b-4 border-[var(--accent)] bg-[var(--card)] text-[var(--brand-ink)] shadow-sm ring-1 ring-black/5 active:scale-95">
             <span className="text-5xl">{x.icon}</span>
             <span className="mt-2 text-lg font-semibold">{t(x.key)}</span>
           </Link>
