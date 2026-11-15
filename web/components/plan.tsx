@@ -5,6 +5,7 @@ import { Badge, Card, Source, SpeakButton, Stat, STATUS_TONE, docLabel } from ".
 import { A, inr, type PlanOptions } from "@/lib/engine";
 import { useApp } from "@/lib/store";
 import { SERIES } from "@/lib/theme";
+import { VoiceNote } from "./voicenote";
 
 export function paybackText(t: any, p: any, data: any) {
   if (!p) return "—";
@@ -235,6 +236,7 @@ export function ParentNote({ r }: { r: any }) {
         <a className="inline-flex items-center gap-1 rounded-full bg-[#25D366] px-3 py-1.5 text-sm font-medium text-white"
           href={`https://wa.me/?text=${encodeURIComponent(msg)}`} target="_blank" rel="noreferrer">💬 {t("share_whatsapp")}</a>
       </div>
+      <VoiceNote text={msg} name={profile?.name} />
     </Card>
   );
 }
