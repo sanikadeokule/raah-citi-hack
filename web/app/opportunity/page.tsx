@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Badge, Card, Shell, Source } from "@/components/ui";
 import { inr } from "@/lib/engine";
 import { useApp } from "@/lib/store";
+import { Mentors } from "@/components/mentors";
 
 export default function Opportunity() {
   const { data, t } = useApp();
@@ -14,6 +15,7 @@ export default function Opportunity() {
   return (
     <Shell title={t("opportunities")}>
       <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Electrician, Fitter, Chakan…" className="w-full rounded-xl bg-[var(--card)] p-3 ring-1 ring-black/10" />
+      <Mentors />
       <Card>
         <h2 className="mb-2 font-bold">🏭 NAPS apprenticeships · Pune <Badge>{naps.length}</Badge></h2>
         <ul className="divide-y divide-black/5">
