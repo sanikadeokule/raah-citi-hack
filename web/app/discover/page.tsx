@@ -52,7 +52,7 @@ const firstMissing = (p: any, from = 0) => {
 const showValue = (v: any) => (Array.isArray(v) ? v.join(", ") : typeof v === "boolean" ? (v ? "✓" : "✗") : String(v));
 
 export default function Discover() {
-  const { data, lang, t, profile, setProfile, queueAction } = useApp();
+  const { data, lang, t, profile, setProfile, queueAction, online } = useApp();
   const [step, setStep] = useState(0);
   const [draft, setDraft] = useState<any>({ language: lang, school_type: "government", domicile: "Maharashtra", has_bank_account: true, exams_passed: [] });
   const [msgs, setMsgs] = useState<Msg[]>([]);
@@ -113,7 +113,7 @@ export default function Discover() {
     }
   };
 
-  const answer = (value: any, shown: string) => {
+  const answer = (value: any, shown: string, learned?: Record<string, any>) => {
     if (!q) return;
     if (mode === "ai") { sendAi(shown, { [q.key]: value }); return; }
     const next = { ...draft, [q.key]: value };
@@ -122,14 +122,14 @@ export default function Discover() {
       if (tk) { next.lat = tk.lat; next.lon = tk.lon; }
     }
     setDraft(next);
-    setMsgs((m) => [...m, { from: "me", text: shown }]);
+    setMsgs((m) => [...m, { from: "me", text: shown, learned }]);
     setText(""); setMulti([]);
     const n = firstMissing(next, step + 1);
     if (n < QUESTIONS.length) setStep(n);
     else finish(next);
   };
 
-  const submitText = (raw: string) => {
+  const submitText = async (raw: string) => {
     if (!raw.trim() || !q) return;
     if (mode === "ai") { sendAi(raw); return; }
     if (q.kind === "number") {
@@ -142,6 +142,11 @@ export default function Discover() {
       else answer(raw, raw);
     } else if (q.kind === "multi") {
       const hits = options.filter((o) => raw.toLowerCase().includes(String(o.v).toLowerCase())).map((o) => o.v);
+      // interests said in the student's own words (any language) are mapped to the dataset's tags on the server
+      if (!hits.length && q.key === "interests" && online) {
+        const j = await postAi("/api/interests/match", { text: raw });
+        if (j?.tags?.length) { const tags = j.tags.map((x: any) => x.tag); answer(tags, raw, { interests: tags }); return; }
+      }
       answer(hits.length ? hits : raw.split(/,|और|आणि|and/).map((s) => s.trim()).filter(Boolean), raw);
     } else answer(raw.trim(), raw);
   };
@@ -176,7 +181,7 @@ export default function Discover() {
               {m.text}
               {m.learned && Object.keys(m.learned).length > 0 && (
                 <div className="mt-2 flex flex-wrap gap-1">
-                  <span className="text-xs text-[var(--muted)]">{t("ai_understood")}:</span>
+                  <span className={`text-xs ${m.from === "me" ? "text-white/80" : "text-[var(--muted)]"}`}>{t("ai_understood")}:</span>
                   {Object.entries(m.learned).map(([k, v]) => (
                     <span key={k} className="rounded-full bg-[var(--brand-soft)] px-2 py-0.5 text-xs text-[var(--brand-ink)]">{k.replaceAll("_", " ")}: {showValue(v)}</span>
                   ))}
