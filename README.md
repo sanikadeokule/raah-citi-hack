@@ -21,6 +21,7 @@ The pilot district is Pune.
 - [Screens](#screens)
 - [The spreadsheet drives everything](#the-spreadsheet-drives-everything)
 - [How the numbers are calculated](#how-the-numbers-are-calculated)
+- [Sign-in and roles](#sign-in-and-roles)
 - [Architecture](#architecture)
 - [Run it locally](#run-it-locally)
 - [API](#api)
@@ -142,6 +143,29 @@ payback       = first month after training where cumulative gain ≥ net_cost
 - Scholarship values use the lower end of a range so the payback is never overstated; the upper end is shown alongside.
 - A scheme counts as eligible for the plan when every rule passes or the only gap is a document the student can still get.
 
+## Sign-in and roles
+
+Students and teachers sign in with their mobile number and a one-time password.
+
+<p align="center"><img src="docs/screenshots/login.png" width="240" alt="Login screen with student and teacher roles"></p>
+
+| | Student | Teacher |
+|---|---|---|
+| Who can sign in | Anyone with a 10-digit Indian mobile number (account is created on first login) | Numbers listed in `RAAH_TEACHER_PHONES` |
+| Screens | Discover, Careers, plans, Compare, Scholarships, Learn, Opportunity, Profile | Everything a student sees, plus Class dashboard and Money |
+| Server access | Own profile, own synced activity, own AA consent | Class data, bulk recommend, pain.001 payouts and ledger, any consent |
+
+- **OTP:** 6 digits, stored only as a salted SHA-256 hash, valid for 5 minutes, single use, 5 wrong tries lock it, and at most 3 requests per number every 10 minutes.
+- **Sandbox mode:** with `SMS_PROVIDER` empty, the OTP is `RAAH_SANDBOX_OTP` (default `123456`) and the login screen shows it. Add an SMS gateway in `_send_sms` in `backend/raah/auth.py` for real delivery.
+- **Tokens:** HS256 JWT signed with `RAAH_SIGNING_KEY`, carrying the user id and role, valid for `RAAH_TOKEN_TTL_DAYS` (default 30) so a signed-in student keeps working offline. A rejected token signs the app out.
+- **Storage:** users, OTP challenges, saved profiles and synced activity live in SQLite at `RAAH_DB` (default `backend/data/raah.db`).
+- **Profile sync:** profile edits and offline actions are queued on the phone and saved to the account on reconnect; signing in on a new phone restores the profile.
+- **Delete my data:** removes the account, profile and synced activity on the server and clears the phone.
+- **Open endpoints:** `/api/data`, `/api/version`, `/api/plan`, `/api/eligibility`, `/api/careers` and `/api/centres` stay public because they only serve the published dataset and run the same maths the phone runs offline.
+- **Partners** use a separate OAuth2 client-credentials flow (below).
+
+Demo logins: any student number (e.g. `9876543210`), teacher `9000000001`, OTP `123456`.
+
 ## Architecture
 
 ```
@@ -227,7 +251,9 @@ Interactive OpenAPI docs: <http://localhost:8000/docs>
 | `POST /api/partners/token` | OAuth2 client-credentials token |
 | `POST /api/partners/opportunities` · `GET /api/partners/candidates` | Partner posting and masked candidates |
 | `POST /api/partners/enrolments/{id}/complete` | Completion → teacher payout |
-| `POST /api/sync` | Actions queued while offline |
+| `POST /api/auth/otp/request` · `POST /api/auth/otp/verify` | Phone OTP login, returns a JWT |
+| `GET /api/auth/me` · `GET`/`PUT /api/auth/profile` · `DELETE /api/auth/me` | Account, saved profile, delete my data |
+| `POST /api/sync` | Actions queued while offline (signed in) |
 
 Example:
 
@@ -244,6 +270,7 @@ backend/
     dataset.py      spreadsheet loader and text-to-number parsing, reload on save
     engine.py       eligibility, cost & payback, centres, career ranking
     main.py         FastAPI app, core routes, serves web/out
+    auth.py         phone OTP login, JWT roles, users and profiles in SQLite
     voice.py        BHASHINI ASR / TTS
     teacher.py      synthetic class, dropout model, bulk recommend
     money.py        pain.001, Account Aggregator mock, skills passport
@@ -277,6 +304,7 @@ RAAH_DATASET=../raah-dataset.xlsx python -m pytest -q tests
 ```
 
 - `test_parity.py`: Python and TypeScript engines agree on 105 scenarios (3 students × 7 plans × 5 what-if settings), including eligibility and ranking.
+- `test_auth.py`: OTP login, wrong-code lockout, single use, rate limit, teacher allowlist, role checks on teacher and money endpoints, consent ownership, profile sync and account deletion.
 - `test_data_driven.py`: edits a copy of the spreadsheet (income limit, course fee, income, assumption) and checks the eligibility, cost, payback and cached data change accordingly.
 
 ## Data sources
