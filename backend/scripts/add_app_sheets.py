@@ -35,6 +35,8 @@ SHEETS["Assumptions"] = (
         ["default_family_contribution_per_month", 0, "₹ per month", "Starting value of the what-if slider", "App setting"],
         ["max_commute_slider_km", 60, "km", "Upper end of the commute slider", "App setting"],
         ["months_paid_per_year", 10, "months", "Monthly scholarship allowances are paid for this many months a year (e.g. SCH09, SCH17 say 10)", "From SCH09 / SCH17 text"],
+        ["teacher_share_of_module_sales", 0.7, "fraction", "Share of a paid module or subscription that goes to the teacher who made it", "App setting - demo value"],
+        ["payout_per_completed_enrolment", 100, "₹ per completion", "Paid to the teacher each time a student completes one of their modules", "App setting - demo value"],
     ],
 )
 
@@ -68,6 +70,24 @@ SHEETS["Exams"] = (
         ['EX05', 'NEET-UG', 'National Testing Agency (NTA)', 'MBBS, BDS, BAMS/BHMS and other medical degrees', 'Class 12 with Physics, Chemistry, Biology and English', 'Pen-and-paper national entrance test', '₹1,700', '₹1,000', 'EWS / OBC-NCL ₹1,600; SC/ST/PwBD ₹1,000', '2026: apply by 8 Mar 2026; exam 3 May 2026', 'Registration Feb-Mar; exam May', 'https://neet.nta.nic.in', 'https://www.freepressjournal.in/education/neet-ug-2026-registration-process-starts-check-details-here', '2026-11-15'],
         ['EX06', 'NMMS scholarship exam (Class 8)', 'Maharashtra State Council of Examination (MSCE), Pune', 'National Means-cum-Merit Scholarship, ₹12,000 a year for Classes 9-12', "Regular Class 8 student in a govt, aided or local-body school; 55% in Class 7 (50% SC/ST); parents' income up to ₹3,50,000 a year", 'Written test (mental ability + scholastic aptitude)', None, None, 'Fee is in the yearly MSCE notification', '2026-27 exam: 20 Dec 2026 (2025-26 exam was 28 Dec 2025)', 'Apply Sep-Oct through the school; exam December', 'https://www.mscepune.in', 'https://school.careers360.com/articles/nmms-maharashtra', '2026-11-15'],
         ['EX07', 'Central Railway Act Apprentice (RRC/CR)', 'Railway Recruitment Cell, Central Railway', '1-year paid apprenticeship in railway workshops and depots', 'ITI certificate in the trade + Class 10 with 50%; age 15-24 (SC/ST +5, OBC +3, PwBD +10)', 'Merit = average of Class 10 % and ITI %; no exam', '₹100', '₹0', 'SC/ST/PwBD and women apply free', '2025: notice RRC/CR/AA/2025 dated 12 Aug 2025, closed 11 Sep 2025', 'Notice every year, usually Aug-Sep', 'https://www.rrccr.com', 'https://www.rrccr.com/rrwc/Files/52e94fca-1737-430a-aa9e-211048dc5ff5.pdf', '2026-11-15'],
+    ],
+)
+
+# ---------------------------------------------------------------- Mentors
+# Synthetic demo mentors; the Phone column never reaches the app until a student accepts.
+SHEETS["Mentors"] = (
+    ['ID', 'Name', 'Works as', 'Career IDs (use ;)', 'Taluka', 'Languages', 'Can help with', 'How they meet', 'Phone', 'Available', 'Note'],
+    [
+        ['MEN01', 'Sunita Gaikwad', 'Electrician, MSEDCL sub-division, Junnar', 'CAR01; CAR02; CAR39', 'Junnar', 'Marathi; Hindi', 'Choosing an ITI trade, apprenticeship at MSEDCL, safety licence', 'Phone call; ITI open day', '+91 90000 20001', 'Saturday afternoons', 'Synthetic demo mentor - replace with a real, consented volunteer before use'],
+        ['MEN02', 'Rahul Shinde', 'Fitter, Central Railway C&W depot, Pune', 'CAR03; CAR30', 'Haveli', 'Marathi; Hindi; English', 'Railway Act Apprentice notice, ITI merit, what the work is like', 'Phone call', '+91 90000 20002', 'Sunday mornings', 'Synthetic demo mentor - replace with a real, consented volunteer before use'],
+        ['MEN03', 'Meena Kale', 'ANM, Primary Health Centre, Ambegaon', 'CAR25', 'Ambegaon', 'Marathi', 'ANM admission, hostel life, working in a sub-centre', 'Phone call; visit PHC with a parent', '+91 90000 20003', 'Weekdays after 5 pm', 'Synthetic demo mentor - replace with a real, consented volunteer before use'],
+        ['MEN04', 'Priyanka Jadhav', 'Staff Nurse (GNM), rural hospital, Khed', 'CAR24; CAR25', 'Khed', 'Marathi; Hindi', 'Nursing CET, GNM vs B.Sc Nursing, scholarships for nursing', 'Phone call', '+91 90000 20004', 'Weekends', 'Synthetic demo mentor - replace with a real, consented volunteer before use'],
+        ['MEN05', 'Asha Pawar', 'Runs a beauty parlour, Manchar', 'CAR34', 'Ambegaon', 'Marathi', 'Free beauty courses, starting from home, first customers', 'In person at the parlour', '+91 90000 20005', 'Monday (parlour closed)', 'Synthetic demo mentor - replace with a real, consented volunteer before use'],
+        ['MEN06', 'Kavita More', 'Tailor and garment unit owner, Shirur', 'CAR33', 'Shirur', 'Marathi; Hindi', 'Tailoring course, buying a machine, Mudra loan basics', 'In person; phone call', '+91 90000 20006', 'Afternoons', 'Synthetic demo mentor - replace with a real, consented volunteer before use'],
+        ['MEN07', 'Imran Shaikh', 'Mobile repair shop owner, Rajgurunagar', 'CAR35; CAR12', 'Khed', 'Hindi; Marathi; Urdu', 'Phone repair course, tools to buy, working in a shop first', 'In person at the shop', '+91 90000 20007', 'Evenings', 'Synthetic demo mentor - replace with a real, consented volunteer before use'],
+        ['MEN08', 'Sachin Wagh', 'Diploma mechanical engineer, auto plant, Chakan', 'CAR23; CAR11; CAR10', 'Khed', 'Marathi; English', 'Polytechnic admission, diploma apprenticeship, factory jobs', 'Phone call', '+91 90000 20008', 'Sunday', 'Synthetic demo mentor - replace with a real, consented volunteer before use'],
+        ['MEN09', 'Pooja Deshmukh', 'B.Sc graduate, lab assistant, Baramati', 'CAR31; CAR32', 'Baramati', 'Marathi; English', 'Class 11 science, B.Sc admission, post-matric scholarship forms', 'Phone call; video call', '+91 90000 20009', 'Weekday evenings', 'Synthetic demo mentor - replace with a real, consented volunteer before use'],
+        ['MEN10', 'Ganesh Bhor', 'Solar installer, own business, Purandar', 'CAR36; CAR39', 'Purandar', 'Marathi', 'Suryamitra course, solar rooftop work, getting started', 'In person on site; phone call', '+91 90000 20010', 'Saturdays', 'Synthetic demo mentor - replace with a real, consented volunteer before use'],
     ],
 )
 
@@ -258,6 +278,7 @@ def main(path):
             "Career_Profile": "Career_Profile - interest tags, minimum class and local demand used to rank careers.",
             "Talukas": "Talukas - approximate taluka points, used for distance only when a centre has no Lat/Lon.",
             "Demo_Students": "Demo_Students - synthetic hero profiles (Priya etc.) for the demo.",
+            "Mentors": "Mentors - synthetic demo mentors per career and taluka. Phone numbers are never sent to the app until a student accepts sharing their details with that mentor.",
             "Exams": "Exams - entrance tests and admission rounds (fee, who can apply, last dates, official site). Plan_Inputs links them by ID in 'Exams / admissions (IDs, use ;)'; they show as a step in the student's path and on the Exams screen.",
         }
         for n in added:
