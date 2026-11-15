@@ -17,6 +17,7 @@ from pydantic import BaseModel
 from . import dataset, engine
 from .money import Payee, PaymentIn, create_payment
 from .teacher import synthetic_class
+from .auth import require_role
 
 router = APIRouter(prefix="/api/partners", tags=["partners (OAuth2)"])
 KEY = os.environ.get("RAAH_SIGNING_KEY", "dev-only-signing-key-change-me-in-env-file")
@@ -85,7 +86,7 @@ def candidates(opportunity_id: str, who: str = Depends(partner)):
 
 
 @router.post("/candidates/{candidate_ref}/accept", tags=["student"])
-def student_accepts(candidate_ref: str, opportunity_id: str):
+def student_accepts(candidate_ref: str, opportunity_id: str, user: dict = Depends(require_role("student"))):
     """Called from the student app when the student accepts; unmasks contact for that partner only."""
     ACCEPTED.add((opportunity_id, candidate_ref.removeprefix("C-")))
     return {"ok": True}
