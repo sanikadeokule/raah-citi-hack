@@ -58,9 +58,21 @@ Eligibility, costs, payback months, distances and career ranking are computed by
 | **Audio lessons + quiz** | "What is an ITI?", "What is an apprenticeship?", "How do scholarships work?" plus a 5-question quiz. Facts inside lessons and quiz (stipend rates, income limits, ITI count) come from the dataset. With BHASHINI keys, "Save lesson audio for offline" stores each lesson as an audio file on the phone; the file is tied to the exact lesson text, so after a dataset edit the new figures are spoken rather than an old recording. Without keys the phone's own voice reads them, which also works offline. |
 | **Apprenticeships** | 31 live NAPS listings in Pune district and 17 Central Railway seat lines, searchable, with stipend and apply link. |
 | **Exams** | Every entrance test or admission round a path needs shows as a step on the plan screen, and the Exams screen lists them all with who can apply, how selection works, the fee for open and reserved categories, when to apply and the official site. All of it comes from the `Exams` sheet. |
+| **Mentors** | Mentors from the `Mentors` sheet, filtered by the student's top careers (or any career) and a distance slider. A mentor's phone number never leaves the server until the student agrees to share their first name, class and taluka with that mentor; the teacher sees who connected with whom. |
+| **Teacher modules** | Short lessons made by teachers, read aloud in the module's language, with a quiz. Free, per-module or monthly subscription; payments are simulated. |
 | **Offline + sync** | Installable PWA. Dataset, profile, plan, lessons and quiz answers work offline; queued actions sync on reconnect with a "N changes synced" toast. |
 | **Delete my data** | One tap clears everything stored on the phone. |
 | **Teacher recommendations** | When a teacher recommends a scheme, the student sees it on the home screen with the plan it was for and any missing document. "Check" opens the scholarship screen with that scheme first. Cached on the phone so it still shows offline. |
+
+<p align="center">
+  <img src="docs/screenshots/mentors.png" width="240" alt="Mentors filtered by career and distance, one number revealed after consent">
+  <img src="docs/screenshots/student-module.png" width="240" alt="Student completing a teacher's Marathi module">
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/module-builder.png" width="240" alt="Teacher module builder with quiz and price model">
+  <img src="docs/screenshots/teacher-earnings.png" width="240" alt="Teacher earnings paid out as pain.001">
+</p>
 
 <p align="center"><img src="docs/screenshots/exams.png" width="240" alt="Exams screen with ITI admission and polytechnic details"></p>
 
@@ -78,6 +90,8 @@ Eligibility, costs, payback months, distances and career ranking are computed by
 | **Dropout-risk flags** | Logistic regression (scikit-learn) with the top two reasons per student, e.g. "attendance fell 26% this term; an older sibling already left school to work". Trained on a synthetic class. |
 | **Talent flags** | High quiz score with strong marks. |
 | **Recommend to all eligible** | Pick a scheme and a path, see how many students qualify (and how many still need a document), send to all in one tap. Students who signed up and saved a profile are checked with the same rules as the demo class and receive the recommendation in their app. |
+| **Module builder** | Title, language, lesson text (spoken to students), up to 10 quiz questions with the correct answer marked, and a price model: free, per module or monthly subscription. |
+| **Earnings** | The teacher's share of module sales and a fixed amount per completed enrolment, both set in the `Assumptions` sheet (`teacher_share_of_module_sales`, `payout_per_completed_enrolment`). "Pay out" sends everything unpaid as one ISO 20022 pain.001 teacher payout. |
 
 ### Money layer (sandbox)
 
@@ -126,6 +140,7 @@ All figures are loaded from `raah-dataset.xlsx` at runtime. Editing a cell and s
 | `Stipend_Rates` | Minimum apprentice stipends used in lessons and quiz. |
 | `Training_Centres` | Nearest-centre lookup. |
 | `Courses` | Free courses per career; a course's fee can fill a plan's fee. |
+| `Mentors` | Synthetic demo mentors with career IDs, taluka, languages, what they help with and a phone number that is only revealed after the student accepts. |
 | `Exams` | Entrance tests and admission rounds: ITI admission (DVET), polytechnic (DTE), MHT-CET, MH Nursing CET, NEET-UG, NMMS and the Central Railway apprentice notice, with who can apply, selection, application fee by category, last cycle dates, usual timing and official site. |
 | `Assumptions` | Fare per km, study days per year, hostel cost per month, working days per month, low/high income factors, payback horizon, whether scholarships can be combined, months a monthly allowance is paid. |
 | `Plan_Inputs` | One row per career path: course months, months earning while training, fees, exam fees, materials, course tags, centre type and the exams on the path (`EX01; EX07`). Blank income cells are taken from `Careers_Income`. |
@@ -302,6 +317,9 @@ Interactive OpenAPI docs: <http://localhost:8000/docs>
 | `POST /api/chat/turn` | Next question plus validated profile fields from the conversation |
 | `POST /api/interests/match` | Closest career tags for free-text interests in any language |
 | `POST /api/chat/explain` | Model-written match reason, checked against the dataset's numbers |
+| `POST /api/mentors/{id}/request` · `GET /api/mentors/mine` · `GET /api/mentors/requests` | Accept-to-reveal mentor contact; teacher view of connections |
+| `POST /api/modules` · `GET /api/modules/mine` · `GET /api/modules/earnings` · `POST /api/modules/earnings/payout` | Teacher module builder, earnings and pain.001 payout |
+| `GET /api/modules` · `POST /api/modules/{id}/enrol` · `POST /api/modules/{id}/complete` | Student enrolment and quiz completion |
 | `POST /api/auth/otp/request` · `POST /api/auth/otp/verify` | Phone OTP login, returns a JWT |
 | `GET /api/auth/notifications` · `POST /api/auth/notifications/{id}/read` | Recommendations sent to the signed-in student |
 | `GET /api/auth/me` · `GET`/`PUT /api/auth/profile` · `DELETE /api/auth/me` | Account, saved profile, delete my data |
