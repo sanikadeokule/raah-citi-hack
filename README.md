@@ -194,6 +194,10 @@ Raah uses open-source models through any OpenAI-compatible chat API. Providers a
 
 **Grounded reasons** (`POST /api/chat/explain`). The server ranks careers with the same engine as the app, then gives the model only that career's facts: score breakdown, matched interests, entry path, net cost and payback from the dataset. Every number in the model's answer must appear in those facts, otherwise the template reason is returned.
 
+**Interest matching** (`POST /api/interests/match`). Students describe what they enjoy in their own words and language, for example "मला गाड्या दुरुस्त करायला आवडतं" (I like repairing vehicles). A multilingual embedding model maps the sentence to the closest career tags in the spreadsheet, here "fixing things" and "vehicles"; the matched tags appear as chips under the answer. Ranking still runs on tags, so it stays identical online and offline. Providers are tried in the order of `EMBED_PROVIDERS`: Ollama's `/api/embed` with `bge-m3` (run `ollama pull bge-m3` once), then `sentence-transformers` with `intfloat/multilingual-e5-small` if that package is installed. Without either, words are matched against the tags. Tag embeddings are cached per model and per tag list, so a tag edited in the spreadsheet is embedded again on the next request.
+
+<p align="center"><img src="docs/screenshots/interest-matching.png" width="240" alt="A Marathi answer mapped to the tags fixing things and vehicles"></p>
+
 **Fallback.** With no provider reachable, offline, or when the student taps "Use quick questions instead", the scripted questions take over and skip whatever the conversation already filled in. Nothing else in the app depends on a model.
 
 To use your local Ollama:
@@ -292,6 +296,7 @@ Interactive OpenAPI docs: <http://localhost:8000/docs>
 | `POST /api/partners/enrolments/{id}/complete` | Completion → teacher payout |
 | `GET /api/chat/status` | Whether a language model is reachable |
 | `POST /api/chat/turn` | Next question plus validated profile fields from the conversation |
+| `POST /api/interests/match` | Closest career tags for free-text interests in any language |
 | `POST /api/chat/explain` | Model-written match reason, checked against the dataset's numbers |
 | `POST /api/auth/otp/request` · `POST /api/auth/otp/verify` | Phone OTP login, returns a JWT |
 | `GET /api/auth/notifications` · `POST /api/auth/notifications/{id}/read` | Recommendations sent to the signed-in student |
