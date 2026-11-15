@@ -144,5 +144,18 @@
  "redo": "Redo",
  "save_audio_offline": "Save lesson audio for offline",
  "audio_saved": "Lesson audio saved on this phone",
- "device_voice_note": "Lessons are read by your phone's voice, which also works offline."
+ "device_voice_note": "Lessons are read by your phone's voice, which also works offline.",
+ "home_exams": "Exams",
+ "exams_intro": "Entrance tests and admission rounds for the paths in Raah, with who can apply, fees and when to apply. Dates change every year, so confirm on the official site.",
+ "exams_for_path": "Exams and admissions for this path",
+ "official_site": "Official site",
+ "leads_to": "Leads to",
+ "who_can_apply": "Who can apply",
+ "selection": "Selection",
+ "application_fee": "Application fee",
+ "when": "When",
+ "check_dates": "Dates change every year. Check the official site before applying.",
+ "fee_open": "open",
+ "fee_reserved": "reserved",
+ "free": "Free"
 }
