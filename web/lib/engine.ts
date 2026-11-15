@@ -94,3 +94,174 @@ export function eligibility(data: Data, profile: Profile, plan?: any, hostel?: b
   out.sort((a: any, b: any) => ORDER[a.status as SchemeStatus] - ORDER[b.status as SchemeStatus] || b.passed / Math.max(b.total, 1) - a.passed / Math.max(a.total, 1));
   return out;
 }
+
+export const A = (data: Data, key: string, d = 0): number => {
+  const a = data.assumptions?.[key];
+  return a && a.value !== null && a.value !== undefined ? a.value : d;
+};
+
+export function benefitValue(scheme: any, gender: string, years: number, fees: number) {
+  const b = scheme.benefit;
+  let low = 0, high = 0;
+  if (b.fee_pct) {
+    const pct = gender in b.fee_pct ? b.fee_pct[gender] : Math.max(...Object.values(b.fee_pct).map((v: any) => v || 0));
+    let part = ((pct || 0) / 100) * fees;
+    if (b.fee_cap !== null && b.fee_cap !== undefined) part = Math.min(part, b.fee_cap * Math.max(years, fees ? 1 : 0));
+    low += part; high += part;
+  }
+  if (b.per_year) { low += b.per_year.low * years; high += b.per_year.high * years; }
+  if (b.per_month) {
+    const m = b.months_per_year || 12;
+    low += b.per_month.low * m * years; high += b.per_month.high * m * years;
+  }
+  return { low: pyRound(low), high: pyRound(high) };
+}
+
+// Python's round() uses banker's rounding; match it so both engines agree to the rupee.
+export function pyRound(x: number) {
+  const f = Math.floor(x), d = x - f;
+  if (Math.abs(d - 0.5) < 1e-9) return f % 2 === 0 ? f : f + 1;
+  return Math.round(x);
+}
+
+export function planIncome(data: Data, plan: any, career: any, gender: string) {
+  const loF = A(data, "income_low_factor", 1), hiF = A(data, "income_high_factor", 1);
+  const ov = plan.income_override || {};
+  const inc = career.income;
+  if (ov.median !== null && ov.median !== undefined) {
+    const med = ov.median, src = "Plan_Inputs (your figure)";
+    return { low: ov.low ?? med * loF, median: med, high: ov.high ?? med * hiF, source: src, text: src, derived: ov.low == null };
+  }
+  if (!inc) return null;
+  if (inc.by_gender) {
+    const med = inc.by_gender[gender] ?? Math.min(...(Object.values(inc.by_gender) as number[]));
+    return { low: med * loF, median: med, high: med * hiF, source: career.income_type, text: career.income_text, derived: true };
+  }
+  if (inc.low !== inc.high) {
+    return { low: inc.low, median: (inc.low + inc.high) / 2, high: inc.high, source: career.income_type, text: career.income_text, derived: false };
+  }
+  const med = inc.low;
+  return { low: med * loF, median: med, high: med * hiF, source: career.income_type, text: career.income_text, derived: true };
+}
+
+function paybackAfter(net: number, gain: number, horizon: number): number | null {
+  if (net <= 0) return 0;
+  if (gain <= 0) return null;
+  const m = Math.ceil(net / gain);
+  return m <= horizon ? m : null;
+}
+
+export interface PlanOptions {
+  hostel?: boolean;
+  commute_km?: number | null;
+  scholarships?: string[] | null;
+  family_contribution?: number;
+  baseline?: "student" | "daily_wage";
+}
+
+export function computePlan(data: Data, profile: Profile, planId: string, opts: PlanOptions = {}) {
+  const plan = data.plans.find((p: any) => p.id === planId);
+  const career = data.careers.find((c: any) => c.id === plan.career_id);
+  const gender = profile.gender || "F";
+  const hostel = Boolean(opts.hostel);
+  const months = plan.course_months;
+  const years = months / 12;
+
+  const centres = plan.centre_type ? nearestCentres(data, profile, plan.centre_type, 3) : [];
+  let km: number;
+  if (opts.commute_km !== undefined && opts.commute_km !== null) km = Number(opts.commute_km);
+  else if (centres.length && centres[0].distance_km !== null) km = centres[0].distance_km;
+  else km = Number(profile.max_commute_km || 0);
+
+  const fees = plan.fees + plan.exam_fees;
+  let living: number, livingLabel: string;
+  if (hostel) { living = A(data, "hostel_cost_per_month") * months; livingLabel = "Hostel"; }
+  else { living = km * 2 * A(data, "fare_per_km") * A(data, "study_days_per_year") * years; livingLabel = "Travel"; }
+  const total = fees + plan.materials + living;
+
+  const elig = eligibility(data, profile, plan, hostel);
+  const possible = elig.filter((e: any) => e.status === "eligible" || e.status === "eligible_missing_docs");
+  const byId: Record<string, any> = Object.fromEntries(data.scholarships.map((s: any) => [s.id, s]));
+  const values: Record<string, { low: number; high: number }> = {};
+  for (const e of possible) values[e.id] = benefitValue(byId[e.id], gender, years, fees);
+  let chosen: string[] = opts.scholarships !== undefined && opts.scholarships !== null
+    ? opts.scholarships.filter((s) => s in values)
+    : possible.filter((e: any) => values[e.id].low > 0).map((e: any) => e.id);
+  if (!A(data, "stack_scholarships", 0) && chosen.length > 1) {
+    chosen = [chosen.reduce((best, s) => (values[s].low > values[best].low ? s : best), chosen[0])];
+  }
+  const schLow = chosen.reduce((a, s) => a + values[s].low, 0);
+  const schHigh = chosen.reduce((a, s) => a + values[s].high, 0);
+
+  const tr = career.training_income;
+  const stipendMonth = tr && plan.earn_months ? tr.low : 0;
+  const stipend = stipendMonth * plan.earn_months;
+
+  const net = total - schLow - stipend;
+  const income = planIncome(data, plan, career, gender);
+  const baselineMode = opts.baseline || "student";
+  let base = 0;
+  if (baselineMode === "daily_wage" && data.baseline) base = data.baseline.monthly[gender] || 0;
+  const horizon = Math.trunc(A(data, "payback_horizon_months", 120));
+  const fam = Number(opts.family_contribution ?? A(data, "default_family_contribution_per_month", 0));
+  const gap = Math.max(0, total - schLow - fam * months);
+
+  const pay: Record<string, any> = {};
+  if (income) {
+    for (const k of ["low", "median"] as const) {
+      const pm = paybackAfter(net, income[k] - base, horizon);
+      pay[k] = {
+        months_after_training: pm,
+        month_from_start: pm === null ? null : Math.trunc(months + plan.earn_months + pm),
+        monthly_gain: pyRound(income[k] - base),
+      };
+    }
+  }
+
+  const series: { month: number; median: number; low: number }[] = [];
+  let cumMed = 0, cumLow = 0;
+  const monthlyCost = months ? (total - schLow) / months : 0;
+  if (!months) { cumMed = cumLow = -(total - schLow); }
+  for (let m = 0; m <= horizon; m++) {
+    if (m > 0) {
+      if (m <= months) { cumMed -= monthlyCost; cumLow -= monthlyCost; }
+      else if (m <= months + plan.earn_months) { cumMed += stipendMonth; cumLow += stipendMonth; }
+      else if (income) { cumMed += income.median - base; cumLow += income.low - base; }
+    }
+    series.push({ month: m, median: pyRound(cumMed), low: pyRound(cumLow) });
+  }
+
+  return {
+    plan,
+    career,
+    inputs: { gender, hostel, commute_km: Math.round(km * 10) / 10, family_contribution: fam, baseline: baselineMode, scholarships: chosen },
+    costs: { course_fees: plan.fees, exam_fees: plan.exam_fees, materials: plan.materials, living: pyRound(living), living_label: livingLabel, total: pyRound(total) },
+    scholarship: {
+      low: schLow, high: schHigh, chosen,
+      options: possible.map((e: any) => ({ id: e.id, name: e.name, status: e.status, value: values[e.id], missing_docs: e.missing_docs })),
+    },
+    stipend: { per_month: stipendMonth, months: plan.earn_months, total: stipend, text: career.training_income_text },
+    net_cost: pyRound(net), family_gap: pyRound(gap), income, baseline_monthly: base, payback: pay, series, centres,
+    eligibility: elig,
+  };
+}
+
+export function haversine(lat1: number, lon1: number, lat2: number, lon2: number) {
+  const r = 6371, rad = Math.PI / 180;
+  const p1 = lat1 * rad, p2 = lat2 * rad, dp = p2 - p1, dl = (lon2 - lon1) * rad;
+  const a = Math.sin(dp / 2) ** 2 + Math.cos(p1) * Math.cos(p2) * Math.sin(dl / 2) ** 2;
+  return 2 * r * Math.asin(Math.sqrt(a));
+}
+
+export function nearestCentres(data: Data, profile: Profile, centreType: string | null, n = 3) {
+  const { lat, lon } = profile;
+  const out: any[] = [];
+  for (const c of data.centres) {
+    if (centreType && !String(c.type).toLowerCase().includes(centreType.toLowerCase())) continue;
+    let d: number | null = null;
+    if (lat != null && lon != null && c.lat != null) d = Math.round(haversine(lat, lon, c.lat, c.lon) * 10) / 10;
+    out.push({ ...c, distance_km: d, approximate: c.coord_source !== "exact" });
+  }
+  out.sort((a, b) => (a.distance_km === null ? 1 : 0) - (b.distance_km === null ? 1 : 0) || (a.distance_km ?? 0) - (b.distance_km ?? 0));
+  return out.slice(0, n);
+}
