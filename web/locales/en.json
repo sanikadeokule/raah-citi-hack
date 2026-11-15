@@ -197,5 +197,7 @@
  "payout_sent": "Payout of {p} sent as pain.001",
  "my_modules": "My modules",
  "module_stats": "{e} enrolled · {c} completed · {s} sales",
- "mentor_connections": "Students connected to mentors"
+ "mentor_connections": "Students connected to mentors",
+ "map_offline": "The map needs internet. Distances below work offline.",
+ "map_approx_note": "Centres without exact coordinates are placed at their taluka point, so the map and distances are approximate."
 }
