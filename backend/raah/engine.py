@@ -95,3 +95,183 @@ def eligibility(data: dict, profile: dict, plan: dict | None = None, hostel: boo
     order = {"eligible": 0, "eligible_missing_docs": 1, "need_info": 2, "not_eligible": 3}
     out.sort(key=lambda r: (order[r["status"]], -r["passed"] / max(r["total"], 1)))
     return out
+
+
+# ------------------------------------------------------------------ money
+
+def A(data, key, default=0):
+    a = data["assumptions"].get(key)
+    return a["value"] if a and a["value"] is not None else default
+
+
+def benefit_value(scheme: dict, gender: str, years: float, fees: float) -> dict:
+    b = scheme["benefit"]
+    low = high = 0.0
+    if b.get("fee_pct"):
+        pct = b["fee_pct"].get(gender) if gender in b["fee_pct"] else max(v or 0 for v in b["fee_pct"].values())
+        part = (pct or 0) / 100 * fees * 1.0
+        if b.get("fee_cap") is not None:
+            part = min(part, b["fee_cap"] * max(years, 1 if fees else 0))
+        low += part
+        high += part
+    if b.get("per_year"):
+        low += b["per_year"]["low"] * years
+        high += b["per_year"]["high"] * years
+    if b.get("per_month"):
+        m = b.get("months_per_year") or 12
+        low += b["per_month"]["low"] * m * years
+        high += b["per_month"]["high"] * m * years
+    return {"low": round(low), "high": round(high)}
+
+
+def plan_income(data: dict, plan: dict, career: dict, gender: str) -> dict | None:
+    lo_f, hi_f = A(data, "income_low_factor", 1), A(data, "income_high_factor", 1)
+    ov = plan.get("income_override") or {}
+    inc = career.get("income")
+    if ov.get("median") is not None:
+        med = ov["median"]
+        src = "Plan_Inputs (your figure)"
+        return {"low": ov.get("low") or med * lo_f, "median": med, "high": ov.get("high") or med * hi_f,
+                "source": src, "text": src, "derived": ov.get("low") is None}
+    if not inc:
+        return None
+    if inc.get("by_gender"):
+        med = inc["by_gender"].get(gender) or min(inc["by_gender"].values())
+        return {"low": med * lo_f, "median": med, "high": med * hi_f, "source": career["income_type"],
+                "text": career["income_text"], "derived": True}
+    if inc["low"] != inc["high"]:
+        return {"low": inc["low"], "median": (inc["low"] + inc["high"]) / 2, "high": inc["high"],
+                "source": career["income_type"], "text": career["income_text"], "derived": False}
+    med = inc["low"]
+    return {"low": med * lo_f, "median": med, "high": med * hi_f, "source": career["income_type"],
+            "text": career["income_text"], "derived": True}
+
+
+def payback_after(net: float, gain: float, horizon: int) -> int | None:
+    if net <= 0:
+        return 0
+    if gain <= 0:
+        return None
+    m = math.ceil(net / gain)
+    return m if m <= horizon else None
+
+
+def compute_plan(data: dict, profile: dict, plan_id: str, opts: dict | None = None) -> dict:
+    opts = opts or {}
+    plan = next(p for p in data["plans"] if p["id"] == plan_id)
+    career = next(c for c in data["careers"] if c["id"] == plan["career_id"])
+    gender = profile.get("gender") or "F"
+    hostel = bool(opts.get("hostel", False))
+    months = plan["course_months"]
+    years = months / 12
+
+    centres = nearest_centres(data, profile, plan.get("centre_type"), 3) if plan.get("centre_type") else []
+    if opts.get("commute_km") is not None:
+        km = float(opts["commute_km"])
+    elif centres and centres[0]["distance_km"] is not None:
+        km = centres[0]["distance_km"]
+    else:
+        km = float(profile.get("max_commute_km") or 0)
+
+    fees = plan["fees"] + plan["exam_fees"]
+    if hostel:
+        living = A(data, "hostel_cost_per_month") * months
+        living_label = "Hostel"
+    else:
+        living = km * 2 * A(data, "fare_per_km") * A(data, "study_days_per_year") * years
+        living_label = "Travel"
+    total = fees + plan["materials"] + living
+
+    elig = eligibility(data, profile, plan, hostel)
+    possible = [e for e in elig if e["status"] in ("eligible", "eligible_missing_docs")]
+    by_id = {s["id"]: s for s in data["scholarships"]}
+    values = {e["id"]: benefit_value(by_id[e["id"]], gender, years, fees) for e in possible}
+    if opts.get("scholarships") is not None:
+        chosen = [s for s in opts["scholarships"] if s in values]
+    else:
+        chosen = [e["id"] for e in possible if values[e["id"]]["low"] > 0]
+    if not A(data, "stack_scholarships", 0) and len(chosen) > 1:
+        chosen = [max(chosen, key=lambda s: values[s]["low"])]
+    sch_low = sum(values[s]["low"] for s in chosen)
+    sch_high = sum(values[s]["high"] for s in chosen)
+
+    tr = career.get("training_income")
+    stipend_month = tr["low"] if (tr and plan["earn_months"]) else 0
+    stipend = stipend_month * plan["earn_months"]
+
+    net = total - sch_low - stipend
+    income = plan_income(data, plan, career, gender)
+    baseline_mode = opts.get("baseline", "student")
+    base = 0
+    if baseline_mode == "daily_wage" and data.get("baseline"):
+        base = data["baseline"]["monthly"].get(gender, 0)
+    horizon = int(A(data, "payback_horizon_months", 120))
+    fam = float(opts.get("family_contribution", A(data, "default_family_contribution_per_month", 0)))
+    gap = max(0, total - sch_low - fam * months)
+
+    pay = {}
+    if income:
+        for k in ("low", "median"):
+            pm = payback_after(net, income[k] - base, horizon)
+            pay[k] = {"months_after_training": pm,
+                      "month_from_start": None if pm is None else int(months + plan["earn_months"] + pm),
+                      "monthly_gain": round(income[k] - base)}
+
+    # cumulative cash, month by month (median income, low scholarship)
+    series = []
+    cum_med = cum_low = 0.0
+    monthly_cost = (total - sch_low) / months if months else 0
+    if not months:
+        cum_med = cum_low = -(total - sch_low)
+    for m in range(0, horizon + 1):
+        if m > 0:
+            if m <= months:
+                cum_med -= monthly_cost
+                cum_low -= monthly_cost
+            elif m <= months + plan["earn_months"]:
+                cum_med += stipend_month
+                cum_low += stipend_month
+            elif income:
+                cum_med += income["median"] - base
+                cum_low += income["low"] - base
+        series.append({"month": m, "median": round(cum_med), "low": round(cum_low)})
+
+    return {
+        "plan": plan, "career": {k: career[k] for k in ("id", "name", "category", "income_text", "income_type", "sources", "last_checked", "training_income_text")},
+        "inputs": {"gender": gender, "hostel": hostel, "commute_km": round(km, 1), "family_contribution": fam,
+                   "baseline": baseline_mode, "scholarships": chosen},
+        "costs": {"course_fees": plan["fees"], "exam_fees": plan["exam_fees"], "materials": plan["materials"],
+                  "living": round(living), "living_label": living_label, "total": round(total)},
+        "scholarship": {"low": sch_low, "high": sch_high, "chosen": chosen, "options": [
+            {"id": e["id"], "name": e["name"], "status": e["status"], "value": values[e["id"]],
+             "missing_docs": e["missing_docs"]} for e in possible]},
+        "stipend": {"per_month": stipend_month, "months": plan["earn_months"], "total": stipend,
+                    "text": career.get("training_income_text")},
+        "net_cost": round(net), "family_gap": round(gap), "income": income,
+        "baseline_monthly": base, "payback": pay, "series": series, "centres": centres,
+        "eligibility": elig,
+    }
+
+
+# ------------------------------------------------------------------ centres
+
+def haversine(lat1, lon1, lat2, lon2) -> float:
+    r = 6371.0
+    p1, p2 = math.radians(lat1), math.radians(lat2)
+    dp, dl = p2 - p1, math.radians(lon2 - lon1)
+    a = math.sin(dp / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dl / 2) ** 2
+    return 2 * r * math.asin(math.sqrt(a))
+
+
+def nearest_centres(data: dict, profile: dict, centre_type: str | None, n: int = 3) -> list[dict]:
+    lat, lon = profile.get("lat"), profile.get("lon")
+    out = []
+    for c in data["centres"]:
+        if centre_type and centre_type.lower() not in str(c["type"]).lower():
+            continue
+        d = None
+        if lat is not None and lon is not None and c["lat"] is not None:
+            d = round(haversine(lat, lon, c["lat"], c["lon"]), 1)
+        out.append({**c, "distance_km": d, "approximate": c["coord_source"] != "exact"})
+    out.sort(key=lambda c: (c["distance_km"] is None, c["distance_km"] or 0))
+    return out[:n]
