@@ -55,11 +55,13 @@ Eligibility, costs, payback months, distances and career ranking are computed by
 | **Scholarship check** | 17 central and Maharashtra schemes checked rule by rule (✅ ❌ ❔ 📄). Names the missing document and where to get it (tehsil office, Aaple Sarkar Seva Kendra, school). |
 | **Nearest training centres** | 3 nearest Govt ITIs or nursing schools for the chosen path with distance, fees and source. |
 | **Parent voice note** | A short message for parents in the chosen language with the plan's numbers, played aloud and shareable on WhatsApp as text or as an audio file. With BHASHINI keys the file is generated speech (WAV); without them the student records the message in their own voice. On phones the file goes to the share sheet (WhatsApp, Bluetooth, Files); elsewhere it downloads. |
-| **Audio lessons + quiz** | "What is an ITI?", "What is an apprenticeship?", "How do scholarships work?", spoken on the device, plus a 5-question quiz. Facts inside lessons and quiz (stipend rates, income limits, ITI count) come from the dataset. |
+| **Audio lessons + quiz** | "What is an ITI?", "What is an apprenticeship?", "How do scholarships work?" plus a 5-question quiz. Facts inside lessons and quiz (stipend rates, income limits, ITI count) come from the dataset. With BHASHINI keys, "Save lesson audio for offline" stores each lesson as an audio file on the phone; the file is tied to the exact lesson text, so after a dataset edit the new figures are spoken rather than an old recording. Without keys the phone's own voice reads them, which also works offline. |
 | **Apprenticeships** | 31 live NAPS listings in Pune district and 17 Central Railway seat lines, searchable, with stipend and apply link. |
 | **Offline + sync** | Installable PWA. Dataset, profile, plan, lessons and quiz answers work offline; queued actions sync on reconnect with a "N changes synced" toast. |
 | **Delete my data** | One tap clears everything stored on the phone. |
 | **Teacher recommendations** | When a teacher recommends a scheme, the student sees it on the home screen with the plan it was for and any missing document. "Check" opens the scholarship screen with that scheme first. Cached on the phone so it still shows offline. |
+
+<p align="center"><img src="docs/screenshots/lessons-offline.png" width="240" alt="Audio lessons saved on the phone for offline listening"></p>
 
 <p align="center"><img src="docs/screenshots/parent-voice-note.png" width="240" alt="Message for parents with a recorded voice note ready to share"></p>
 
@@ -261,7 +263,7 @@ npm run build                                             # writes web/out, whic
 
 ### Voice
 
-With `BHASHINI_USER_ID` and `BHASHINI_API_KEY` in `backend/.env`, text-to-speech and speech-to-text go through BHASHINI. Without them the app uses the browser's built-in voices (`mr-IN`, `hi-IN`, `en-IN`).
+With `BHASHINI_USER_ID` and `BHASHINI_API_KEY` in `backend/.env`, text-to-speech and speech-to-text go through BHASHINI. Generated speech is cached on the server in `RAAH_TTS_CACHE` (default `backend/data/tts`), so each lesson or message is synthesised once, and lesson audio can be saved on the phone for offline listening. Without keys the app uses the browser's built-in voices (`mr-IN`, `hi-IN`, `en-IN`).
 
 ### ISO 20022 validation
 
