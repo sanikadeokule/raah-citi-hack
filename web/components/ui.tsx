@@ -1,11 +1,22 @@
 "use client";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { API, LANGS, useApp } from "@/lib/store";
 
-export function Shell({ title, back = "/", children }: { title?: string; back?: string | null; children: React.ReactNode }) {
-  const { t, online, toast, lang, setLang, data } = useApp();
+export function Shell({ title, back = "/", role = "any", publicPage = false, children }: {
+  title?: string; back?: string | null; role?: "any" | "teacher"; publicPage?: boolean; children: React.ReactNode;
+}) {
+  const { t, online, toast, lang, setLang, data, auth, authReady, signOut } = useApp();
+  const router = useRouter();
+  const path = usePathname();
+  const needsLogin = !publicPage && authReady && !auth;
+  useEffect(() => {
+    if (needsLogin) router.replace(`/login/?next=${encodeURIComponent(path)}${role === "teacher" ? "&role=teacher" : ""}`);
+  }, [needsLogin, path, role, router]);
+  const wrongRole = !publicPage && auth && role === "teacher" && auth.user.role !== "teacher";
+  const ready = publicPage || (authReady && auth);
   return (
     <div className="mx-auto min-h-screen max-w-md bg-[var(--bg)] pb-24">
       <header className="sticky top-0 z-20 flex items-center gap-2 bg-[var(--brand)] px-4 py-3 text-white shadow">
@@ -17,9 +28,23 @@ export function Shell({ title, back = "/", children }: { title?: string; back?: 
           className="rounded bg-white/15 px-2 py-1 text-sm">
           {LANGS.map((l) => <option key={l.code} value={l.code} className="text-black">{l.label}</option>)}
         </select>
+        {auth && (
+          <button onClick={async () => { await signOut(); router.replace("/login/"); }} title={`${auth.user.name ?? ""} ${auth.user.phone} · ${t("logout")}`}
+            className="grid h-8 w-8 place-items-center rounded-full bg-white/15 text-sm font-bold" aria-label={t("logout")}>
+            {(auth.user.name || auth.user.role)[0].toUpperCase()}
+          </button>
+        )}
       </header>
       {!online && <div className="bg-amber-500 px-4 py-2 text-center text-sm font-medium text-black">📴 {t("offline_banner")}</div>}
-      <main className="space-y-4 p-4">{data ? children : <Loading />}</main>
+      <main className="space-y-4 p-4">
+        {!ready ? <Loading /> : wrongRole ? (
+          <Card>
+            <p>🔒 {t("teacher_only")}</p>
+            <button onClick={async () => { await signOut(); router.replace(`/login/?next=${encodeURIComponent(path)}&role=teacher`); }}
+              className="mt-3 w-full rounded-xl bg-[var(--brand)] py-3 font-semibold text-white">{t("sign_in_teacher")}</button>
+          </Card>
+        ) : data || publicPage ? children : <Loading />}
+      </main>
       {toast && (
         <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full bg-black/85 px-5 py-3 text-sm text-white shadow-lg">{toast}</div>
       )}
