@@ -14,7 +14,31 @@ from functools import lru_cache
 import numpy as np
 from fastapi import APIRouter
 from pydantic import BaseModel
-from sklearn.linear_model import LogisticRegression
+
+try:
+    from sklearn.linear_model import LogisticRegression
+except ImportError:  # e.g. Windows Application Control blocking sklearn's compiled DLLs
+    LogisticRegression = None
+
+
+class _NumpyLogReg:
+    """Plain NumPy logistic regression (gradient descent), used when scikit-learn cannot load."""
+
+    def __init__(self, max_iter: int = 3000, lr: float = 0.1):
+        self.max_iter, self.lr = max_iter, lr
+
+    def fit(self, X, y):
+        w, b = np.zeros(X.shape[1]), 0.0
+        for _ in range(self.max_iter):
+            p = 1 / (1 + np.exp(-(X @ w + b)))
+            w -= self.lr * (X.T @ (p - y) / len(y) + w / len(y))
+            b -= self.lr * float(np.mean(p - y))
+        self.coef_, self.intercept_ = np.array([w]), np.array([b])
+        return self
+
+    def predict_proba(self, X):
+        p = 1 / (1 + np.exp(-(np.asarray(X) @ self.coef_[0] + self.intercept_[0])))
+        return np.column_stack([1 - p, p])
 
 from . import dataset, engine
 
@@ -87,7 +111,8 @@ def model():
         z = -4.0 + 1.1 * row[0] + 0.6 * row[1] + 1.2 * row[2] + 0.5 * row[3] + 0.8 * row[4] + 1.0 * row[5] + 0.9 * row[6]
         X.append(row)
         y.append(int(rng.random() < 1 / (1 + np.exp(-z))))
-    return LogisticRegression(max_iter=1000).fit(np.array(X), np.array(y))
+    model_cls = LogisticRegression if LogisticRegression is not None else _NumpyLogReg
+    return model_cls(max_iter=1000 if LogisticRegression is not None else 3000).fit(np.array(X), np.array(y))
 
 
 def flags(s: dict) -> dict:
