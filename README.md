@@ -54,12 +54,14 @@ Eligibility, costs, payback months, distances and career ranking are computed by
 | **Side-by-side compare** | Any two paths in two columns plus a cumulative cash chart with break-even marked. |
 | **Scholarship check** | 17 central and Maharashtra schemes checked rule by rule (✅ ❌ ❔ 📄). Names the missing document and where to get it (tehsil office, Aaple Sarkar Seva Kendra, school). |
 | **Nearest training centres** | 3 nearest Govt ITIs or nursing schools for the chosen path with distance, fees and source. |
-| **Parent voice note** | A short message for parents in the chosen language with the plan's numbers, played aloud and shareable on WhatsApp. |
+| **Parent voice note** | A short message for parents in the chosen language with the plan's numbers, played aloud and shareable on WhatsApp as text or as an audio file. With BHASHINI keys the file is generated speech (WAV); without them the student records the message in their own voice. On phones the file goes to the share sheet (WhatsApp, Bluetooth, Files); elsewhere it downloads. |
 | **Audio lessons + quiz** | "What is an ITI?", "What is an apprenticeship?", "How do scholarships work?", spoken on the device, plus a 5-question quiz. Facts inside lessons and quiz (stipend rates, income limits, ITI count) come from the dataset. |
 | **Apprenticeships** | 31 live NAPS listings in Pune district and 17 Central Railway seat lines, searchable, with stipend and apply link. |
 | **Offline + sync** | Installable PWA. Dataset, profile, plan, lessons and quiz answers work offline; queued actions sync on reconnect with a "N changes synced" toast. |
 | **Delete my data** | One tap clears everything stored on the phone. |
 | **Teacher recommendations** | When a teacher recommends a scheme, the student sees it on the home screen with the plan it was for and any missing document. "Check" opens the scholarship screen with that scheme first. Cached on the phone so it still shows offline. |
+
+<p align="center"><img src="docs/screenshots/parent-voice-note.png" width="240" alt="Message for parents with a recorded voice note ready to share"></p>
 
 <p align="center"><img src="docs/screenshots/teacher-recommendation.png" width="240" alt="Home screen with a scholarship recommendation from the teacher"></p>
 
