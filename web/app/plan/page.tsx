@@ -9,6 +9,7 @@ import { computePlan, inr, type PlanOptions } from "@/lib/engine";
 import { useApp } from "@/lib/store";
 import { coursesFor } from "@/lib/helpers";
 import { PlanExams } from "@/components/exams";
+import { CentreMap } from "@/components/centremap";
 
 function PlanView() {
   const id = useSearchParams().get("id") || "PLN01";
@@ -55,10 +56,11 @@ function PlanView() {
       {r.centres.length > 0 && (
         <Card>
           <h2 className="mb-2 text-lg font-bold">📍 {t("nearest_centres")}</h2>
+          <CentreMap centres={r.centres} home={{ lat: profile?.lat, lon: profile?.lon, label: profile?.taluka || t("your_profile") }} />
           <ul className="space-y-2">
-            {r.centres.map((c: any) => (
+            {r.centres.map((c: any, i: number) => (
               <li key={c.id} className="rounded-xl bg-[var(--bg)] p-3 text-sm">
-                <div className="flex justify-between gap-2"><b>{c.name}</b><span className="whitespace-nowrap">{c.distance_km ?? "—"} km</span></div>
+                <div className="flex justify-between gap-2"><b><span className="mr-1 inline-grid h-5 w-5 place-items-center rounded-full bg-[var(--brand)] text-xs text-white">{i + 1}</span>{c.name}</b><span className="whitespace-nowrap">{c.distance_km ?? "—"} km</span></div>
                 <div className="text-xs text-[var(--muted)]">{c.address} · {c.type}{c.approximate && <> · <Badge tone="amber">{t("approx_distance")}</Badge></>}</div>
                 <div className="text-xs text-[var(--muted)]">Fees: {c.fees_text}</div>
                 <Source url={c.source} date={c.last_checked} />
