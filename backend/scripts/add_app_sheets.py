@@ -44,15 +44,30 @@ SHEETS["Plan_Inputs"] = (
     ["Plan ID", "Career ID", "Path shown to student", "Steps (use ; between steps)", "Course months",
      "Earning-while-training months", "Course fees total (₹)", "Exam / admission fees (₹)", "Materials / tools (₹)",
      "Linked course ID", "Course tags", "Centre type", "Income low (₹/month)", "Income median (₹/month)",
-     "Income high (₹/month)", "Fee source / status"],
+     "Income high (₹/month)", "Fee source / status", "Exams / admissions (IDs, use ;)"],
     [
         ["PLN01", "CAR25", "ANM nursing (after Class 12)", "Class 11-12 (any stream); ANM course at an MSBNPE school (2 yrs); Register with Maharashtra Nursing Council; Job: sub-centre / hospital", 48, 0, 80000, 3000, 6000, None, "post_matric; nursing_diploma", "Nursing school (ANM)", None, None, None, EST],
         ["PLN02", "CAR32", "B.Sc degree (govt / aided college)", "Class 11-12 science; 3-year B.Sc; Job or further study", 60, 0, 30000, 3000, 6000, None, "post_matric; ug; science_degree", None, None, None, None, EST],
-        ["PLN03", "CAR01", "Electrician via Govt ITI", "Govt ITI Electrician (2 yrs); NAPS / railway apprenticeship (1 yr, paid); Job: electrician / MSEDCL / industry", 24, 12, 4000, 1000, 5000, None, "post_matric; iti_govt", "Government ITI", None, None, None, EST],
-        ["PLN04", "CAR24", "GNM nursing (after Class 12)", "Class 11-12; GNM diploma (3 yrs); Register as nurse; Job: hospital / NORCET", 60, 0, 180000, 5000, 8000, None, "post_matric; nursing_diploma", "Nursing school (GNM)", None, None, None, EST],
+        ["PLN03", "CAR01", "Electrician via Govt ITI", "Govt ITI Electrician (2 yrs); NAPS / railway apprenticeship (1 yr, paid); Job: electrician / MSEDCL / industry", 24, 12, 4000, 1000, 5000, None, "post_matric; iti_govt", "Government ITI", None, None, None, EST, "EX01; EX07"],
+        ["PLN04", "CAR24", "GNM nursing (after Class 12)", "Class 11-12; GNM diploma (3 yrs); Register as nurse; Job: hospital / NORCET", 60, 0, 180000, 5000, 8000, None, "post_matric; nursing_diploma", "Nursing school (GNM)", None, None, None, EST, "EX04"],
         ["PLN05", "CAR34", "Beautician (short skill course)", "Free Skill India / NCERT beauty course; Practice in a salon; Own salon / home service", 4, 0, 0, 0, 5000, "CRS19", "skill_short", None, None, None, None, EST],
         ["PLN06", "CAR33", "Tailoring (short course + own work)", "Skill India tailoring course; Buy a sewing machine; Own tailoring work", 3, 0, 0, 0, 10000, None, "skill_short", None, None, None, None, EST],
         ["PLN07", "CAR35", "Mobile phone repair", "Free SIDH Mobile Phone Hardware Repair course; Work in a repair shop; Own shop", 3, 0, None, 0, 8000, "CRS03", "skill_short", None, None, None, None, EST],
+    ],
+)
+
+# ---------------------------------------------------------------- Exams
+# Entrance tests and admission rounds; Plan_Inputs links them by ID.
+SHEETS["Exams"] = (
+    ['ID', 'Exam / admission', 'Conducted by', 'Leads to', 'Who can apply', 'Selection', 'Application fee (Open / General)', 'Application fee (Reserved)', 'Fee note', 'Last cycle dates', 'Usual timing', 'Official site', 'Source', 'Last checked'],
+    [
+        ['EX01', 'Maharashtra ITI admission (CAP)', 'Directorate of Vocational Education & Training (DVET)', 'Govt and private ITI trades (1-2 yrs)', 'Class 10 pass for most trades; some trades accept Class 8', 'Merit list from Class 10 marks; no entrance test', '₹150', '₹100', 'Out-of-state ₹300; NRI ₹500', '2026 session: applications from 21 May 2026; trade and institute choices from 1 Jun 2026', 'May-July every year', 'https://admission.dvet.gov.in', 'https://www.freepressjournal.in/education/maharashtra-iti-admissions-for-august-2026-session-begin-may-21-over-157-lakh-seats-available-across-1004-institutes', '2026-11-15'],
+        ['EX02', 'Polytechnic diploma admission (post-SSC)', 'Directorate of Technical Education (DTE), Maharashtra', '3-year engineering diploma at a polytechnic', 'Class 10 pass with at least 35%', 'Merit list from Class 10 marks; no entrance test', '₹400', '₹300', None, '2025-26: registration 20 May-30 Jun 2025; provisional merit list 2 Jul 2025', 'May-July every year', 'https://dte.maharashtra.gov.in', 'https://www.careerpower.in/school/application-form/dte-maharashtra-diploma-admission-2025-26', '2026-11-15'],
+        ['EX03', 'MHT-CET (PCM / PCB)', 'State Common Entrance Test Cell, Maharashtra', 'B.E./B.Tech, B.Pharm, B.Sc Agriculture and allied degrees', 'Class 12 with Physics, Chemistry and Maths or Biology; 45% (40% reserved); no age limit', 'Computer-based entrance test', '₹1,300', '₹1,000', 'Reserved fee for Maharashtra candidates only; late fee ₹500', '2027 cycle (expected): Session 1 PCM Dec 2026, PCB Mar 2027; Session 2 May 2027', 'Registration Nov-Jan; exam Dec-May', 'https://cetcell.mahacet.org', 'https://engineering.careers360.com/articles/mht-cet-2026-registration-fee-revised-updated-charges-category-wise-breakdown', '2026-11-15'],
+        ['EX04', 'MH Nursing CET', 'State Common Entrance Test Cell, Maharashtra', 'B.Sc Nursing (4 yrs) and GNM (3 yrs)', 'Class 12 with English, Physics, Chemistry, Biology; B.Sc Nursing PCB 45% (40% reserved); GNM 45%; age 17+ (GNM up to 35)', 'Computer-based test, 100 questions, 90 minutes', '₹1,300', '₹1,000', 'PwD, orphan and other-gender candidates ₹1,000', '2026: registration 24 Jan-24 Feb 2026; exam 6-7 May 2026', 'Registration Jan-Feb; exam May', 'https://cetcell.mahacet.org', 'https://cetcell.mahacet.org/wp-content/uploads/2023/12/Nursing-CET-2026-brochure-1.pdf', '2026-11-15'],
+        ['EX05', 'NEET-UG', 'National Testing Agency (NTA)', 'MBBS, BDS, BAMS/BHMS and other medical degrees', 'Class 12 with Physics, Chemistry, Biology and English', 'Pen-and-paper national entrance test', '₹1,700', '₹1,000', 'EWS / OBC-NCL ₹1,600; SC/ST/PwBD ₹1,000', '2026: apply by 8 Mar 2026; exam 3 May 2026', 'Registration Feb-Mar; exam May', 'https://neet.nta.nic.in', 'https://www.freepressjournal.in/education/neet-ug-2026-registration-process-starts-check-details-here', '2026-11-15'],
+        ['EX06', 'NMMS scholarship exam (Class 8)', 'Maharashtra State Council of Examination (MSCE), Pune', 'National Means-cum-Merit Scholarship, ₹12,000 a year for Classes 9-12', "Regular Class 8 student in a govt, aided or local-body school; 55% in Class 7 (50% SC/ST); parents' income up to ₹3,50,000 a year", 'Written test (mental ability + scholastic aptitude)', None, None, 'Fee is in the yearly MSCE notification', '2026-27 exam: 20 Dec 2026 (2025-26 exam was 28 Dec 2025)', 'Apply Sep-Oct through the school; exam December', 'https://www.mscepune.in', 'https://school.careers360.com/articles/nmms-maharashtra', '2026-11-15'],
+        ['EX07', 'Central Railway Act Apprentice (RRC/CR)', 'Railway Recruitment Cell, Central Railway', '1-year paid apprenticeship in railway workshops and depots', 'ITI certificate in the trade + Class 10 with 50%; age 15-24 (SC/ST +5, OBC +3, PwBD +10)', 'Merit = average of Class 10 % and ITI %; no exam', '₹100', '₹0', 'SC/ST/PwBD and women apply free', '2025: notice RRC/CR/AA/2025 dated 12 Aug 2025, closed 11 Sep 2025', 'Notice every year, usually Aug-Sep', 'https://www.rrccr.com', 'https://www.rrccr.com/rrwc/Files/52e94fca-1737-430a-aa9e-211048dc5ff5.pdf', '2026-11-15'],
     ],
 )
 
@@ -243,6 +258,7 @@ def main(path):
             "Career_Profile": "Career_Profile - interest tags, minimum class and local demand used to rank careers.",
             "Talukas": "Talukas - approximate taluka points, used for distance only when a centre has no Lat/Lon.",
             "Demo_Students": "Demo_Students - synthetic hero profiles (Priya etc.) for the demo.",
+            "Exams": "Exams - entrance tests and admission rounds (fee, who can apply, last dates, official site). Plan_Inputs links them by ID in 'Exams / admissions (IDs, use ;)'; they show as a step in the student's path and on the Exams screen.",
         }
         for n in added:
             rd.append([notes.get(n, n)])
