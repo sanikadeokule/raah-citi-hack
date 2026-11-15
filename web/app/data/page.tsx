@@ -8,7 +8,7 @@ export default function DataPage() {
   const counts: [string, number][] = [
     ["Scholarships", data?.scholarships.length], ["Eligibility rules", data?.scholarships.reduce((a: number, s: any) => a + s.rules.length, 0)],
     ["Careers", data?.careers.length], ["Cost plans", data?.plans.length], ["Training centres", data?.centres.length],
-    ["NAPS listings", data?.naps.length], ["Railway seats", data?.railway.length], ["Courses", data?.courses.length],
+    ["NAPS listings", data?.naps.length], ["Railway seats", data?.railway.length], ["Courses", data?.courses.length], ["Exams", data?.exams?.length],
   ];
   return (
     <Shell title={t("home_data")} publicPage>
