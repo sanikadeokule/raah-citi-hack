@@ -20,6 +20,8 @@ from .auth import current_user, log_sync, save_profile
 from .auth import router as auth_router
 from .chat import router as chat_router
 from .embed import router as embed_router
+from .mentors import router as mentors_router
+from .modules import router as modules_router
 from .money import router as money_router
 from .partners import router as partners_router
 from .teacher import router as teacher_router
@@ -140,6 +142,8 @@ app.include_router(embed_router)
 app.include_router(voice_router)
 app.include_router(teacher_router)
 app.include_router(money_router)
+app.include_router(mentors_router)
+app.include_router(modules_router)
 app.include_router(partners_router)
 
 # ------------------------------------------------------------------ static web app (Next.js export)
