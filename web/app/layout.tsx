@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   description: "Career guidance with cost, payback and scholarships for rural students",
   manifest: "/manifest.webmanifest",
 };
-export const viewport: Viewport = { width: "device-width", initialScale: 1, themeColor: "#0f6b5c" };
+export const viewport: Viewport = { width: "device-width", initialScale: 1, themeColor: "#1b3a6b" };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
