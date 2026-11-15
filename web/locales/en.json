@@ -141,5 +141,8 @@
  "stop_recording": "Stop recording",
  "share_audio": "Share audio",
  "download_audio": "Download",
- "redo": "Redo"
+ "redo": "Redo",
+ "save_audio_offline": "Save lesson audio for offline",
+ "audio_saved": "Lesson audio saved on this phone",
+ "device_voice_note": "Lessons are read by your phone's voice, which also works offline."
 }
