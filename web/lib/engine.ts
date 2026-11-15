@@ -265,3 +265,70 @@ export function nearestCentres(data: Data, profile: Profile, centreType: string 
   out.sort((a, b) => (a.distance_km === null ? 1 : 0) - (b.distance_km === null ? 1 : 0) || (a.distance_km ?? 0) - (b.distance_km ?? 0));
   return out.slice(0, n);
 }
+
+const tokens = (items: any[]) => {
+  const out = new Set<string>();
+  for (const it of items || []) for (const w of String(it).toLowerCase().replace(/-/g, " ").split(/\s+/)) if (w.length > 2) out.add(w);
+  return out;
+};
+
+export function rankCareers(data: Data, profile: Profile, n = 5) {
+  const interests = tokens(profile.interests);
+  const phrases = new Set<string>((profile.interests || []).map((i: string) => String(i).trim().toLowerCase()));
+  const cls = profile.class || 10;
+  const plansByCareer: Record<string, any> = Object.fromEntries(data.plans.map((p: any) => [p.career_id, p]));
+  const fam = profile.family_income_annual || 0;
+  const scored = data.careers.map((c: any) => {
+    const tags = tokens(c.tags);
+    const tagPhrases = new Set<string>((c.tags || []).map((t: string) => String(t).trim().toLowerCase()));
+    const exact = [...phrases].filter((p) => tagPhrases.has(p));
+    const loose = [...phrases].filter((p) => !exact.includes(p) && [...tokens([p])].some((t) => tags.has(t)));
+    const interest = phrases.size ? (exact.length + 0.5 * loose.length) / phrases.size : 0;
+    void interests;
+    const minC = c.min_class || 0;
+    const elig = cls >= minC ? 1.0 : minC - cls <= 2 ? 0.7 : 0.3;
+    let afford = 0.5;
+    const p = plansByCareer[c.id];
+    if (p) {
+      const cost = p.fees + p.exam_fees + p.materials;
+      afford = cost <= 0.25 * fam ? 1.0 : cost <= fam ? 0.6 : 0.2;
+    }
+    const demand = (c.demand || 3) / 5;
+    const score = 0.5 * interest + 0.2 * elig + 0.2 * afford + 0.1 * demand;
+    return {
+      career: c, score: Math.round(score * 1000) / 1000, plan_id: p ? p.id : null,
+      breakdown: { interest: Math.round(interest * 100) / 100, eligibility: elig, affordability: afford, demand: Math.round(demand * 100) / 100 },
+      matched: [...exact.sort(), ...loose.sort()],
+    };
+  });
+  scored.sort((a: any, b: any) => b.score - a.score);
+  const top = scored.slice(0, n);
+  for (const flag of ["vocational", "non_stem"]) {
+    if (!top.some((s: any) => s.career.flags[flag])) {
+      const extra = scored.slice(n).find((s: any) => s.career.flags[flag]);
+      if (extra) { top[top.length - 1] = extra; top.sort((a: any, b: any) => b.score - a.score); }
+    }
+  }
+  return top.map((s: any) => ({ ...s, why: whyLine(s) }));
+}
+
+export function whyLine(s: any) {
+  const parts: string[] = [];
+  if (s.matched.length) parts.push("matches your interest in " + s.matched.slice(0, 3).join(", "));
+  if (s.breakdown.affordability >= 1) parts.push("low cost for your family");
+  if (s.breakdown.demand >= 0.8) parts.push("many openings near Pune");
+  if (s.career.flags.vocational) parts.push("start earning sooner");
+  return parts.length ? "Fits you: " + parts.join("; ") : "A different option worth knowing about";
+}
+
+export function inr(v: number | null | undefined) {
+  if (v === null || v === undefined || !Number.isFinite(v)) return "—";
+  const n = Math.round(v);
+  const s = String(Math.abs(n));
+  let out = s;
+  if (s.length > 3) {
+    const head = s.slice(0, -3), tail = s.slice(-3);
+    out = head.replace(/\B(?=(\d{2})+(?!\d))/g, ",") + "," + tail;
+  }
+  return (n < 0 ? "-₹" : "₹") + out;
+}
