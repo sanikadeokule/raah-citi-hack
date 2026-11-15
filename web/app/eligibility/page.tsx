@@ -1,6 +1,6 @@
 "use client";
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Card, Shell } from "@/components/ui";
 import { SchemeResult } from "@/components/plan";
 import { eligibility } from "@/lib/engine";
@@ -9,11 +9,19 @@ import { useApp } from "@/lib/store";
 export default function EligibilityPage() {
   const { data, profile, t } = useApp();
   const [planId, setPlanId] = useState<string>("");
+  const [focus, setFocus] = useState<string | null>(null);
+  // a teacher's recommendation links here with ?scheme=…&plan=…; show that scheme first and open
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search);
+    if (q.get("plan")) setPlanId(q.get("plan")!);
+    setFocus(q.get("scheme"));
+  }, []);
   const list = useMemo(() => {
     if (!data || !profile) return [];
     const plan = data.plans.find((p: any) => p.id === planId);
-    return eligibility(data, profile, plan);
-  }, [data, profile, planId]);
+    const all = eligibility(data, profile, plan);
+    return focus ? [...all.filter((e: any) => e.id === focus), ...all.filter((e: any) => e.id !== focus)] : all;
+  }, [data, profile, planId, focus]);
   const counts = list.reduce((a: any, e: any) => ({ ...a, [e.status]: (a[e.status] || 0) + 1 }), {});
   return (
     <Shell title={t("eligibility")}>
@@ -29,7 +37,7 @@ export default function EligibilityPage() {
         </div>
       </Card>
       <div className="space-y-2">
-        {list.map((e: any, i: number) => <SchemeResult key={e.id} e={e} open={i === 0} />)}
+        {list.map((e: any, i: number) => <SchemeResult key={`${e.id}-${focus}`} e={e} open={i === 0} />)}
       </div>
     </Shell>
   );
