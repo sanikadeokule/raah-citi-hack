@@ -6,10 +6,10 @@ import { inr } from "@/lib/engine";
 import { API, useApp } from "@/lib/store";
 import { getKV } from "@/lib/db";
 
-const post = (u: string, b: any) => fetch(`${API}${u}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(b) }).then((r) => r.json());
 
 export default function Money() {
-  const { data, profile, t } = useApp();
+  const { data, profile, t, authFetch, auth } = useApp();
+  const post = (u: string, b: any) => authFetch(u, { method: "POST", body: JSON.stringify(b) }).then((r) => r.json());
   const [consent, setConsent] = useState<any>(null);
   const [fi, setFi] = useState<any>(null);
   const [scheme, setScheme] = useState("");
@@ -19,14 +19,15 @@ export default function Money() {
   const cashSchemes = (data?.scholarships || []).filter((s: any) => s.benefit.per_year || s.benefit.per_month);
   useEffect(() => { if (!scheme && cashSchemes[0]) setScheme(cashSchemes[0].id); }, [cashSchemes, scheme]);
   useEffect(() => {
-    const id = setInterval(() => fetch(`${API}/api/money/ledger`).then((r) => r.json()).then(setLedger).catch(() => {}), 3000);
+    if (auth?.user.role !== "teacher") return;
+    const id = setInterval(() => authFetch("/api/money/ledger").then((r) => (r.ok ? r.json() : [])).then(setLedger).catch(() => {}), 3000);
     return () => clearInterval(id);
-  }, []);
+  }, [authFetch, auth]);
 
   const doConsent = async () => {
     const c = await post("/api/money/aa/consent", { student_id: profile.id || profile.name, declared_income_annual: profile.family_income_annual });
     setConsent(c);
-    const f = await fetch(`${API}/api/money/aa/fi-data?consent_id=${c.consentId}`).then((r) => r.json());
+    const f = await authFetch(`/api/money/aa/fi-data?consent_id=${c.consentId}`).then((r) => r.json());
     setFi(f);
   };
   const doPay = async () => {
@@ -39,7 +40,7 @@ export default function Money() {
   };
 
   return (
-    <Shell title={t("money_layer")}>
+    <Shell title={t("money_layer")} role="teacher">
       <Card>
         <h2 className="font-bold">1 · Family bank check (Account Aggregator style)</h2>
         <p className="text-xs text-[var(--muted)]">Consent → fetch deposit data in the ReBIT FI schema → check. Synthetic data, sandbox.</p>
