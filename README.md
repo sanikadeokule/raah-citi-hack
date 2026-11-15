@@ -22,6 +22,7 @@ The pilot district is Pune.
 - [The spreadsheet drives everything](#the-spreadsheet-drives-everything)
 - [How the numbers are calculated](#how-the-numbers-are-calculated)
 - [Sign-in and roles](#sign-in-and-roles)
+- [AI conversation](#ai-conversation)
 - [Architecture](#architecture)
 - [Run it locally](#run-it-locally)
 - [API](#api)
@@ -44,7 +45,8 @@ Eligibility, costs, payback months, distances and career ranking are computed by
 | Feature | What it does |
 |---|---|
 | **Language picker + icon home** | Marathi, Hindi, English. Big icon tiles for Discover, Careers, Learn, Opportunity, Scholarships and Compare. |
-| **Discover chat** | Asks 12 short questions by voice or text (name, age, class, interests, marks, taluka, category, family income, travel limit, hostel, documents) and builds the profile. Answer chips for low-literacy use; mic on every question. |
+| **Discover chat** | When a language model is reachable, Raah holds a free conversation ("I'm Asha, 15, in Class 10 and I like computers") and shows the fields it understood as chips under each reply. Otherwise, or with one tap, it asks 12 short scripted questions (name, age, class, interests, marks, taluka, category, family income, travel limit, hostel, documents). Answer chips for low-literacy use; mic on every question. |
+| **Why this career** | Each shortlisted career gets a one or two sentence reason. The model writes it from the score breakdown and dataset rows; if its text contains a number that is not in those rows, the template sentence is shown instead. |
 | **Parental consent** | Students under 18 need a parent's OTP before the profile is saved. A consent record with purpose and timestamp is stored (DPDP Act 2023). |
 | **Career shortlist** | Top 5 out of 40 careers, scored on interest match (50%), eligibility (20%), affordability (20%) and local demand (10%). The top 5 always includes at least one vocational and one non-STEM or self-employment option. |
 | **Cost & payback card** | Course fees, exam fees, materials, travel or hostel, scholarship cover, stipend while training, net family cost, monthly income range and the payback month at typical and low income. |
@@ -166,6 +168,36 @@ Students and teachers sign in with their mobile number and a one-time password.
 
 Demo logins: any student number (e.g. `9876543210`), teacher `9000000001`, OTP `123456`.
 
+## AI conversation
+
+<p align="center">
+  <img src="docs/screenshots/ai-chat.png" width="240" alt="Discover chat with fields understood by the model shown as chips">
+  <img src="docs/screenshots/ai-explain.png" width="240" alt="Career shortlist with model-written reasons">
+</p>
+
+Raah uses open-source models through any OpenAI-compatible chat API. Providers are tried in the order set in `LLM_PROVIDERS`; one that fails is skipped for 60 seconds so a stopped local server does not slow the app.
+
+| Provider | Model (default) | Variables |
+|---|---|---|
+| `ollama` | `gemma4:12b`, running on your own machine | `OLLAMA_URL`, `OLLAMA_MODEL` |
+| `groq` | `llama-3.3-70b-versatile` | `GROQ_API_KEY`, `GROQ_MODEL` |
+| `sarvam` | `sarvam-m` (Indian languages) | `SARVAM_API_KEY`, `SARVAM_MODEL` |
+
+**Profile extraction** (`POST /api/chat/turn`). The model gets the conversation, the profile so far, the fields still missing and the allowed values (categories, talukas and interest tags from the spreadsheet). It replies with its next question and the fields it learned. Every field is validated on its own with Pydantic: an age of 40, marks of 300 or an unknown category is dropped and reported in `rejected`, while the valid fields are kept. Talukas and interests are matched to the spreadsheet's names. The model is told never to state fees or amounts.
+
+**Grounded reasons** (`POST /api/chat/explain`). The server ranks careers with the same engine as the app, then gives the model only that career's facts: score breakdown, matched interests, entry path, net cost and payback from the dataset. Every number in the model's answer must appear in those facts, otherwise the template reason is returned.
+
+**Fallback.** With no provider reachable, offline, or when the student taps "Use quick questions instead", the scripted questions take over and skip whatever the conversation already filled in. Nothing else in the app depends on a model.
+
+To use your local Ollama:
+
+```bash
+ollama pull gemma4:12b
+# backend/.env
+LLM_PROVIDERS=ollama
+OLLAMA_MODEL=gemma4:12b
+```
+
 ## Architecture
 
 ```
@@ -251,6 +283,9 @@ Interactive OpenAPI docs: <http://localhost:8000/docs>
 | `POST /api/partners/token` | OAuth2 client-credentials token |
 | `POST /api/partners/opportunities` · `GET /api/partners/candidates` | Partner posting and masked candidates |
 | `POST /api/partners/enrolments/{id}/complete` | Completion → teacher payout |
+| `GET /api/chat/status` | Whether a language model is reachable |
+| `POST /api/chat/turn` | Next question plus validated profile fields from the conversation |
+| `POST /api/chat/explain` | Model-written match reason, checked against the dataset's numbers |
 | `POST /api/auth/otp/request` · `POST /api/auth/otp/verify` | Phone OTP login, returns a JWT |
 | `GET /api/auth/me` · `GET`/`PUT /api/auth/profile` · `DELETE /api/auth/me` | Account, saved profile, delete my data |
 | `POST /api/sync` | Actions queued while offline (signed in) |
