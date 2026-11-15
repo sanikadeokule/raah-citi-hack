@@ -5,6 +5,7 @@ import { Card, Shell, SpeakButton } from "@/components/ui";
 import { lessons, quiz } from "@/lib/lessons";
 import { useApp } from "@/lib/store";
 import { getKV, setKV } from "@/lib/db";
+import { cachedAudio, fetchAudio, voiceAvailable } from "@/lib/audio";
 
 export default function Learn() {
   const { data, lang, t, queueAction } = useApp();
@@ -14,6 +15,21 @@ export default function Learn() {
   const [ans, setAns] = useState<Record<number, number>>({});
   const [checked, setChecked] = useState(false);
   useEffect(() => { getKV<string[]>("lessons_done").then((v) => v && setDone(v)); }, []);
+  // audio files for offline lessons: which lessons already have one saved for the current text
+  const [voice, setVoice] = useState(false);
+  const [saved, setSaved] = useState<Record<string, boolean>>({});
+  const [saving, setSaving] = useState(false);
+  useEffect(() => { voiceAvailable().then(setVoice); }, []);
+  useEffect(() => {
+    Promise.all(ls.map(async (l) => [l.id, Boolean(await cachedAudio(lang, l.text))] as const)).then((e) => setSaved(Object.fromEntries(e)));
+  }, [ls, lang]);
+  const saveAll = async () => {
+    setSaving(true);
+    const next = { ...saved };
+    for (const l of ls) if (!next[l.id]) next[l.id] = Boolean(await fetchAudio(lang, l.text, true));
+    setSaved(next); setSaving(false);
+  };
+  const savedCount = ls.filter((l) => saved[l.id]).length;
   const markDone = async (id: string) => {
     if (done.includes(id)) return;
     const next = [...done, id];
@@ -29,12 +45,20 @@ export default function Learn() {
     <Shell title={t("home_learn")}>
       <Card>
         <h2 className="mb-2 text-lg font-bold">🎧 {t("lessons")}</h2>
+        {voice ? (
+          <button onClick={saveAll} disabled={saving || savedCount === ls.length}
+            className="mb-3 w-full rounded-lg bg-[var(--brand-soft)] py-2 text-sm font-semibold text-[var(--brand-ink)] disabled:opacity-60">
+            {savedCount === ls.length ? `✅ ${t("audio_saved")}` : saving ? "…" : `⬇️ ${t("save_audio_offline")} (${savedCount}/${ls.length})`}
+          </button>
+        ) : (
+          <p className="mb-3 text-xs text-[var(--muted)]">{t("device_voice_note")}</p>
+        )}
         <ul className="space-y-3">
           {ls.map((l) => (
             <li key={l.id} className="rounded-xl bg-[var(--bg)] p-3">
               <div className="flex items-center justify-between gap-2">
-                <b>{done.includes(l.id) ? "✅ " : ""}{l.title}</b>
-                <span onClick={() => markDone(l.id)}><SpeakButton text={l.text} /></span>
+                <b>{done.includes(l.id) ? "✅ " : ""}{l.title}{saved[l.id] ? " 💾" : ""}</b>
+                <span onClick={() => markDone(l.id)}><SpeakButton text={l.text} cache /></span>
               </div>
               <p className="mt-1 text-sm text-[var(--muted)]">{l.text}</p>
             </li>
