@@ -335,6 +335,20 @@ def load(path: Path = DATASET_PATH) -> dict:
                         "source": r.get("Source"), "last_checked": str(r.get("Last checked") or "")})
     by_course = {c["id"]: c for c in courses}
 
+    # exams and admission rounds
+    exams = []
+    for r in _rows(wb, "Exams"):
+        if not r.get("ID"):
+            continue
+        fee_open, fee_res = r.get("Application fee (Open / General)"), r.get("Application fee (Reserved)")
+        exams.append({"id": r.get("ID"), "name": r.get("Exam / admission"), "by": r.get("Conducted by"),
+                      "leads_to": r.get("Leads to"), "eligibility": r.get("Who can apply"), "selection": r.get("Selection"),
+                      "fee_open": first_money(fee_open) if fee_open not in (None, "") else None,
+                      "fee_reserved": first_money(fee_res) if fee_res not in (None, "") else None,
+                      "fee_note": r.get("Fee note"), "dates": r.get("Last cycle dates"), "timing": r.get("Usual timing"),
+                      "site": r.get("Official site"), "source": r.get("Source"), "last_checked": str(r.get("Last checked") or "")})
+    exam_ids = {e["id"] for e in exams}
+
     # plans
     plans = []
     for i, r in enumerate(_rows(wb, "Plan_Inputs"), start=2):
@@ -360,7 +374,11 @@ def load(path: Path = DATASET_PATH) -> dict:
             "course_tags": split_list(r.get("Course tags")), "centre_type": r.get("Centre type"),
             "income_override": override if any(v is not None for v in override.values()) else None,
             "status": r.get("Fee source / status"),
+            "exams": [x for x in split_list(r.get("Exams / admissions (IDs, use ;)")) if x in exam_ids],
         })
+        for x in split_list(r.get("Exams / admissions (IDs, use ;)")):
+            if x not in exam_ids:
+                warnings.append(f"Plan_Inputs {pid}: exam '{x}' not found in Exams")
 
     # centres
     talukas = {str(r.get("Taluka")).lower(): (num_or_none(r.get("Lat")), num_or_none(r.get("Lon")))
@@ -433,7 +451,7 @@ def load(path: Path = DATASET_PATH) -> dict:
         "version": {"file": path.name, "modified": datetime.fromtimestamp(st.st_mtime, timezone.utc).isoformat(),
                     "loaded_at": datetime.now(timezone.utc).isoformat(), "size": st.st_size},
         "readme": readme, "assumptions": assumptions, "scholarships": schemes, "careers": careers,
-        "baseline": baseline, "plans": plans, "courses": courses, "centres": centres, "naps": naps,
+        "baseline": baseline, "plans": plans, "courses": courses, "exams": exams, "centres": centres, "naps": naps,
         "railway": railway, "stipends": stipends, "students": students, "warnings": warnings,
         "talukas": taluka_list,
     }
