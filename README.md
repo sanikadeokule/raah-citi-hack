@@ -176,7 +176,7 @@ The same logic exists in Python (`backend/raah/engine.py`, used by the API) and 
 
 ## Run it locally
 
-Requirements: Python 3.11+. Node 20+ only if you want to change the web app.
+Requirements: Python 3.10+. Node 20+ only if you want to change the web app.
 
 ```bash
 git clone https://github.com/sanikadeokule/raah-citi-hack.git
