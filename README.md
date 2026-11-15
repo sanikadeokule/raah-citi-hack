@@ -275,7 +275,7 @@ With `BHASHINI_USER_ID` and `BHASHINI_API_KEY` in `backend/.env`, text-to-speech
 
 ### ISO 20022 validation
 
-Place the official `pain.001.001.09.xsd` from the ISO 20022 message catalogue in `backend/schemas/` and every generated payment is validated against it. Without the file, structural checks run instead.
+Run `python scripts/fetch_iso_schema.py` from `backend/` once. It downloads the official `pain.001.001.09.xsd` from the ISO 20022 message catalogue into `backend/schemas/` and checks its namespace. From then on every generated payment file is validated against the official schema, and the payment response and ledger show `official XSD pain.001.001.09` with any errors by line. If the download is blocked, save the file there by hand (or point `RAAH_PAIN001_XSD` at it). Without the file, structural checks run instead.
 
 ## API
 
