@@ -57,9 +57,12 @@ Eligibility, costs, payback months, distances and career ranking are computed by
 | **Parent voice note** | A short message for parents in the chosen language with the plan's numbers, played aloud and shareable on WhatsApp as text or as an audio file. With BHASHINI keys the file is generated speech (WAV); without them the student records the message in their own voice. On phones the file goes to the share sheet (WhatsApp, Bluetooth, Files); elsewhere it downloads. |
 | **Audio lessons + quiz** | "What is an ITI?", "What is an apprenticeship?", "How do scholarships work?" plus a 5-question quiz. Facts inside lessons and quiz (stipend rates, income limits, ITI count) come from the dataset. With BHASHINI keys, "Save lesson audio for offline" stores each lesson as an audio file on the phone; the file is tied to the exact lesson text, so after a dataset edit the new figures are spoken rather than an old recording. Without keys the phone's own voice reads them, which also works offline. |
 | **Apprenticeships** | 31 live NAPS listings in Pune district and 17 Central Railway seat lines, searchable, with stipend and apply link. |
+| **Exams** | Every entrance test or admission round a path needs shows as a step on the plan screen, and the Exams screen lists them all with who can apply, how selection works, the fee for open and reserved categories, when to apply and the official site. All of it comes from the `Exams` sheet. |
 | **Offline + sync** | Installable PWA. Dataset, profile, plan, lessons and quiz answers work offline; queued actions sync on reconnect with a "N changes synced" toast. |
 | **Delete my data** | One tap clears everything stored on the phone. |
 | **Teacher recommendations** | When a teacher recommends a scheme, the student sees it on the home screen with the plan it was for and any missing document. "Check" opens the scholarship screen with that scheme first. Cached on the phone so it still shows offline. |
+
+<p align="center"><img src="docs/screenshots/exams.png" width="240" alt="Exams screen with ITI admission and polytechnic details"></p>
 
 <p align="center"><img src="docs/screenshots/lessons-offline.png" width="240" alt="Audio lessons saved on the phone for offline listening"></p>
 
@@ -123,8 +126,9 @@ All figures are loaded from `raah-dataset.xlsx` at runtime. Editing a cell and s
 | `Stipend_Rates` | Minimum apprentice stipends used in lessons and quiz. |
 | `Training_Centres` | Nearest-centre lookup. |
 | `Courses` | Free courses per career; a course's fee can fill a plan's fee. |
+| `Exams` | Entrance tests and admission rounds: ITI admission (DVET), polytechnic (DTE), MHT-CET, MH Nursing CET, NEET-UG, NMMS and the Central Railway apprentice notice, with who can apply, selection, application fee by category, last cycle dates, usual timing and official site. |
 | `Assumptions` | Fare per km, study days per year, hostel cost per month, working days per month, low/high income factors, payback horizon, whether scholarships can be combined, months a monthly allowance is paid. |
-| `Plan_Inputs` | One row per career path: course months, months earning while training, fees, exam fees, materials, course tags, centre type. Blank income cells are taken from `Careers_Income`. |
+| `Plan_Inputs` | One row per career path: course months, months earning while training, fees, exam fees, materials, course tags, centre type and the exams on the path (`EX01; EX07`). Blank income cells are taken from `Careers_Income`. |
 | `Eligibility_Rules` | One row per rule. `@income` in the Value column links to that scheme's income limit in `Scholarships`. Operators: `in`, `any`, `has`, `is`, `<=`, `<`, `>=`, `>`. Category relaxations: `55; SC=50; ST=50`. |
 | `Career_Profile` | Interest tags, minimum class and local demand per career, used for ranking. |
 | `Talukas` | Taluka points used for distance while a centre has no Lat/Lon. Exact centre coordinates take priority once filled in. |
