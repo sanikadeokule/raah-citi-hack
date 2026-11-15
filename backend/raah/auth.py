@@ -99,6 +99,39 @@ def _db() -> sqlite3.Connection:
             created_at INTEGER NOT NULL,
             read_at INTEGER
         );
+        CREATE TABLE IF NOT EXISTS mentor_requests (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            mentor_id TEXT NOT NULL,
+            shared TEXT NOT NULL,
+            created_at INTEGER NOT NULL,
+            UNIQUE (user_id, mentor_id)
+        );
+        CREATE TABLE IF NOT EXISTS modules (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            teacher_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            title TEXT NOT NULL,
+            lang TEXT NOT NULL,
+            lesson TEXT NOT NULL,
+            quiz TEXT NOT NULL,
+            price_model TEXT NOT NULL,
+            price REAL NOT NULL,
+            published INTEGER NOT NULL DEFAULT 1,
+            created_at INTEGER NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS enrolments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            module_id INTEGER NOT NULL REFERENCES modules(id) ON DELETE CASCADE,
+            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            paid REAL NOT NULL,
+            teacher_share REAL NOT NULL,
+            score INTEGER,
+            completed_at INTEGER,
+            completion_payout REAL NOT NULL DEFAULT 0,
+            payout_id TEXT,
+            created_at INTEGER NOT NULL,
+            UNIQUE (module_id, user_id)
+        );
     """)
     return con
 
@@ -321,7 +354,7 @@ def delete_me(user: dict = Depends(current_user)):
     """Delete-my-data: removes the account, saved profile and synced activity."""
     with _lock:
         con = _db()
-        for t in ("sync_log", "profiles", "notifications"):
+        for t in ("sync_log", "profiles", "notifications", "mentor_requests", "enrolments"):
             con.execute(f"DELETE FROM {t} WHERE user_id = ?", (user["id"],))
         con.execute("DELETE FROM users WHERE id = ?", (user["id"],))
         con.commit()
