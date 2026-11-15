@@ -8,8 +8,11 @@ Keys go in backend/.env (never in code):
 """
 from __future__ import annotations
 
+import base64
+import hashlib
 import os
 import time
+from pathlib import Path
 
 import httpx
 from fastapi import APIRouter, HTTPException
@@ -19,6 +22,12 @@ router = APIRouter(prefix="/api/voice", tags=["voice"])
 
 CONFIG_URL = "https://meity-auth.ulcacontrib.org/ulca/apis/v0/model/getModelsPipeline"
 _cache: dict[str, tuple[float, dict]] = {}
+# generated speech is kept on disk so the same lesson or message is synthesised once
+TTS_DIR = Path(os.environ.get("RAAH_TTS_CACHE", Path(__file__).resolve().parents[1] / "data" / "tts"))
+
+
+def _tts_path(text: str, lang: str, gender: str) -> Path:
+    return TTS_DIR / (hashlib.sha256(f"{lang}|{gender}|{text}".encode()).hexdigest()[:32] + ".wav")
 
 
 def _keys():
@@ -65,6 +74,10 @@ def status():
 
 @router.post("/tts")
 def tts(body: TTSIn):
+    _keys()
+    path = _tts_path(body.text, body.lang, body.gender)
+    if path.exists():
+        return {"audio_b64": base64.b64encode(path.read_bytes()).decode(), "mime": "audio/wav", "cached": True}
     cfg = _pipeline("tts", body.lang)
     r = httpx.post(cfg["url"], timeout=30, headers=cfg["auth"], json={
         "pipelineTasks": [{"taskType": "tts", "config": {"language": {"sourceLanguage": body.lang},
@@ -73,7 +86,9 @@ def tts(body: TTSIn):
     if r.status_code != 200:
         raise HTTPException(502, "BHASHINI TTS failed")
     audio = r.json()["pipelineResponse"][0]["audio"][0]["audioContent"]
-    return {"audio_b64": audio, "mime": "audio/wav"}
+    TTS_DIR.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(base64.b64decode(audio))
+    return {"audio_b64": audio, "mime": "audio/wav", "cached": False}
 
 
 @router.post("/asr")
