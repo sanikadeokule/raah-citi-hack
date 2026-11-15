@@ -19,7 +19,7 @@ const FIELDS: { k: string; label: string; type: "text" | "number" | "bool" | "li
 ];
 
 export default function ProfilePage() {
-  const { profile, setProfile, t, data, showToast } = useApp();
+  const { profile, setProfile, t, data, showToast, authFetch, signOut, queueAction } = useApp();
   const [p, setP] = useState<any>(null);
   const [consent, setConsent] = useState<any>(null);
   useEffect(() => { if (profile) setP(profile); getKV("consent").then(setConsent); }, [profile]);
@@ -50,13 +50,13 @@ export default function ProfilePage() {
             setP({ ...p, taluka: e.target.value, lat: tk?.lat ?? p.lat, lon: tk?.lon ?? p.lon });
           }}>{data.talukas.map((x: any) => <option key={x.name}>{x.name}</option>)}</select>
         </label>
-        <button onClick={() => { setProfile(p); showToast(t("saved")); }} className="w-full rounded-xl bg-[var(--brand)] py-3 font-semibold text-white">{t("save")}</button>
+        <button onClick={() => { setProfile(p); queueAction("profile", p); showToast(t("saved")); }} className="w-full rounded-xl bg-[var(--brand)] py-3 font-semibold text-white">{t("save")}</button>
       </Card>
       {consent && (
         <Card><h2 className="font-bold">{t("consent_recorded")}</h2>
           <pre className="mt-1 whitespace-pre-wrap text-xs">{JSON.stringify(consent, null, 2)}</pre></Card>
       )}
-      <button onClick={async () => { await db.delete(); location.href = "/"; }} className="w-full rounded-xl bg-rose-100 py-3 font-semibold text-rose-800">🗑️ {t("delete_my_data")}</button>
+      <button onClick={async () => { await authFetch("/api/auth/me", { method: "DELETE" }).catch(() => null); await signOut(); await db.delete(); location.href = "/login/"; }} className="w-full rounded-xl bg-rose-100 py-3 font-semibold text-rose-800">🗑️ {t("delete_my_data")}</button>
     </Shell>
   );
 }

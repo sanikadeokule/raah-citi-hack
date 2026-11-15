@@ -11,7 +11,7 @@ export default function DataPage() {
     ["NAPS listings", data?.naps.length], ["Railway seats", data?.railway.length], ["Courses", data?.courses.length],
   ];
   return (
-    <Shell title={t("home_data")}>
+    <Shell title={t("home_data")} publicPage>
       <Card>
         <h2 className="font-bold">📊 {t("live_data")}</h2>
         <p className="mt-1 text-sm">{data?.version.file} · saved {data && new Date(data.version.modified).toLocaleString()}</p>
