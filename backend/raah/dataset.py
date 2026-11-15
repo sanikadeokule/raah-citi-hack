@@ -409,6 +409,19 @@ def load(path: Path = DATASET_PATH) -> dict:
     if missing:
         warnings.append(f"Training_Centres: {missing} of {len(centres)} centres have no Lat/Lon, distance uses the taluka point (approximate)")
 
+    # mentors: phone numbers stay on the server (in "_private") until a student accepts
+    mentors, mentor_contacts = [], {}
+    for r in _rows(wb, "Mentors"):
+        if not r.get("ID"):
+            continue
+        pt = taluka_point(r.get("Taluka"))
+        mentors.append({"id": r.get("ID"), "name": r.get("Name"), "works_as": r.get("Works as"),
+                        "career_ids": split_list(r.get("Career IDs (use ;)")), "taluka": r.get("Taluka"),
+                        "lat": pt[0] if pt else None, "lon": pt[1] if pt else None,
+                        "languages": split_list(r.get("Languages")), "helps_with": r.get("Can help with"),
+                        "mode": r.get("How they meet"), "available": r.get("Available"), "note": r.get("Note")})
+        mentor_contacts[r.get("ID")] = {"phone": r.get("Phone")}
+
     # apprenticeships + stipends
     naps = [{"id": r.get("ID"), "trade": r.get("Course / trade"), "trade_type": r.get("Trade type"),
              "employer": r.get("Establishment"), "location": r.get("Location"), "district": r.get("District"),
@@ -451,7 +464,8 @@ def load(path: Path = DATASET_PATH) -> dict:
         "version": {"file": path.name, "modified": datetime.fromtimestamp(st.st_mtime, timezone.utc).isoformat(),
                     "loaded_at": datetime.now(timezone.utc).isoformat(), "size": st.st_size},
         "readme": readme, "assumptions": assumptions, "scholarships": schemes, "careers": careers,
-        "baseline": baseline, "plans": plans, "courses": courses, "exams": exams, "centres": centres, "naps": naps,
+        "baseline": baseline, "plans": plans, "courses": courses, "exams": exams, "mentors": mentors,
+        "_private": {"mentor_contacts": mentor_contacts}, "centres": centres, "naps": naps,
         "railway": railway, "stipends": stipends, "students": students, "warnings": warnings,
         "talukas": taluka_list,
     }

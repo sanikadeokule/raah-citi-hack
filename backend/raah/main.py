@@ -96,7 +96,7 @@ def get_data(request: Request, response: Response):
         return Response(status_code=304)
     response.headers["ETag"] = etag
     response.headers["Cache-Control"] = "no-cache"
-    return d
+    return {k: v for k, v in d.items() if not k.startswith("_")}
 
 
 @app.post("/api/plan", tags=["student"])
