@@ -59,6 +59,9 @@ Eligibility, costs, payback months, distances and career ranking are computed by
 | **Apprenticeships** | 31 live NAPS listings in Pune district and 17 Central Railway seat lines, searchable, with stipend and apply link. |
 | **Offline + sync** | Installable PWA. Dataset, profile, plan, lessons and quiz answers work offline; queued actions sync on reconnect with a "N changes synced" toast. |
 | **Delete my data** | One tap clears everything stored on the phone. |
+| **Teacher recommendations** | When a teacher recommends a scheme, the student sees it on the home screen with the plan it was for and any missing document. "Check" opens the scholarship screen with that scheme first. Cached on the phone so it still shows offline. |
+
+<p align="center"><img src="docs/screenshots/teacher-recommendation.png" width="240" alt="Home screen with a scholarship recommendation from the teacher"></p>
 
 ### Teacher
 
@@ -67,7 +70,7 @@ Eligibility, costs, payback months, distances and career ranking are computed by
 | **Class dashboard** | 40 students with profile completion, top interests and each student's best-fit career. |
 | **Dropout-risk flags** | Logistic regression (scikit-learn) with the top two reasons per student, e.g. "attendance fell 26% this term; an older sibling already left school to work". Trained on a synthetic class. |
 | **Talent flags** | High quiz score with strong marks. |
-| **Recommend to all eligible** | Pick a scheme and a path, see how many students qualify (and how many still need a document), send to all in one tap. |
+| **Recommend to all eligible** | Pick a scheme and a path, see how many students qualify (and how many still need a document), send to all in one tap. Students who signed up and saved a profile are checked with the same rules as the demo class and receive the recommendation in their app. |
 
 ### Money layer (sandbox)
 
@@ -287,6 +290,7 @@ Interactive OpenAPI docs: <http://localhost:8000/docs>
 | `POST /api/chat/turn` | Next question plus validated profile fields from the conversation |
 | `POST /api/chat/explain` | Model-written match reason, checked against the dataset's numbers |
 | `POST /api/auth/otp/request` · `POST /api/auth/otp/verify` | Phone OTP login, returns a JWT |
+| `GET /api/auth/notifications` · `POST /api/auth/notifications/{id}/read` | Recommendations sent to the signed-in student |
 | `GET /api/auth/me` · `GET`/`PUT /api/auth/profile` · `DELETE /api/auth/me` | Account, saved profile, delete my data |
 | `POST /api/sync` | Actions queued while offline (signed in) |
 
