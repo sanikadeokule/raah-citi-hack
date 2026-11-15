@@ -129,5 +129,9 @@
  "quick_mode": "झटपट सवाल",
  "use_quick_questions": "झटपट सवाल इस्तेमाल करें",
  "ai_understood": "समझा",
- "thinking": "सोच रहा है…"
+ "thinking": "सोच रहा है…",
+ "your_teacher": "आपके शिक्षक",
+ "teacher_recommends": "{scheme} के लिए आवेदन करने की सलाह",
+ "got_it": "समझ गया",
+ "sent_to_app": "{n} ऐप पर पंजीकृत"
 }

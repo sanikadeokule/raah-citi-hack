@@ -129,5 +129,9 @@
  "quick_mode": "Quick questions",
  "use_quick_questions": "Use quick questions instead",
  "ai_understood": "Understood",
- "thinking": "Thinking…"
+ "thinking": "Thinking…",
+ "your_teacher": "Your teacher",
+ "teacher_recommends": "Recommends you apply for {scheme}",
+ "got_it": "Got it",
+ "sent_to_app": "{n} signed up in the app"
 }
