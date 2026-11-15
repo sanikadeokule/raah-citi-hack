@@ -26,7 +26,7 @@ export default function Teacher() {
   const recommend = async () => {
     const r = await authFetch("/api/teacher/recommend", { method: "POST", body: JSON.stringify({ scheme_id: scheme, plan_id: planId }) });
     const j = await r.json();
-    showToast(t("sent_to", { n: j.sent }));
+    showToast(`${t("sent_to", { n: j.sent })} · ${t("sent_to_app", { n: j.sent_to_app ?? 0 })}`);
   };
   if (!cls) return <Shell title={t("teacher_dashboard")} role="teacher"><Card>Connect to the Raah server to load the class.</Card></Shell>;
   const st = cls.students;
@@ -53,7 +53,8 @@ export default function Teacher() {
           {t("recommend_all")} ({eligible?.students?.length ?? 0})
         </button>
         {eligible?.students?.length > 0 && (
-          <p className="mt-2 text-xs text-[var(--muted)]">{eligible.students.filter((s: any) => s.status === "eligible_missing_docs").length} of them still need a document (mostly income certificate).</p>
+          <p className="mt-2 text-xs text-[var(--muted)]">{eligible.students.filter((s: any) => s.status === "eligible_missing_docs").length} of them still need a document (mostly income certificate).
+            {" "}📱 {t("sent_to_app", { n: eligible.students.filter((s: any) => s.real).length })}</p>
         )}
       </Card>
       <Card>
