@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Badge, Card, Shell, Stat } from "@/components/ui";
 import { useApp } from "@/lib/store";
 import { getKV, setKV } from "@/lib/db";
+import { MentorRequests, TeacherModules } from "@/components/modules";
 
 export default function Teacher() {
   const { data, t, showToast, authFetch, auth } = useApp();
@@ -83,6 +84,8 @@ export default function Teacher() {
         </ul>
         <p className="mt-2 text-xs text-[var(--muted)]">{cls.model_note} Class roster is synthetic.</p>
       </Card>
+      <MentorRequests />
+      <TeacherModules />
     </Shell>
   );
 }
