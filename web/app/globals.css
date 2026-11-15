@@ -1,0 +1,37 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #f6f3ee;
+  --card: #ffffff;
+  --ink: #1d1b16;
+  --muted: #6b6457;
+  --brand: #0f6b5c;
+  --brand-ink: #0b4f44;
+  --brand-soft: #d9efe9;
+  --accent: #e07a1f;
+  --good: #0f7a4a;
+  --bad: #b42318;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #14130f;
+    --card: #1f1d18;
+    --ink: #f1ede4;
+    --muted: #a59d8c;
+    --brand: #1a8a77;
+    --brand-ink: #9fe0d2;
+    --brand-soft: #1d3a34;
+    --good: #4ccb8c;
+    --bad: #ff8a7a;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #14130f; --card: #1f1d18; --ink: #f1ede4; --muted: #a59d8c;
+  --brand: #1a8a77; --brand-ink: #9fe0d2; --brand-soft: #1d3a34; --good: #4ccb8c; --bad: #ff8a7a;
+}
+
+html, body { background: var(--bg); color: var(--ink); overflow-x: hidden; }
+select { max-width: 100%; }
+body { font-family: "Noto Sans", "Noto Sans Devanagari", system-ui, sans-serif; -webkit-tap-highlight-color: transparent; }
+input[type="range"] { accent-color: var(--brand); }
+button { cursor: pointer; }
