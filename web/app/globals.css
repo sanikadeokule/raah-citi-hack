@@ -36,3 +36,7 @@ select { max-width: 100%; }
 body { font-family: "Noto Sans", "Noto Sans Devanagari", system-ui, sans-serif; -webkit-tap-highlight-color: transparent; }
 input[type="range"] { accent-color: var(--brand); }
 button { cursor: pointer; }
+
+/* numbered centre markers on the Leaflet map */
+.leaflet-tooltip.centre-num { background: transparent; border: 0; box-shadow: none; color: #fff; font-weight: 700; font-size: 11px; padding: 0; }
+.leaflet-tooltip.centre-num::before { display: none; }
