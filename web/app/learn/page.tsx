@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Card, Shell, SpeakButton } from "@/components/ui";
 import { lessons, quiz } from "@/lib/lessons";
 import { useApp } from "@/lib/store";
+import { StudentModules } from "@/components/modules";
 import { getKV, setKV } from "@/lib/db";
 import { cachedAudio, fetchAudio, voiceAvailable } from "@/lib/audio";
 
@@ -65,6 +66,7 @@ export default function Learn() {
           ))}
         </ul>
       </Card>
+      <StudentModules />
       <Card>
         <h2 className="mb-2 text-lg font-bold">📝 {t("quiz")}</h2>
         <ol className="space-y-3">
