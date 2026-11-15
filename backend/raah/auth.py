@@ -90,6 +90,15 @@ def _db() -> sqlite3.Connection:
             client_at TEXT,
             received_at INTEGER NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS notifications (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            from_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+            kind TEXT NOT NULL,
+            payload TEXT NOT NULL,
+            created_at INTEGER NOT NULL,
+            read_at INTEGER
+        );
     """)
     return con
 
@@ -263,12 +272,56 @@ def log_sync(user_id: int, items: list[dict]) -> None:
         con.commit()
 
 
+# ------------------------------------------------------------------ students and notifications
+
+def student_profiles() -> list[dict]:
+    """Signed-up students who have saved a profile, for the teacher's eligibility checks."""
+    with _lock:
+        rows = _db().execute("SELECT u.id, u.name, p.data FROM users u JOIN profiles p ON p.user_id = u.id "
+                             "WHERE u.role = 'student' ORDER BY u.id").fetchall()
+    out = []
+    for r in rows:
+        prof = json.loads(r["data"])
+        out.append({**prof, "user_id": r["id"], "name": prof.get("name") or r["name"] or f"Student {r['id']}"})
+    return out
+
+
+def notify(user_ids: list[int], kind: str, payload: dict, from_user_id: int | None = None) -> int:
+    now = int(time.time())
+    with _lock:
+        con = _db()
+        con.executemany("INSERT INTO notifications (user_id, from_user_id, kind, payload, created_at) VALUES (?, ?, ?, ?, ?)",
+                        [(u, from_user_id, kind, json.dumps(payload, ensure_ascii=False), now) for u in user_ids])
+        con.commit()
+    return len(user_ids)
+
+
+@router.get("/notifications")
+def my_notifications(user: dict = Depends(current_user)):
+    with _lock:
+        rows = _db().execute("SELECT n.id, n.kind, n.payload, n.created_at, n.read_at, f.name AS from_name FROM notifications n "
+                             "LEFT JOIN users f ON f.id = n.from_user_id WHERE n.user_id = ? ORDER BY n.id DESC LIMIT 50",
+                             (user["id"],)).fetchall()
+    return [{"id": r["id"], "kind": r["kind"], **json.loads(r["payload"]), "from": r["from_name"],
+             "created_at": r["created_at"], "read": r["read_at"] is not None} for r in rows]
+
+
+@router.post("/notifications/{nid}/read")
+def read_notification(nid: int, user: dict = Depends(current_user)):
+    with _lock:
+        con = _db()
+        cur = con.execute("UPDATE notifications SET read_at = ? WHERE id = ? AND user_id = ? AND read_at IS NULL",
+                          (int(time.time()), nid, user["id"]))
+        con.commit()
+    return {"updated": cur.rowcount}
+
+
 @router.delete("/me")
 def delete_me(user: dict = Depends(current_user)):
     """Delete-my-data: removes the account, saved profile and synced activity."""
     with _lock:
         con = _db()
-        for t in ("sync_log", "profiles"):
+        for t in ("sync_log", "profiles", "notifications"):
             con.execute(f"DELETE FROM {t} WHERE user_id = ?", (user["id"],))
         con.execute("DELETE FROM users WHERE id = ?", (user["id"],))
         con.commit()
