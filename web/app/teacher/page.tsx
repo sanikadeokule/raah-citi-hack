@@ -2,11 +2,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useState } from "react";
 import { Badge, Card, Shell, Stat } from "@/components/ui";
-import { API, useApp } from "@/lib/store";
+import { useApp } from "@/lib/store";
 import { getKV, setKV } from "@/lib/db";
 
 export default function Teacher() {
-  const { data, t, showToast } = useApp();
+  const { data, t, showToast, authFetch, auth } = useApp();
   const [cls, setCls] = useState<any>(null);
   const [scheme, setScheme] = useState("SCH16");
   const [planId, setPlanId] = useState("PLN01");
@@ -14,23 +14,25 @@ export default function Teacher() {
   const [filter, setFilter] = useState<"all" | "risk" | "talent">("all");
 
   useEffect(() => {
+    if (auth?.user.role !== "teacher") return;
     getKV("teacher_class").then((c) => c && setCls(c));
-    fetch(`${API}/api/teacher/class`).then((r) => r.json()).then((c) => { setCls(c); setKV("teacher_class", c); }).catch(() => {});
-  }, [data?.version?.modified]);
+    authFetch("/api/teacher/class").then((r) => r.json()).then((c) => { setCls(c); setKV("teacher_class", c); }).catch(() => {});
+  }, [data?.version?.modified, authFetch, auth]);
   useEffect(() => {
-    fetch(`${API}/api/teacher/eligible/${scheme}?plan_id=${planId}`).then((r) => r.json()).then(setEligible).catch(() => setEligible(null));
-  }, [scheme, planId, data?.version?.modified]);
+    if (auth?.user.role !== "teacher") return;
+    authFetch(`/api/teacher/eligible/${scheme}?plan_id=${planId}`).then((r) => r.json()).then(setEligible).catch(() => setEligible(null));
+  }, [scheme, planId, data?.version?.modified, authFetch, auth]);
 
   const recommend = async () => {
-    const r = await fetch(`${API}/api/teacher/recommend`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ scheme_id: scheme, plan_id: planId }) });
+    const r = await authFetch("/api/teacher/recommend", { method: "POST", body: JSON.stringify({ scheme_id: scheme, plan_id: planId }) });
     const j = await r.json();
     showToast(t("sent_to", { n: j.sent }));
   };
-  if (!cls) return <Shell title={t("teacher_dashboard")}><Card>Connect to the Raah server to load the class.</Card></Shell>;
+  if (!cls) return <Shell title={t("teacher_dashboard")} role="teacher"><Card>Connect to the Raah server to load the class.</Card></Shell>;
   const st = cls.students;
   const shown = st.filter((s: any) => filter === "all" || (filter === "risk" ? s.risk_level === "high" : s.talent));
   return (
-    <Shell title={t("teacher_dashboard")}>
+    <Shell title={t("teacher_dashboard")} role="teacher">
       <div className="grid grid-cols-3 gap-2">
         <Stat label={t("students")} value={String(st.length)} />
         <Stat label={t("risk")} value={String(st.filter((s: any) => s.risk_level === "high").length)} tone="text-[var(--bad)]" />
