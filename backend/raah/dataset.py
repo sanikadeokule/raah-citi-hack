@@ -285,7 +285,8 @@ def load(path: Path = DATASET_PATH) -> dict:
         value, kind = parse_rule_value(r.get("Value"), op, s, warnings, f"Eligibility_Rules row {i} ({sid})")
         label = r.get("Label shown to student") or ""
         if kind == "linked" and value is not None and r.get("Field") == "family_income_annual":
-            label = f"Family income {'<' if op == '<' else '≤'} ₹{inr(value)} per year"
+            sign = {"<": "<", ">": "above", ">=": "≥"}.get(op, "≤")
+            label = f"Family income {sign} ₹{inr(value)} per year"
         s["rules"].append({"field": r.get("Field"), "op": op, "value": value, "value_kind": kind, "label": label,
                            "doc": r.get("Document needed"), "where": r.get("Where to get it")})
 

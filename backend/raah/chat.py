@@ -22,7 +22,7 @@ from . import dataset, embed, engine, llm
 router = APIRouter(prefix="/api/chat", tags=["ai"])
 
 LANG_NAME = {"mr": "Marathi", "hi": "Hindi", "en": "English"}
-CATEGORIES = ["General", "EWS", "OBC", "SC", "ST", "DNT", "EBC", "SEBC", "Navbouddha"]
+CATEGORIES = ["General", "EWS", "OBC", "SC", "ST", "DNT", "EBC", "SEBC", "VJNT", "SBC", "Navbouddha"]
 DOCS = ["aadhaar", "marksheet_10", "marksheet_12", "caste_certificate", "income_certificate",
         "domicile_certificate", "bank_passbook", "disability_certificate"]
 # full-year exams only (same ids as web/lib/questions.ts); "unknown" means the student does not remember

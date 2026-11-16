@@ -165,7 +165,7 @@ def test_nothing_found_says_so(monkeypatch):
 
 def test_status_reports_index():
     s = c.get("/api/ask/status").json()
-    assert s["chunks"] > 200 and s["sheets"]["Scholarships"] == 17 and s["alpha"] == 0.7
+    assert s["chunks"] > 200 and s["sheets"]["Scholarships"] == len(dataset.load()["scholarships"]) and s["alpha"] == 0.7
 
 
 # ------------------------------------------------------------------ optional Weaviate store
