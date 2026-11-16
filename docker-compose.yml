@@ -1,0 +1,20 @@
+# PostgreSQL for Raah. Start it with:  docker compose up -d db
+# Then backend/.env needs:  DATABASE_URL=postgresql://raah:raah@localhost:5432/raah
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: raah
+      POSTGRES_PASSWORD: raah
+      POSTGRES_DB: raah
+    ports:
+      - "5432:5432"
+    volumes:
+      - raah-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U raah -d raah"]
+      interval: 5s
+      retries: 10
+volumes:
+  raah-pgdata:
