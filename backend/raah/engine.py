@@ -97,6 +97,21 @@ def eligibility(data: dict, profile: dict, plan: dict | None = None, hostel: boo
     return out
 
 
+
+def eligibility_changes(data: dict, profile: dict, plan: dict, hostel: bool | None = None) -> dict:
+    """What choosing this plan changes against the student's situation now, so the screen can say so.
+
+    Most schemes depend on the student (class, category, income), not on the course; only rules on
+    course_tags (and class, for courses after Class 10) move when the plan changes.
+    """
+    now = {e["id"]: e["status"] for e in eligibility(data, profile, None, hostel)}
+    tags = set(plan["course_tags"])
+    for_course = [s["id"] for s in data["scholarships"]
+                  if any(r["field"] == "course_tags" and tags & set(r["value"] or []) for r in s["rules"])]
+    changed = [{"id": e["id"], "name": e["name"], "before": now.get(e["id"]), "after": e["status"]}
+               for e in eligibility(data, profile, plan, hostel) if now.get(e["id"]) != e["status"]]
+    return {"plan_id": plan["id"], "for_this_course": for_course, "changed": changed}
+
 # ------------------------------------------------------------------ money
 
 def A(data, key, default=0):
@@ -279,28 +294,48 @@ def nearest_centres(data: dict, profile: dict, centre_type: str | None, n: int =
 
 # ------------------------------------------------------------------ careers
 
+def _word(w: str) -> str:
+    """Singular form, so 'computer' matches the tag 'computers' and 'phone' matches 'phones'."""
+    return w[:-1] if len(w) > 3 and w.endswith("s") and not w.endswith("ss") else w
+
+
+def _phrase(t) -> str:
+    return " ".join(_word(w) for w in str(t).lower().replace("-", " ").split())
+
+
 def _tokens(items) -> set[str]:
     out = set()
     for it in items or []:
-        for w in str(it).lower().replace("-", " ").split():
+        for w in _phrase(it).split():
             if len(w) > 2:
                 out.add(w)
     return out
 
 
+RELATED_WEIGHT = 0.5  # a career that only shares tags with the direct matches counts at most half a direct match
+
+
 def rank_careers(data: dict, profile: dict, n: int = 5) -> list[dict]:
-    interests = _tokens(profile.get("interests"))
-    phrases = {str(i).strip().lower() for i in profile.get("interests") or []}
+    said = {_phrase(i): str(i).strip().lower() for i in profile.get("interests") or [] if str(i).strip()}
+    phrases = set(said)
     cls = profile.get("class") or 10
     plans_by_career = {p["career_id"]: p for p in data["plans"]}
     fam = profile.get("family_income_annual") or 0
+    # a loose (word-level) match only counts on words that belong to one tag; 'people' is in both
+    # 'helping people' and 'talking to people', so it says nothing about which one the student meant
+    word_tags: dict[str, set] = {}
+    for c in data["careers"]:
+        for t in c.get("tags") or []:
+            for w in _tokens([t]):
+                word_tags.setdefault(w, set()).add(_phrase(t))
+    distinctive = {w for w, ts in word_tags.items() if len(ts) == 1}
     scored = []
     for c in data["careers"]:
-        tags = _tokens(c.get("tags"))
-        tag_phrases = {str(t).strip().lower() for t in c.get("tags") or []}
-        exact = phrases & tag_phrases
+        tags = _tokens(c.get("tags")) & distinctive
+        by_phrase = {_phrase(t): str(t).strip().lower() for t in c.get("tags") or []}
+        exact = phrases & set(by_phrase)
         loose = {p for p in phrases - exact if _tokens([p]) & tags}
-        interest = (len(exact) + 0.5 * len(loose)) / len(phrases) if phrases else 0
+        direct = (len(exact) + 0.5 * len(loose)) / len(phrases) if phrases else 0
         min_c = c.get("min_class") or 0
         elig = 1.0 if cls >= min_c else (0.7 if min_c - cls <= 2 else 0.3)
         afford = 0.5
@@ -309,22 +344,49 @@ def rank_careers(data: dict, profile: dict, n: int = 5) -> list[dict]:
             cost = p["fees"] + p["exam_fees"] + p["materials"]
             afford = 1.0 if cost <= 0.25 * fam else (0.6 if cost <= fam else 0.2)
         demand = (c.get("demand") or 3) / 5
-        score = 0.5 * interest + 0.2 * elig + 0.2 * afford + 0.1 * demand
-        scored.append({"career": c, "score": round(score, 3), "plan_id": p["id"] if p else None,
-                       "breakdown": {"interest": round(interest, 2), "eligibility": elig, "affordability": afford,
-                                     "demand": round(demand, 2)},
-                       "matched": sorted(exact) + sorted(loose)})
-    scored.sort(key=lambda s: -s["score"])
+        scored.append({"career": c, "plan_id": p["id"] if p else None, "direct": direct, "elig": elig,
+                       "afford": afford, "demand": demand, "by_phrase": by_phrase,
+                       "matched": sorted(by_phrase[x] for x in exact) + sorted(said[x] for x in loose)})
+    # careers that share tags with the direct matches are related to the interest (e.g. 'computers' -> CNC Operator
+    # -> 'machines' -> Electrician); everything else has no link to what the student said they enjoy
+    near = set()
+    for s in scored:
+        if s["direct"] > 0:
+            near |= set(s["by_phrase"])
+    near -= phrases
+    for s in scored:
+        rel = sorted(v for k, v in s["by_phrase"].items() if k in near) if s["direct"] == 0 else []
+        interest = s["direct"] or (RELATED_WEIGHT * len(rel) / len(s["by_phrase"]) if rel else 0)
+        s["related"] = rel
+        s["fit"] = "direct" if s["direct"] > 0 else ("related" if rel else "none")
+        raw = 0.5 * interest + 0.2 * s["elig"] + 0.2 * s["afford"] + 0.1 * s["demand"]
+        s["raw"] = raw
+        s["score"] = math.floor(raw * 1000 + 0.5) / 1000  # same half-up rounding as Math.round in engine.ts
+        s["breakdown"] = {"interest": round(interest, 2), "eligibility": s["elig"], "affordability": s["afford"],
+                          "demand": round(s["demand"], 2)}
+        s["diversity"] = False
+        s["has_interests"] = bool(phrases)
+        for k in ("direct", "elig", "afford", "demand", "by_phrase"):
+            del s[k]
+    tier = {"direct": 0, "related": 1, "none": 2}
+    key = lambda s: (tier[s["fit"]], -s["raw"])
+    scored.sort(key=key)
     top = scored[:n]
-    # diversity: at least one vocational and one non-STEM / self-employment option
+    # diversity: show at least one vocational and one non-STEM / self-employment option, but only one that
+    # links to the student's interests, or in place of another career that does not
     for flag in ("vocational", "non_stem"):
-        if not any(s["career"]["flags"][flag] for s in top):
-            extra = next((s for s in scored[n:] if s["career"]["flags"][flag]), None)
+        if top and not any(s["career"]["flags"][flag] for s in top):
+            extra = next((s for s in scored[n:] if s["career"]["flags"][flag]
+                          and (s["fit"] != "none" or top[-1]["fit"] == "none" or not phrases)), None)
             if extra:
+                extra["diversity"] = True
                 top[-1] = extra
-                top.sort(key=lambda s: -s["score"])
+                top.sort(key=key)
     for s in top:
         s["why"] = why_line(s)
+        s.pop("raw", None)
+    for s in scored:
+        s.pop("raw", None)
     return top
 
 
@@ -333,10 +395,15 @@ def why_line(s: dict) -> str:
     parts = []
     if s["matched"]:
         parts.append("matches your interest in " + ", ".join(s["matched"][:3]))
+    elif s.get("related"):
+        parts.append("close to your interests through " + ", ".join(s["related"][:3]))
     if s["breakdown"]["affordability"] >= 1:
         parts.append("low cost for your family")
     if s["breakdown"]["demand"] >= 0.8:
         parts.append("many openings near Pune")
     if s["career"]["flags"]["vocational"]:
         parts.append("start earning sooner")
+    if s.get("fit") == "none" and s.get("has_interests"):
+        # never call an unrelated career a fit: say plainly why it is on the list
+        return "A different kind of path, not linked to your interests" + ((": " + "; ".join(parts)) if parts else "")
     return ("Fits you: " + "; ".join(parts)) if parts else "A different option worth knowing about"

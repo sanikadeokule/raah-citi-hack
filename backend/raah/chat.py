@@ -273,7 +273,7 @@ def explain(body: Explain):
     facts = {"career": c["name"], "category": c["category"], "entry_path": c["entry_path"],
              "minimum_qualification": c["min_qualification"], "income_source_text": c["income_text"],
              "student_interests": body.profile.get("interests"), "matched_interests": s["matched"],
-             "score_breakdown": s["breakdown"]}
+             "interest_fit": s["fit"], "related_interests": s["related"], "score_breakdown": s["breakdown"]}
     if plan:
         r = engine.compute_plan(d, body.profile, plan["id"])
         facts.update({"net_cost_rupees": r["net_cost"], "payback_months_after_training": r["payback"].get("median", {}).get("months_after_training"),
@@ -281,6 +281,7 @@ def explain(body: Explain):
     context = json.dumps(facts, ensure_ascii=False)
     msgs = [{"role": "system", "content": f"You explain career matches to rural students in {LANG_NAME.get(body.lang, 'English')}. "
              "Write at most two short, encouraging sentences saying why this career fits the student. Use ONLY the facts given. "
+             "If interest_fit is 'none', do not say it matches their interests: say it is a different kind of path worth knowing about. "
              "Do not add any number that is not in the facts. No greetings, no lists."},
             {"role": "user", "content": context}]
     try:
