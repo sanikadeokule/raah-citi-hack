@@ -52,9 +52,11 @@ const firstMissing = (p: any, from = 0) => {
 const showValue = (v: any) => (Array.isArray(v) ? v.join(", ") : typeof v === "boolean" ? (v ? "✓" : "✗") : String(v));
 
 export default function Discover() {
-  const { data, lang, t, profile, setProfile, queueAction, online } = useApp();
-  const [step, setStep] = useState(0);
-  const [draft, setDraft] = useState<any>({ language: lang, school_type: "government", domicile: "Maharashtra", has_bank_account: true, exams_passed: [] });
+  const { data, lang, t, profile, setProfile, queueAction, online, auth } = useApp();
+  // the registered name is already known, so the chat starts from the next question
+  const knownName = auth?.user.name || null;
+  const [step, setStep] = useState(knownName ? 1 : 0);
+  const [draft, setDraft] = useState<any>({ language: lang, school_type: "government", domicile: "Maharashtra", has_bank_account: true, exams_passed: [], ...(knownName ? { name: knownName } : {}) });
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [text, setText] = useState("");
   const [multi, setMulti] = useState<string[]>([]);
@@ -72,8 +74,9 @@ export default function Discover() {
   useEffect(() => { aiAvailable().then((ok) => setMode(ok ? "ai" : "script")); }, []);
   // scripted mode asks each question; AI mode opens with the same greeting, then the model takes over
   useEffect(() => {
-    if (mode === "script" && QUESTIONS[step]) setMsgs((m) => [...m, { from: "raah", text: QUESTIONS[step].q[lang] || QUESTIONS[step].q.en }]);
-    if (mode === "ai" && msgs.length === 0) setMsgs([{ from: "raah", text: QUESTIONS[0].q[lang] || QUESTIONS[0].q.en }]);
+    const hello = (i: number) => (knownName && msgs.length === 0 ? `${t("hello")}, ${knownName}! ` : "") + (QUESTIONS[i].q[lang] || QUESTIONS[i].q.en);
+    if (mode === "script" && QUESTIONS[step]) setMsgs((m) => [...m, { from: "raah", text: hello(step) }]);
+    if (mode === "ai" && msgs.length === 0) setMsgs([{ from: "raah", text: hello(knownName ? 1 : 0) }]);
   }, [step, mode]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { end.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs, consent]);
 
