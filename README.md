@@ -23,6 +23,7 @@ The pilot district is Pune.
 - [How the numbers are calculated](#how-the-numbers-are-calculated)
 - [Sign-in and roles](#sign-in-and-roles)
 - [AI conversation](#ai-conversation)
+- [Ask Raah (RAG over the dataset)](#ask-raah-rag-over-the-dataset)
 - [Architecture](#architecture)
 - [Run it locally](#run-it-locally)
 - [API](#api)
@@ -230,6 +231,32 @@ LLM_PROVIDERS=ollama
 OLLAMA_MODEL=gemma4:12b
 ```
 
+## Ask Raah (RAG over the dataset)
+
+Students, parents and teachers can ask free questions on the **Ask Raah** screen, in Marathi, Hindi or English: "Which scholarship helps an OBC girl with hostel costs?", "पुण्यात रेल्वे अप्रेंटिसचे कोणते ट्रेड आहेत?". The answer comes only from the spreadsheet, and every fact carries a numbered citation to the sheet, row ID, Excel row and official source link (`backend/raah/rag.py`, `POST /api/ask`).
+
+<p align="center"><img src="docs/screenshots/ask-raah.png" width="240" alt="Ask Raah answering with numbered citations to Scholarships rows SCH16 and SCH02"></p>
+
+**Ingestion** (on start, and again whenever the spreadsheet or a knowledge file is saved)
+1. **Chunk.** Every sheet row is one chunk. Its section path is `<Sheet> > <row ID>` (for example `Scholarships > SCH16`), and its Excel row number and Source link travel with it. A scheme's eligibility rules are grouped into one chunk; the README sheet is one chunk. `Demo_Students` and `Talukas` are skipped, and mentor phone numbers never enter the index. Optional `.md` / `.txt` files in `backend/knowledge/` are split by heading, keep their heading path, and a table always stays whole.
+2. **Embed.** The same multilingual model as interest matching (Ollama `bge-m3`, else `sentence-transformers`). Vectors are cached by text hash in `backend/data/rag_vectors.json`, so a re-index only embeds rows that changed.
+3. **Store.** In memory by default: a pure-Python BM25 keyword index plus a cosine vector index, so `./run.sh` needs nothing extra. Set `WEAVIATE_URL` to also push the chunks and vectors to Weaviate and let it run the hybrid query.
+
+**Question time**
+4. **Hybrid search.** 70% vector meaning + 30% BM25 keywords (`RAG_ALPHA=0.7`), scores min-max normalised first, top 6 chunks (`RAG_TOP_K`). BM25 catches exact codes such as `SCH05` or an establishment code like `E06242700019`. Because the row text is English, a Marathi or Hindi question also gets English keywords for the BM25 half: from a small built-in word list, plus an LLM rewrite when a model answers. A follow-up question is searched together with the previous one.
+5. **Answer.** The LLM gets the numbered chunks and the student's class, category, income and taluka, answers only from them, and cites `[n]`.
+6. **Data decides.** Every number in the answer (Devanagari digits included) must appear in the retrieved chunks, the question or the profile. If not, or if no model is running, the app shows the top matching rows with their sources instead, and says why. If nothing matches, it says the data does not have it.
+
+**Why not Weaviate by default:** the dataset is about 270 chunks, which the in-memory index searches in milliseconds; Embedded Weaviate does not run on Windows; and Docker would make the laptop demo depend on one more service. The Weaviate path is there for when the corpus grows (more scholarships, documents):
+
+```bash
+docker run -p 8080:8080 -e DEFAULT_VECTORIZER_MODULE=none -e AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED=true cr.weaviate.io/semitechnologies/weaviate:1.30.0
+# backend/.env
+WEAVIATE_URL=http://localhost:8080
+```
+
+If Weaviate stops answering, search falls back to the in-memory index for a minute. `GET /api/ask/status` shows the chunk count per sheet, the embedding model and whether vectors are ready.
+
 ## Architecture
 
 ```
@@ -347,6 +374,7 @@ Interactive OpenAPI docs: <http://localhost:8000/docs>
 | `GET /api/chat/status` | Whether a language model is reachable |
 | `POST /api/chat/turn` | Next question plus validated profile fields from the conversation |
 | `POST /api/interests/match` | Closest career tags for free-text interests in any language |
+| `POST /api/ask` · `GET /api/ask/status` | Ask Raah: hybrid search over the spreadsheet rows and a cited, number-checked answer |
 | `POST /api/chat/explain` | Model-written match reason, checked against the dataset's numbers |
 | `POST /api/mentors/{id}/request` · `GET /api/mentors/mine` · `GET /api/mentors/requests` | Accept-to-reveal mentor contact; teacher view of connections |
 | `POST /api/modules` · `GET /api/modules/mine` · `GET /api/modules/earnings` · `POST /api/modules/earnings/payout` | Teacher module builder, earnings and pain.001 payout |
@@ -374,6 +402,7 @@ backend/
     main.py         FastAPI app, core routes, serves web/out
     auth.py         register and sign in with mobile + PIN, JWT roles, profiles
     db.py           PostgreSQL schema and connection (DATABASE_URL)
+    rag.py          Ask Raah: row chunks, hybrid BM25 + vector search, cited answers
     voice.py        speech: BHASHINI, then Sarvam (ASR / TTS)
     teacher.py      synthetic class, dropout model, bulk recommend
     money.py        pain.001, Account Aggregator mock, skills passport
@@ -413,6 +442,7 @@ Tests never use the app's `DATABASE_URL`. Without `TEST_DATABASE_URL` they run o
 
 - `test_parity.py`: Python and TypeScript engines agree on 105 scenarios (3 students × 7 plans × 5 what-if settings), including eligibility and ranking.
 - `test_auth.py`: register then sign in, registered name in the token and `/me`, Argon2 PIN hashing, duplicate and weak-PIN rejection, wrong-PIN countdown and lockout, teacher PIN reset, upgrading an old account, teacher allowlist, role checks on teacher and money endpoints, consent ownership, profile sync and account deletion.
+- `test_rag.py`: one chunk per row with path, row and source; tables kept whole in documents; exact codes found; hybrid search; Marathi questions without a model; re-index after a spreadsheet edit; citations; invented numbers rejected; Weaviate path and its fallback.
 - `test_data_driven.py`: edits a copy of the spreadsheet (income limit, course fee, income, assumption) and checks the eligibility, cost, payback and cached data change accordingly.
 
 ## Data sources

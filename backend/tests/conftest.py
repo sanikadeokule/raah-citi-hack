@@ -18,3 +18,6 @@ if os.environ.get("TEST_DATABASE_URL"):
     _eng = create_engine(db.database_url())
     db.metadata.drop_all(_eng)
     _eng.dispose()
+
+os.environ.setdefault("RAG_WARM", "0")  # no background embedding during tests
+os.environ.setdefault("RAG_CACHE", os.path.join(tempfile.mkdtemp(), "rag_vectors.json"))
