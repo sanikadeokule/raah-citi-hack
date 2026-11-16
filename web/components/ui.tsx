@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { LANGS, useApp } from "@/lib/store";
-import { cachedAudio, fetchAudio } from "@/lib/audio";
+import { cachedAudio, fetchAudio, micErrorKind, micProblem, pickVoice, startRecording, transcribe, voiceStatus, type Recording, type VoiceProblem } from "@/lib/audio";
 
 export function Shell({ title, back = "/", role = "any", publicPage = false, children }: {
   title?: string; back?: string | null; role?: "any" | "teacher"; publicPage?: boolean; children: React.ReactNode;
@@ -47,7 +47,7 @@ export function Shell({ title, back = "/", role = "any", publicPage = false, chi
         ) : data || publicPage ? children : <Loading />}
       </main>
       {toast && (
-        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full bg-black/85 px-5 py-3 text-sm text-white shadow-lg">{toast}</div>
+        <div role="status" className="fixed bottom-6 left-1/2 z-50 w-max max-w-[min(92vw,28rem)] -translate-x-1/2 rounded-2xl bg-black/85 px-5 py-3 text-center text-sm text-white shadow-lg">{toast}</div>
       )}
     </div>
   );
@@ -88,60 +88,164 @@ export function speechLang(lang: string) {
   return LANGS.find((l) => l.code === lang)?.speech || "en-IN";
 }
 
-/** Text-to-speech: a saved audio file if there is one, then BHASHINI via the backend, else the device voice.
- *  With `cache`, BHASHINI audio is saved on the phone so it plays again offline. */
+/** Text-to-speech: a saved audio file if there is one, then the server (BHASHINI or Sarvam), else the phone's voice.
+ *  With `cache`, server audio is saved on the phone so it plays again offline.
+ *  When nothing can be played the button turns into a warning and a message says why. */
 export function SpeakButton({ text, label, cache }: { text: string; label?: string; cache?: boolean }) {
-  const { lang, t, online } = useApp();
-  const [on, setOn] = useState(false);
+  const { lang, t, online, showToast } = useApp();
+  const [state, setState] = useState<"idle" | "loading" | "on" | "error">("idle");
   const audio = useRef<HTMLAudioElement | null>(null);
-  const stop = () => { window.speechSynthesis?.cancel(); audio.current?.pause(); setOn(false); };
+  // audio fetched but blocked by the browser (no tap in the chain): the next tap plays it straight away
+  const ready = useRef<Blob | null>(null);
+  const run = useRef(0);
+  useEffect(() => { ready.current = null; }, [text, lang]);
+
+  const stop = () => { run.current++; window.speechSynthesis?.cancel(); audio.current?.pause(); setState("idle"); };
+  const fail = (k: VoiceProblem, vars?: Record<string, string>) => {
+    setState("error");
+    showToast(t(`voice_err_${k}`, vars), 8000);
+  };
   const playBlob = async (b: Blob) => {
     const url = URL.createObjectURL(b);
-    audio.current = new Audio(url);
-    audio.current.onended = () => { setOn(false); URL.revokeObjectURL(url); };
-    await audio.current.play();
+    const a = new Audio(url);
+    audio.current = a;
+    a.onended = () => { setState("idle"); URL.revokeObjectURL(url); };
+    await a.play(); // rejects when the browser blocks playback or the file cannot be decoded
+    setState("on");
+  };
+  const speakDevice = async (id: number) => {
+    const ss = typeof window !== "undefined" ? window.speechSynthesis : undefined;
+    const langName = LANGS.find((l) => l.code === lang)?.label ?? lang;
+    if (!ss || typeof SpeechSynthesisUtterance === "undefined") return fail("novoice", { lang: langName });
+    const pick = await pickVoice(speechLang(lang));
+    if (id !== run.current) return;
+    if (!pick) return fail("novoice", { lang: langName });
+    if (pick.substitute) showToast(t("voice_hindi_for_marathi"), 5000);
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = pick.voice?.lang ?? speechLang(lang);
+    if (pick.voice) u.voice = pick.voice;
+    u.rate = 0.95;
+    let started = false;
+    u.onstart = () => { started = true; if (id === run.current) setState("on"); };
+    u.onend = () => { if (id === run.current) setState("idle"); };
+    u.onerror = (e) => { if (id === run.current && !["interrupted", "canceled"].includes(e.error)) fail("play"); };
+    ss.cancel();
+    ss.speak(u);
+    // some phones accept the request but never speak (no engine, or no audio output)
+    setTimeout(() => { if (id === run.current && !started && !ss.speaking) { ss.cancel(); fail("play"); } }, 5000);
   };
   const play = async () => {
-    if (on) return stop();
-    setOn(true);
+    if (state === "on" || state === "loading") return stop();
+    const id = ++run.current;
+    if (ready.current) {
+      const b = ready.current;
+      ready.current = null;
+      try { return await playBlob(b); } catch { return fail("play"); }
+    }
+    setState("loading");
+    let blob: Blob | null = null;
     try {
-      const saved = await cachedAudio(lang, text);
-      const blob = saved ?? (online ? await fetchAudio(lang, text, Boolean(cache)) : null);
-      if (blob) return await playBlob(blob);
-    } catch { /* fall back */ }
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = speechLang(lang);
-    u.rate = 0.95;
-    u.onend = () => setOn(false);
-    window.speechSynthesis?.speak(u);
+      blob = (await cachedAudio(lang, text)) ?? (online ? await fetchAudio(lang, text, Boolean(cache)) : null);
+    } catch { /* use the phone's voice */ }
+    if (id !== run.current) return;
+    if (blob) {
+      try { return await playBlob(blob); } catch (e) {
+        if ((e as DOMException)?.name === "NotAllowedError") {
+          ready.current = blob;
+          setState("error");
+          return showToast(t("voice_tap_again"), 5000);
+        }
+        /* file could not be played: try the phone's voice */
+      }
+    }
+    speakDevice(id);
   };
-  useEffect(() => () => { window.speechSynthesis?.cancel(); }, []);
+  useEffect(() => () => { window.speechSynthesis?.cancel(); audio.current?.pause(); }, []);
+  const icon = state === "on" ? "■" : state === "loading" ? "…" : state === "error" ? "⚠️" : "🔊";
+  const text_ = label ?? (state === "on" ? t("stop") : state === "error" ? t("voice_retry") : t("play"));
   return (
-    <button onClick={play} className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full bg-[var(--brand-soft)] px-3 py-1.5 text-sm font-medium text-[var(--brand-ink)]">
-      {on ? "■" : "🔊"} {label ?? (on ? t("stop") : t("play"))}
+    <button onClick={play} aria-live="polite" title={state === "error" ? t("voice_err_play") : undefined}
+      className={`inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-medium ${state === "error" ? "bg-amber-100 text-amber-900" : "bg-[var(--brand-soft)] text-[var(--brand-ink)]"}`}>
+      {icon} {text_}
     </button>
   );
 }
 
-/** Speech-to-text with the browser's Web Speech API (BHASHINI ASR is wired on the server for recorded audio). */
+/** Voice typing. With a server speech service (BHASHINI or Sarvam) the phone records and the server transcribes,
+ *  which works for Marathi on any browser; otherwise the browser's own speech recognition is used.
+ *  Every failure (http link, blocked permission, no microphone, nothing heard) is explained in a message. */
 export function MicButton({ onText }: { onText: (s: string) => void }) {
-  const { lang, t } = useApp();
-  const [listening, setListening] = useState(false);
-  const SR: any = typeof window !== "undefined" ? (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition : null;
-  if (!SR) return null;
-  const start = () => {
-    const r = new SR();
-    r.lang = speechLang(lang);
-    r.interimResults = false;
-    r.onresult = (e: any) => onText(e.results[0][0].transcript);
-    r.onend = () => setListening(false);
-    setListening(true);
-    r.start();
+  const { lang, t, showToast } = useApp();
+  const [state, setState] = useState<"idle" | "listening" | "working">("idle");
+  const rec = useRef<Recording | null>(null);
+  const sr = useRef<any>(null);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const tell = (k: VoiceProblem) => showToast(t(`voice_err_${k}`), 8000);
+  useEffect(() => () => { if (timer.current) clearTimeout(timer.current); sr.current?.abort?.(); rec.current?.stop().catch(() => {}); }, []);
+
+  const finish = async () => {
+    if (timer.current) clearTimeout(timer.current);
+    const r = rec.current;
+    rec.current = null;
+    if (!r) return;
+    setState("working");
+    try {
+      const text = await transcribe(lang, await r.stop());
+      if (text) onText(text); else tell("asr");
+    } catch {
+      tell("asr");
+    } finally {
+      setState("idle");
+    }
   };
+
+  const click = async () => {
+    if (state === "working") return;
+    if (state === "listening") {
+      if (rec.current) return finish();
+      sr.current?.stop();
+      return;
+    }
+    const problem = micProblem();
+    if (problem === "insecure") return tell("insecure");
+    const SR: any = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    const status = await voiceStatus();
+    if (status.asr && !problem && typeof MediaRecorder !== "undefined") {
+      try {
+        rec.current = await startRecording();
+      } catch (e) {
+        return tell(micErrorKind(e));
+      }
+      setState("listening");
+      showToast(t("voice_listening"), 4000);
+      timer.current = setTimeout(finish, 15000);
+      return;
+    }
+    if (SR) {
+      const r = new SR();
+      sr.current = r;
+      r.lang = speechLang(lang);
+      r.interimResults = false;
+      let heard = false;
+      r.onresult = (e: any) => { heard = true; onText(e.results[0][0].transcript); };
+      r.onerror = (e: any) => { if (e.error !== "aborted") { heard = true; tell(micErrorKind(e)); } };
+      r.onend = () => { if (timer.current) clearTimeout(timer.current); setState("idle"); if (!heard) tell("nospeech"); };
+      try {
+        r.start();
+        setState("listening");
+        timer.current = setTimeout(() => r.abort?.(), 15000); // some phones never end on their own
+      } catch (e) {
+        tell(micErrorKind(e));
+      }
+      return;
+    }
+    tell("unsupported");
+  };
+
   return (
-    <button onClick={start} aria-label={t("mic")}
-      className={`h-12 w-12 shrink-0 rounded-full text-xl text-white shadow ${listening ? "animate-pulse bg-rose-500" : "bg-[var(--brand)]"}`}>
-      🎤
+    <button onClick={click} aria-label={state === "listening" ? t("voice_listening") : t("mic")} aria-pressed={state === "listening"}
+      className={`h-12 w-12 shrink-0 rounded-full text-xl text-white shadow ${state === "listening" ? "animate-pulse bg-rose-500" : state === "working" ? "bg-[var(--muted)]" : "bg-[var(--brand)]"}`}>
+      {state === "working" ? "…" : state === "listening" ? "⏹" : "🎤"}
     </button>
   );
 }

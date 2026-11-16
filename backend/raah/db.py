@@ -21,6 +21,12 @@ import threading
 from contextlib import contextmanager
 from typing import Any, Iterator
 
+# Windows Application Control / Smart App Control can block SQLAlchemy's compiled (Cython) helpers
+# with "DLL load failed ... An Application Control policy has blocked this file". SQLAlchemy 2.0
+# (pinned <2.1 in requirements.txt; 2.1 has no pure-Python fallback) skips them when this is set.
+# The pure-Python path is a little slower and makes no difference at Raah's scale.
+os.environ.setdefault("DISABLE_SQLALCHEMY_CEXT_RUNTIME", "1")
+
 from sqlalchemy import (Column, Float, ForeignKey, Integer, MetaData, String, Table, Text, UniqueConstraint,
                         create_engine, event, inspect, text)
 from sqlalchemy.engine import Connection, CursorResult, Engine
@@ -122,8 +128,10 @@ def database_url() -> str:
             "DATABASE_URL=postgresql://raah:raah@localhost:5432/raah in backend/.env")
     if url.startswith("sqlite") and os.environ.get("RAAH_TESTING") != "1":
         raise DatabaseNotConfigured("SQLite is only used by the automated tests; set DATABASE_URL to a PostgreSQL URL")
-    # hosting providers give postgres:// URLs; SQLAlchemy wants a driver name
-    return re.sub(r"^postgres(ql)?://", "postgresql+psycopg://", url)
+    # Hosting providers give postgres:// URLs; SQLAlchemy wants a driver name. Raah uses pg8000, a
+    # pure-Python driver, because psycopg's compiled libpq wrapper is blocked by Windows Application
+    # Control on some laptops. Older .env files that name psycopg are moved over too.
+    return re.sub(r"^postgres(ql)?(\+psycopg2?)?://", "postgresql+pg8000://", url)
 
 
 _engine: Engine | None = None

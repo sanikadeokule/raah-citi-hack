@@ -276,7 +276,7 @@ If Weaviate stops answering, search falls back to the in-memory index for a minu
  │  /api/data /api/version  parsed spreadsheet │
  │  /api/plan /api/eligibility /api/careers    │
  │  /api/centres            raah/engine.py     │
- │  /api/voice              BHASHINI ASR / TTS │
+ │  /api/voice       BHASHINI / Sarvam ASR+TTS │
  │  /api/teacher            class, flags, bulk │
  │  /api/money              AA, pain.001, VC   │
  │  /api/partners           OAuth2 + OpenAPI   │
@@ -287,7 +287,7 @@ If Weaviate stops answering, search falls back to the in-memory index for a minu
 
 The same logic exists in Python (`backend/raah/engine.py`, used by the API) and TypeScript (`web/lib/engine.ts`, used offline in the browser). A parity test runs both on 105 scenarios and requires identical results.
 
-**Stack:** Next.js 16, React 19, Tailwind CSS 4, Recharts, Dexie · FastAPI, Pydantic, openpyxl, scikit-learn, NumPy, lxml, PyJWT, httpx · BHASHINI (ULCA) for Indian-language speech.
+**Stack:** Next.js 16, React 19, Tailwind CSS 4, Recharts, Dexie · FastAPI, Pydantic, openpyxl, scikit-learn, NumPy, lxml, PyJWT, httpx · BHASHINI (ULCA) and Sarvam AI for Indian-language speech.
 
 ## Run it locally
 
@@ -304,7 +304,20 @@ powershell -ExecutionPolicy Bypass -File backend\scripts\setup_postgres.ps1   # 
 
 The setup script creates the role `raah` and database `raah` on `localhost:5432` and writes `DATABASE_URL=postgresql://raah:raah@localhost:5432/raah` into `backend/.env`. Running it again is safe. Other settings (BHASHINI keys, signing key, partner credentials) are in the same `.env`.
 
+**Windows laptops with Application Control (Smart App Control) on.** Some managed or new Windows 11 laptops refuse to load unsigned compiled Python extensions ("DLL load failed ... An Application Control policy has blocked this file"). The backend avoids the ones that hit this: it uses the pure-Python PostgreSQL driver `pg8000` (plain `postgresql://` URLs are rewritten to `postgresql+pg8000://`), pins SQLAlchemy below 2.1 and sets `DISABLE_SQLALCHEMY_CEXT_RUNTIME=1` so SQLAlchemy runs without its compiled helpers. scikit-learn and lxml are optional at runtime (NumPy and structural fallbacks). If you upgraded from an older checkout, run `pip uninstall -y psycopg psycopg-binary` and `pip install -r backend\requirements.txt` once.
+
 Open <http://localhost:8000>. On a phone connected to the same Wi-Fi, open `http://<laptop-ip>:8000` and use "Add to Home screen" to install it.
+
+### Phones: use HTTPS for the microphone
+
+Phone browsers only allow the microphone (voice typing, recording a voice note) on `https://` pages, so on the plain `http://<laptop-ip>:8000` link the mic shows a message instead of listening. For a demo, start the app with one of these from the repository root (or `python scripts/serve_https.py [--lan]` from `backend/`, which also works on Windows):
+
+| Command | Link it prints | Needs | Notes |
+| --- | --- | --- | --- |
+| `./run.sh https` | `https://<random>.trycloudflare.com` | internet | Downloads `cloudflared` into `backend/data/bin` the first time. Any phone, any network, no warning. The link changes each run. |
+| `./run.sh lan` | `https://<laptop-ip>:8443` | same Wi-Fi | Self-signed certificate made for the laptop's address. The phone warns once: tap **Advanced → Proceed**. Allow Python through the firewall if Windows asks. |
+
+`pip install qrcode` to also get a QR code in the terminal for the phone to scan.
 
 ### PostgreSQL without the script
 
@@ -326,7 +339,14 @@ npm run build                                             # writes web/out, whic
 
 ### Voice
 
-With `BHASHINI_USER_ID` and `BHASHINI_API_KEY` in `backend/.env`, text-to-speech and speech-to-text go through BHASHINI. Generated speech is cached on the server in `RAAH_TTS_CACHE` (default `backend/data/tts`), so each lesson or message is synthesised once, and lesson audio can be saved on the phone for offline listening. Without keys the app uses the browser's built-in voices (`mr-IN`, `hi-IN`, `en-IN`).
+Speech runs on the server when keys are set in `backend/.env`, so Marathi works even on phones that have no Marathi voice installed:
+
+- **BHASHINI** (`BHASHINI_USER_ID`, `BHASHINI_API_KEY`), the government ULCA pipeline.
+- **Sarvam AI** (`SARVAM_API_KEY`): Bulbul for text-to-speech, Saarika for speech-to-text.
+
+`VOICE_PROVIDERS` (default `bhashini,sarvam`) sets the order. A provider without keys is skipped, and one that fails is tried last for two minutes, so a slow service does not hold up every request. `GET /api/voice/status` shows which providers are active. Generated speech is cached on the server in `RAAH_TTS_CACHE` (default `backend/data/tts`), so each lesson or message is synthesised once and cached audio still plays if the keys or the service go away; lesson audio can also be saved on the phone for offline listening.
+
+Without keys the app uses the phone's own voices (`mr-IN`, `hi-IN`, `en-IN`) and the browser's speech recognition. If the phone has no Marathi voice, a Hindi voice reads Marathi text (same script). When something cannot work, the app says why instead of staying silent: the page is not on https, microphone permission is blocked, no microphone, nothing heard, no voice for the language, or audio could not play on the device (for example a desktop with no speakers). The speaker button turns into ⚠️ and can be tapped to try again.
 
 ### ISO 20022 validation
 
@@ -344,7 +364,7 @@ Interactive OpenAPI docs: <http://localhost:8000/docs>
 | `POST /api/eligibility` | Rule-by-rule results for a profile, optionally for a plan |
 | `POST /api/careers` | Top-N careers with score breakdown and reason |
 | `POST /api/centres` | Nearest centres of a type |
-| `POST /api/voice/tts`, `/api/voice/asr` | BHASHINI speech |
+| `GET /api/voice/status`, `POST /api/voice/tts`, `/api/voice/asr` | Speech through BHASHINI, then Sarvam |
 | `GET /api/teacher/class` | Class with risk and talent flags |
 | `GET /api/teacher/eligible/{scheme}` · `POST /api/teacher/recommend` | Bulk recommend |
 | `POST /api/money/aa/consent` · `GET /api/money/aa/fi-data` | Consent and synthetic FI data |
@@ -385,11 +405,12 @@ backend/
     auth.py         register and sign in with mobile + PIN, JWT roles, profiles
     db.py           PostgreSQL schema and connection (DATABASE_URL)
     rag.py          Ask Raah: row chunks, hybrid BM25 + vector search, cited answers
-    voice.py        BHASHINI ASR / TTS
+    voice.py        speech: BHASHINI, then Sarvam (ASR / TTS)
     teacher.py      synthetic class, dropout model, bulk recommend
     money.py        pain.001, Account Aggregator mock, skills passport
     partners.py     OAuth2 partner endpoints
   scripts/add_app_sheets.py
+  scripts/serve_https.py   https for phones (Cloudflare tunnel or self-signed LAN)
   tests/            parity and spreadsheet-edit tests
 web/
   app/              one folder per screen

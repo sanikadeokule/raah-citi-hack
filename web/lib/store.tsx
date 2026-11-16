@@ -29,7 +29,7 @@ interface Ctx {
   t: (k: string, vars?: Record<string, string | number>) => string;
   online: boolean;
   toast: string | null;
-  showToast: (m: string) => void;
+  showToast: (m: string, ms?: number) => void;
   queueAction: (kind: string, payload: unknown) => Promise<void>;
   refresh: () => Promise<void>;
   auth: Auth | null;
@@ -64,9 +64,11 @@ export function Provider({ children }: { children: React.ReactNode }) {
   const authRef = useRef<Auth | null>(null);
   authRef.current = auth;
 
-  const showToast = useCallback((m: string) => {
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const showToast = useCallback((m: string, ms = 3500) => {
     setToast(m);
-    setTimeout(() => setToast(null), 3500);
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(null), ms);
   }, []);
 
   const t = useCallback((k: string, vars?: Record<string, string | number>) => {
