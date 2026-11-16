@@ -9,13 +9,16 @@ const FIELDS: { k: string; label: string; type: "text" | "number" | "bool" | "li
   { k: "name", label: "Name", type: "text" }, { k: "age", label: "Age", type: "number" },
   { k: "gender", label: "Gender", type: "select", options: ["F", "M"] }, { k: "class", label: "Class", type: "number" },
   { k: "marks_pct", label: "Marks %", type: "number" }, { k: "interests", label: "Interests (comma separated)", type: "list" },
-  { k: "category", label: "Category", type: "select", options: ["General", "EWS", "OBC", "SC", "ST", "DNT", "EBC", "SEBC", "Navbouddha"] },
+  { k: "category", label: "Category", type: "select", options: ["General", "EWS", "OBC", "SC", "ST", "DNT", "EBC", "SEBC", "VJNT", "SBC", "Navbouddha"] },
   { k: "family_income_annual", label: "Family income ₹/year", type: "number" }, { k: "max_commute_km", label: "Max travel km", type: "number" },
   { k: "can_stay_hostel", label: "Can stay in hostel", type: "bool" },
   { k: "school_type", label: "School type", type: "select", options: ["government", "aided", "local_body", "private", "top_class"] },
   { k: "domicile", label: "Domicile", type: "text" }, { k: "documents", label: "Documents you have (comma separated)", type: "list" },
   { k: "has_bank_account", label: "Has bank account", type: "bool" }, { k: "exams_passed", label: "Exams passed (e.g. nmms)", type: "list" },
   { k: "disability_pct", label: "Disability %", type: "number" },
+  { k: "religion", label: "Religion (some scholarships are for minority communities)", type: "select", options: ["Hindu", "Muslim", "Christian", "Sikh", "Buddhist", "Jain", "Parsi", "Other"] },
+  { k: "parent_construction_worker", label: "Parent is a registered construction worker", type: "bool" },
+  { k: "parent_ex_serviceman", label: "Parent is an ex-serviceman", type: "bool" },
 ];
 
 export default function ProfilePage() {
