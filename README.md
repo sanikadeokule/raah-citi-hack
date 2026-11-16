@@ -188,7 +188,7 @@ Students and teachers sign in with their mobile number and a one-time password.
 - **PIN storage and lockout:** PINs are hashed with Argon2id (never stored or logged in plain text). 5 wrong PINs lock the account for 15 minutes; a correct PIN resets the count.
 - **Forgot PIN:** the teacher enters the student's number under "Student forgot their PIN" on the Class dashboard. That clears the PIN and the student registers again with the same number; their saved profile stays.
 - **Tokens:** HS256 JWT signed with `RAAH_SIGNING_KEY`, carrying the user id, role and registered name, valid for `RAAH_TOKEN_TTL_DAYS` (default 30) so a signed-in student keeps working offline. A rejected token signs the app out.
-- **Database:** PostgreSQL when `DATABASE_URL` is set, otherwise a SQLite file at `RAAH_DB` (default `backend/data/raah.db`) so `./run.sh` needs nothing installed. The schema lives in `backend/raah/db.py` and is created on startup; columns added later are added to an existing database automatically. The spec names "SQLModel + SQLite (Postgres optional)", so this keeps SQLite for the laptop demo and Postgres for a real deployment.
+- **Database:** PostgreSQL. The app reads `DATABASE_URL` from `backend/.env` and will not start without it. The schema lives in `backend/raah/db.py` and is created on startup; columns added later are added to an existing database automatically.
 - **Profile sync:** profile edits and offline actions are queued on the phone and saved to the account on reconnect; signing in on a new phone restores the profile.
 - **Delete my data:** removes the account, profile and synced activity on the server and clears the phone.
 - **Open endpoints:** `/api/data`, `/api/version`, `/api/plan`, `/api/eligibility`, `/api/careers` and `/api/centres` stay public because they only serve the published dataset and run the same maths the phone runs offline.
@@ -269,24 +269,22 @@ Requirements: Python 3.10+. Node 20+ only if you want to change the web app.
 ```bash
 git clone https://github.com/sanikadeokule/raah-citi-hack.git
 cd raah-citi-hack
-cp backend/.env.example backend/.env      # optional: BHASHINI keys, signing key, partner credentials
+# once: create the PostgreSQL database (Docker if running, otherwise installs PostgreSQL 16)
+powershell -ExecutionPolicy Bypass -File backend\scripts\setup_postgres.ps1   # Windows
+./backend/scripts/setup_postgres.sh                                          # Mac / Linux
 ./run.sh
 ```
 
+The setup script creates the role `raah` and database `raah` on `localhost:5432` and writes `DATABASE_URL=postgresql://raah:raah@localhost:5432/raah` into `backend/.env`. Running it again is safe. Other settings (BHASHINI keys, signing key, partner credentials) are in the same `.env`.
+
 Open <http://localhost:8000>. On a phone connected to the same Wi-Fi, open `http://<laptop-ip>:8000` and use "Add to Home screen" to install it.
 
-### Using PostgreSQL
+### PostgreSQL without the script
 
-The app runs on a SQLite file out of the box. To use PostgreSQL instead:
+- **Docker:** `docker compose up -d db` from the repository root starts PostgreSQL 16 with the same role, password and database.
+- **Hosted (Neon, Supabase, RDS):** paste the connection string as `DATABASE_URL` in `backend/.env`. `postgres://` URLs work as they are.
 
-```bash
-# once: create a database (or use a hosted one such as Neon, Supabase or RDS)
-createdb raah
-# backend/.env
-DATABASE_URL=postgresql://USER:PASSWORD@localhost:5432/raah
-```
-
-Restart the backend; the tables are created on first start. `postgres://` URLs from hosting providers work as they are.
+Tables are created on first start. Use a strong password instead of `raah` anywhere other than your own laptop.
 
 By default the backend looks for `raah-dataset.xlsx` in the repository root or the folder above it. Point it anywhere with `RAAH_DATASET=/path/to/raah-dataset.xlsx`.
 
@@ -357,7 +355,7 @@ backend/
     engine.py       eligibility, cost & payback, centres, career ranking
     main.py         FastAPI app, core routes, serves web/out
     auth.py         register and sign in with mobile + PIN, JWT roles, profiles
-    db.py           database schema; PostgreSQL via DATABASE_URL, SQLite file otherwise
+    db.py           PostgreSQL schema and connection (DATABASE_URL)
     voice.py        BHASHINI ASR / TTS
     teacher.py      synthetic class, dropout model, bulk recommend
     money.py        pain.001, Account Aggregator mock, skills passport
@@ -388,9 +386,11 @@ run.sh
 cd backend
 pip install -r requirements.txt pytest
 RAAH_DATASET=../raah-dataset.xlsx python -m pytest -q tests
-# the same tests against PostgreSQL
-DATABASE_URL=postgresql://USER:PASSWORD@localhost:5432/raah_test python -m pytest -q tests
+# against a scratch PostgreSQL database (its tables are emptied at the start of each run; never point this at the real one)
+TEST_DATABASE_URL=postgresql://raah:raah@localhost:5432/raah_test python -m pytest -q tests
 ```
+
+Tests never use the app's `DATABASE_URL`. Without `TEST_DATABASE_URL` they run on a throwaway SQLite file.
 
 - `test_parity.py`: Python and TypeScript engines agree on 105 scenarios (3 students × 7 plans × 5 what-if settings), including eligibility and ranking.
 - `test_auth.py`: register then sign in, registered name in the token and `/me`, Argon2 PIN hashing, duplicate and weak-PIN rejection, wrong-PIN countdown and lockout, teacher PIN reset, upgrading an old account, teacher allowlist, role checks on teacher and money endpoints, consent ownership, profile sync and account deletion.
