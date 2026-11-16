@@ -304,6 +304,8 @@ powershell -ExecutionPolicy Bypass -File backend\scripts\setup_postgres.ps1   # 
 
 The setup script creates the role `raah` and database `raah` on `localhost:5432` and writes `DATABASE_URL=postgresql://raah:raah@localhost:5432/raah` into `backend/.env`. Running it again is safe. Other settings (BHASHINI keys, signing key, partner credentials) are in the same `.env`.
 
+**Windows laptops with Application Control (Smart App Control) on.** Some managed or new Windows 11 laptops refuse to load unsigned compiled Python extensions ("DLL load failed ... An Application Control policy has blocked this file"). The backend avoids the ones that hit this: it uses the pure-Python PostgreSQL driver `pg8000` (plain `postgresql://` URLs are rewritten to `postgresql+pg8000://`), pins SQLAlchemy below 2.1 and sets `DISABLE_SQLALCHEMY_CEXT_RUNTIME=1` so SQLAlchemy runs without its compiled helpers. scikit-learn and lxml are optional at runtime (NumPy and structural fallbacks). If you upgraded from an older checkout, run `pip uninstall -y psycopg psycopg-binary` and `pip install -r backend\requirements.txt` once.
+
 Open <http://localhost:8000>. On a phone connected to the same Wi-Fi, open `http://<laptop-ip>:8000` and use "Add to Home screen" to install it.
 
 ### Phones: use HTTPS for the microphone
