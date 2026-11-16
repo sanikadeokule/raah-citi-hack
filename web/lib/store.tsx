@@ -41,6 +41,11 @@ interface Ctx {
 
 const C = createContext<Ctx | null>(null);
 
+/** A new account's profile: just the registered name; the rest is filled in by the Discover chat or My details. */
+function blankProfile(user: AuthUser) {
+  return { name: user.name ?? "", interests: [], documents: [], exams_passed: [] };
+}
+
 export function useApp() {
   const c = useContext(C);
   if (!c) throw new Error("useApp outside provider");
@@ -72,7 +77,9 @@ export function Provider({ children }: { children: React.ReactNode }) {
 
   const signOut = useCallback(async () => {
     setAuth(null);
-    await setKV("auth", null);
+    // the next person on this phone must not see this person's details
+    setProfileState(null);
+    await Promise.all([setKV("auth", null), setKV("profile", null), setKV("profile_owner", null)]);
   }, []);
 
   /** fetch with the signed-in user's token; a 401 from the server signs the user out. */
@@ -103,9 +110,11 @@ export function Provider({ children }: { children: React.ReactNode }) {
   // boot: cached data, session and profile first (instant + offline), then network
   useEffect(() => {
     (async () => {
-      const [cached, p, l, a] = await Promise.all([getKV<any>("data"), getKV<any>("profile"), getKV<string>("lang"), getKV<Auth | null>("auth")]);
+      const [cached, p, l, a, owner] = await Promise.all([getKV<any>("data"), getKV<any>("profile"), getKV<string>("lang"), getKV<Auth | null>("auth"), getKV<number | null>("profile_owner")]);
       if (cached) { setData(cached); version.current = cached.version?.modified ?? null; }
-      if (p) setProfileState(p);
+      // only use the saved profile if it belongs to whoever is signed in (older versions kept a demo student here)
+      if (p && a && owner === a.user.id) setProfileState(p);
+      else if (a) setProfileState(blankProfile(a.user));
       if (l) setLangState(l);
       if (a) setAuth(a);
       setAuthReady(true);
@@ -117,10 +126,10 @@ export function Provider({ children }: { children: React.ReactNode }) {
     }
   }, [fetchData]);
 
-  // default profile = first demo student from the spreadsheet
+  // teachers preview student screens with the first demo student; students always see their own profile
   useEffect(() => {
-    if (data && !profile && data.students?.length) setProfileState(data.students[0]);
-  }, [data, profile]);
+    if (data && !profile && auth?.user.role === "teacher" && data.students?.length) setProfileState(data.students[0]);
+  }, [data, profile, auth]);
 
   // live reload: poll the spreadsheet version
   useEffect(() => {
@@ -168,11 +177,13 @@ export function Provider({ children }: { children: React.ReactNode }) {
     setAuth(a);
     authRef.current = a;
     await setKV("auth", a);
+    await setKV("profile_owner", user.id);
+    let p: any = null;
     try {
       const r = await authFetch("/api/auth/profile");
-      const j = await r.json();
-      if (j.profile) setProfile(j.profile);
-    } catch { /* keep local profile */ }
+      p = (await r.json()).profile;
+    } catch { /* offline: start from the registered name */ }
+    setProfile(p ? { ...p, name: p.name || user.name } : blankProfile(user));
     await flushQueue(false);
   }, [authFetch, flushQueue, setProfile]);
 

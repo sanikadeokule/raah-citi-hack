@@ -23,6 +23,7 @@ The pilot district is Pune.
 - [How the numbers are calculated](#how-the-numbers-are-calculated)
 - [Sign-in and roles](#sign-in-and-roles)
 - [AI conversation](#ai-conversation)
+- [Ask Raah (RAG over the dataset)](#ask-raah-rag-over-the-dataset)
 - [Architecture](#architecture)
 - [Run it locally](#run-it-locally)
 - [API](#api)
@@ -175,24 +176,26 @@ payback       = first month after training where cumulative gain ≥ net_cost
 
 Students and teachers sign in with their mobile number and a one-time password.
 
-<p align="center"><img src="docs/screenshots/login.png" width="240" alt="Login screen with student and teacher roles"></p>
+<p align="center"><img src="docs/screenshots/login.png" width="240" alt="Register screen with name, mobile number and PIN"></p>
 
 | | Student | Teacher |
 |---|---|---|
-| Who can sign in | Anyone with a 10-digit Indian mobile number (account is created on first login) | Numbers listed in `RAAH_TEACHER_PHONES` |
+| Who can register | Anyone with a 10-digit Indian mobile number | Only numbers listed in `RAAH_TEACHER_PHONES` |
 | Screens | Discover, Careers, plans, Compare, Scholarships, Learn, Opportunity, Profile | Everything a student sees, plus Class dashboard and Money |
 | Server access | Own profile, own synced activity, own AA consent | Class data, bulk recommend, pain.001 payouts and ledger, any consent |
 
-- **OTP:** 6 digits, stored only as a salted SHA-256 hash, valid for 5 minutes, single use, 5 wrong tries lock it, and at most 3 requests per number every 10 minutes.
-- **Sandbox mode:** with `SMS_PROVIDER` empty, the OTP is `RAAH_SANDBOX_OTP` (default `123456`) and the login screen shows it. Add an SMS gateway in `_send_sms` in `backend/raah/auth.py` for real delivery.
-- **Tokens:** HS256 JWT signed with `RAAH_SIGNING_KEY`, carrying the user id and role, valid for `RAAH_TOKEN_TTL_DAYS` (default 30) so a signed-in student keeps working offline. A rejected token signs the app out.
-- **Storage:** users, OTP challenges, saved profiles and synced activity live in SQLite at `RAAH_DB` (default `backend/data/raah.db`).
+- **Register, then sign in:** the first screen has **Register** (full name, mobile number, PIN typed twice) and **Sign in** (mobile number and PIN). After registering, the app moves to Sign in with the number filled in. After signing in, the home screen and the Discover chat greet the person by the name they registered with; demo students are never used as a student's identity (teachers can still preview them).
+- **Why a PIN, not a password:** most users type on a phone number pad, often in Marathi or Hindi. A 4 to 6 digit PIN works the same in every language and is familiar from ATM and UPI. Easy PINs (`1111`, `1234`, `9876`) are refused.
+- **PIN storage and lockout:** PINs are hashed with Argon2id (never stored or logged in plain text). 5 wrong PINs lock the account for 15 minutes; a correct PIN resets the count.
+- **Forgot PIN:** the teacher enters the student's number under "Student forgot their PIN" on the Class dashboard. That clears the PIN and the student registers again with the same number; their saved profile stays.
+- **Tokens:** HS256 JWT signed with `RAAH_SIGNING_KEY`, carrying the user id, role and registered name, valid for `RAAH_TOKEN_TTL_DAYS` (default 30) so a signed-in student keeps working offline. A rejected token signs the app out.
+- **Database:** PostgreSQL. The app reads `DATABASE_URL` from `backend/.env` and will not start without it. The schema lives in `backend/raah/db.py` and is created on startup; columns added later are added to an existing database automatically.
 - **Profile sync:** profile edits and offline actions are queued on the phone and saved to the account on reconnect; signing in on a new phone restores the profile.
 - **Delete my data:** removes the account, profile and synced activity on the server and clears the phone.
 - **Open endpoints:** `/api/data`, `/api/version`, `/api/plan`, `/api/eligibility`, `/api/careers` and `/api/centres` stay public because they only serve the published dataset and run the same maths the phone runs offline.
 - **Partners** use a separate OAuth2 client-credentials flow (below).
 
-Demo logins: any student number (e.g. `9876543210`), teacher `9000000001`, OTP `123456`.
+Try it: register as a student with any mobile number. To try the teacher screens, register as a teacher with `9000000001` (the default `RAAH_TEACHER_PHONES`).
 
 ## AI conversation
 
@@ -227,6 +230,32 @@ ollama pull gemma4:12b
 LLM_PROVIDERS=ollama
 OLLAMA_MODEL=gemma4:12b
 ```
+
+## Ask Raah (RAG over the dataset)
+
+Students, parents and teachers can ask free questions on the **Ask Raah** screen, in Marathi, Hindi or English: "Which scholarship helps an OBC girl with hostel costs?", "पुण्यात रेल्वे अप्रेंटिसचे कोणते ट्रेड आहेत?". The answer comes only from the spreadsheet, and every fact carries a numbered citation to the sheet, row ID, Excel row and official source link (`backend/raah/rag.py`, `POST /api/ask`).
+
+<p align="center"><img src="docs/screenshots/ask-raah.png" width="240" alt="Ask Raah answering with numbered citations to Scholarships rows SCH16 and SCH02"></p>
+
+**Ingestion** (on start, and again whenever the spreadsheet or a knowledge file is saved)
+1. **Chunk.** Every sheet row is one chunk. Its section path is `<Sheet> > <row ID>` (for example `Scholarships > SCH16`), and its Excel row number and Source link travel with it. A scheme's eligibility rules are grouped into one chunk; the README sheet is one chunk. `Demo_Students` and `Talukas` are skipped, and mentor phone numbers never enter the index. Optional `.md` / `.txt` files in `backend/knowledge/` are split by heading, keep their heading path, and a table always stays whole.
+2. **Embed.** The same multilingual model as interest matching (Ollama `bge-m3`, else `sentence-transformers`). Vectors are cached by text hash in `backend/data/rag_vectors.json`, so a re-index only embeds rows that changed.
+3. **Store.** In memory by default: a pure-Python BM25 keyword index plus a cosine vector index, so `./run.sh` needs nothing extra. Set `WEAVIATE_URL` to also push the chunks and vectors to Weaviate and let it run the hybrid query.
+
+**Question time**
+4. **Hybrid search.** 70% vector meaning + 30% BM25 keywords (`RAG_ALPHA=0.7`), scores min-max normalised first, top 6 chunks (`RAG_TOP_K`). BM25 catches exact codes such as `SCH05` or an establishment code like `E06242700019`. Because the row text is English, a Marathi or Hindi question also gets English keywords for the BM25 half: from a small built-in word list, plus an LLM rewrite when a model answers. A follow-up question is searched together with the previous one.
+5. **Answer.** The LLM gets the numbered chunks and the student's class, category, income and taluka, answers only from them, and cites `[n]`.
+6. **Data decides.** Every number in the answer (Devanagari digits included) must appear in the retrieved chunks, the question or the profile. If not, or if no model is running, the app shows the top matching rows with their sources instead, and says why. If nothing matches, it says the data does not have it.
+
+**Why not Weaviate by default:** the dataset is about 270 chunks, which the in-memory index searches in milliseconds; Embedded Weaviate does not run on Windows; and Docker would make the laptop demo depend on one more service. The Weaviate path is there for when the corpus grows (more scholarships, documents):
+
+```bash
+docker run -p 8080:8080 -e DEFAULT_VECTORIZER_MODULE=none -e AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED=true cr.weaviate.io/semitechnologies/weaviate:1.30.0
+# backend/.env
+WEAVIATE_URL=http://localhost:8080
+```
+
+If Weaviate stops answering, search falls back to the in-memory index for a minute. `GET /api/ask/status` shows the chunk count per sheet, the embedding model and whether vectors are ready.
 
 ## Architecture
 
@@ -267,11 +296,22 @@ Requirements: Python 3.10+. Node 20+ only if you want to change the web app.
 ```bash
 git clone https://github.com/sanikadeokule/raah-citi-hack.git
 cd raah-citi-hack
-cp backend/.env.example backend/.env      # optional: BHASHINI keys, signing key, partner credentials
+# once: create the PostgreSQL database (Docker if running, otherwise installs PostgreSQL 16)
+powershell -ExecutionPolicy Bypass -File backend\scripts\setup_postgres.ps1   # Windows
+./backend/scripts/setup_postgres.sh                                          # Mac / Linux
 ./run.sh
 ```
 
+The setup script creates the role `raah` and database `raah` on `localhost:5432` and writes `DATABASE_URL=postgresql://raah:raah@localhost:5432/raah` into `backend/.env`. Running it again is safe. Other settings (BHASHINI keys, signing key, partner credentials) are in the same `.env`.
+
 Open <http://localhost:8000>. On a phone connected to the same Wi-Fi, open `http://<laptop-ip>:8000` and use "Add to Home screen" to install it.
+
+### PostgreSQL without the script
+
+- **Docker:** `docker compose up -d db` from the repository root starts PostgreSQL 16 with the same role, password and database.
+- **Hosted (Neon, Supabase, RDS):** paste the connection string as `DATABASE_URL` in `backend/.env`. `postgres://` URLs work as they are.
+
+Tables are created on first start. Use a strong password instead of `raah` anywhere other than your own laptop.
 
 By default the backend looks for `raah-dataset.xlsx` in the repository root or the folder above it. Point it anywhere with `RAAH_DATASET=/path/to/raah-dataset.xlsx`.
 
@@ -316,11 +356,13 @@ Interactive OpenAPI docs: <http://localhost:8000/docs>
 | `GET /api/chat/status` | Whether a language model is reachable |
 | `POST /api/chat/turn` | Next question plus validated profile fields from the conversation |
 | `POST /api/interests/match` | Closest career tags for free-text interests in any language |
+| `POST /api/ask` · `GET /api/ask/status` | Ask Raah: hybrid search over the spreadsheet rows and a cited, number-checked answer |
 | `POST /api/chat/explain` | Model-written match reason, checked against the dataset's numbers |
 | `POST /api/mentors/{id}/request` · `GET /api/mentors/mine` · `GET /api/mentors/requests` | Accept-to-reveal mentor contact; teacher view of connections |
 | `POST /api/modules` · `GET /api/modules/mine` · `GET /api/modules/earnings` · `POST /api/modules/earnings/payout` | Teacher module builder, earnings and pain.001 payout |
 | `GET /api/modules` · `POST /api/modules/{id}/enrol` · `POST /api/modules/{id}/complete` | Student enrolment and quiz completion |
-| `POST /api/auth/otp/request` · `POST /api/auth/otp/verify` | Phone OTP login, returns a JWT |
+| `POST /api/auth/register` · `POST /api/auth/login` | Register (name, mobile, PIN, role), then sign in with mobile + PIN to get a JWT |
+| `POST /api/auth/reset-pin` | Teacher clears a student's forgotten PIN so they can register again |
 | `GET /api/auth/notifications` · `POST /api/auth/notifications/{id}/read` | Recommendations sent to the signed-in student |
 | `GET /api/auth/me` · `GET`/`PUT /api/auth/profile` · `DELETE /api/auth/me` | Account, saved profile, delete my data |
 | `POST /api/sync` | Actions queued while offline (signed in) |
@@ -340,7 +382,9 @@ backend/
     dataset.py      spreadsheet loader and text-to-number parsing, reload on save
     engine.py       eligibility, cost & payback, centres, career ranking
     main.py         FastAPI app, core routes, serves web/out
-    auth.py         phone OTP login, JWT roles, users and profiles in SQLite
+    auth.py         register and sign in with mobile + PIN, JWT roles, profiles
+    db.py           PostgreSQL schema and connection (DATABASE_URL)
+    rag.py          Ask Raah: row chunks, hybrid BM25 + vector search, cited answers
     voice.py        BHASHINI ASR / TTS
     teacher.py      synthetic class, dropout model, bulk recommend
     money.py        pain.001, Account Aggregator mock, skills passport
@@ -372,10 +416,15 @@ run.sh
 cd backend
 pip install -r requirements.txt pytest
 RAAH_DATASET=../raah-dataset.xlsx python -m pytest -q tests
+# against a scratch PostgreSQL database (its tables are emptied at the start of each run; never point this at the real one)
+TEST_DATABASE_URL=postgresql://raah:raah@localhost:5432/raah_test python -m pytest -q tests
 ```
 
+Tests never use the app's `DATABASE_URL`. Without `TEST_DATABASE_URL` they run on a throwaway SQLite file.
+
 - `test_parity.py`: Python and TypeScript engines agree on 105 scenarios (3 students × 7 plans × 5 what-if settings), including eligibility and ranking.
-- `test_auth.py`: OTP login, wrong-code lockout, single use, rate limit, teacher allowlist, role checks on teacher and money endpoints, consent ownership, profile sync and account deletion.
+- `test_auth.py`: register then sign in, registered name in the token and `/me`, Argon2 PIN hashing, duplicate and weak-PIN rejection, wrong-PIN countdown and lockout, teacher PIN reset, upgrading an old account, teacher allowlist, role checks on teacher and money endpoints, consent ownership, profile sync and account deletion.
+- `test_rag.py`: one chunk per row with path, row and source; tables kept whole in documents; exact codes found; hybrid search; Marathi questions without a model; re-index after a spreadsheet edit; citations; invented numbers rejected; Weaviate path and its fallback.
 - `test_data_driven.py`: edits a copy of the spreadsheet (income limit, course fee, income, assumption) and checks the eligibility, cost, payback and cached data change accordingly.
 
 ## Data sources

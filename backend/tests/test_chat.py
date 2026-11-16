@@ -1,9 +1,7 @@
 """AI layer: validated profile extraction, grounded explanations, fallbacks."""
 import json
 import os
-import tempfile
 
-os.environ.setdefault("RAAH_DB", os.path.join(tempfile.mkdtemp(), "t.db"))
 
 from fastapi.testclient import TestClient  # noqa: E402
 
