@@ -175,6 +175,7 @@ export default function Discover() {
         <div className="flex items-center justify-between text-xs text-[var(--muted)]">
           <span>{mode === "ai" ? `✨ ${t("ai_chat_mode")}` : `📝 ${t("quick_mode")}`}</span>
           {mode === "ai" && <button className="underline" onClick={() => toScript(draft)}>{t("use_quick_questions")}</button>}
+          <Link href="/ask/" className="underline">💬 {t("home_ask")}</Link>
         </div>
       )}
       <div className="space-y-2">

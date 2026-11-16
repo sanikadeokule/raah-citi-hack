@@ -213,5 +213,21 @@
  "reset_pin_title": "Student forgot their PIN",
  "reset_pin_help": "Enter the student's mobile number. Their PIN is cleared and they register again with the same number to make a new one. Their profile stays.",
  "reset_pin": "Reset",
- "pin_reset_done": "PIN cleared. The student can register again with the same number."
+ "pin_reset_done": "PIN cleared. The student can register again with the same number.",
+ "send_otp": "Send OTP",
+ "enter_otp": "Enter the 6-digit OTP",
+ "verify_login": "Verify and sign in",
+ "otp_sent": "OTP sent to {phone}",
+ "change_number": "Change number",
+ "home_ask": "Ask Raah",
+ "ask_intro": "Ask anything about scholarships, apprenticeships, training centres, courses, exams or careers. Answers come only from Raah's verified data, with the source for every fact.",
+ "ask_ex1": "Which scholarship helps an OBC girl with hostel costs?",
+ "ask_ex2": "Which railway apprentice trades are open in Pune, and what is the stipend?",
+ "ask_ex3": "What documents do I need for NMMS?",
+ "ask_placeholder": "Type or speak your question",
+ "ask_searching": "Searching Raah's data…",
+ "ask_row": "row",
+ "ask_offline": "Asking needs the internet. Your saved pages still work offline.",
+ "ask_note_no_ai": "The AI is not running right now, so these are the matching rows from the data.",
+ "ask_note_ungrounded": "The AI's answer had a figure that is not in the data, so the data rows are shown instead."
 }
