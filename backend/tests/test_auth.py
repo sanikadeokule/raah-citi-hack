@@ -1,8 +1,6 @@
 """Register then sign in: PIN hashing, lockout, roles, real-name greeting and protected endpoints."""
 import os
-import tempfile
 
-os.environ["RAAH_DB"] = os.path.join(tempfile.mkdtemp(), "test.db")
 
 from fastapi.testclient import TestClient  # noqa: E402
 

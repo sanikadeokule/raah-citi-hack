@@ -1,8 +1,6 @@
 """Mentor accept-to-reveal, teacher modules, enrolment, completion and earnings payout."""
 import os
-import tempfile
 
-os.environ.setdefault("RAAH_DB", os.path.join(tempfile.mkdtemp(), "test.db"))
 
 from fastapi.testclient import TestClient  # noqa: E402
 

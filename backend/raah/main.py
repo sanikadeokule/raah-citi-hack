@@ -24,6 +24,8 @@ from .mentors import router as mentors_router
 from .modules import router as modules_router
 from .money import router as money_router
 from .partners import router as partners_router
+from .rag import router as rag_router
+from .rag import warm as rag_warm
 from .teacher import router as teacher_router
 from .voice import router as voice_router
 
@@ -34,6 +36,13 @@ app = FastAPI(
                 "Every figure is read from raah-dataset.xlsx; the AI explains, the data decides.",
 )
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+
+
+@app.on_event("startup")
+def _connect_database() -> None:
+    """Fail at start with a clear message if PostgreSQL is not set up, instead of on the first sign-in."""
+    from . import db
+    db.engine()
 
 
 class Profile(BaseModel):
@@ -145,6 +154,10 @@ app.include_router(money_router)
 app.include_router(mentors_router)
 app.include_router(modules_router)
 app.include_router(partners_router)
+app.include_router(rag_router)
+
+if os.environ.get("RAG_WARM", "1") == "1":
+    rag_warm()  # build and embed the Ask Raah index in the background
 
 # ------------------------------------------------------------------ static web app (Next.js export)
 WEB_OUT = Path(os.environ.get("RAAH_WEB_OUT", Path(__file__).resolve().parents[2] / "web" / "out"))

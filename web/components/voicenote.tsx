@@ -1,10 +1,11 @@
 "use client";
 // Turns the parent message into an audio file that can be sent on WhatsApp.
-// 1. BHASHINI text-to-speech when the server has keys (a WAV in the chosen language).
+// 1. Server text-to-speech (BHASHINI or Sarvam) when the server has keys (a WAV in the chosen language).
 // 2. Otherwise the student records the message in their own voice (browser speech cannot be saved to a file).
 // The file is shared through the phone's share sheet, or downloaded where sharing files is not supported.
 import { useEffect, useRef, useState } from "react";
 import { API, useApp } from "@/lib/store";
+import { micErrorKind, micProblem, type VoiceProblem } from "@/lib/audio";
 
 type Clip = { blob: Blob; url: string; ext: string };
 
@@ -16,11 +17,12 @@ export function VoiceNote({ text, name }: { text: string; name?: string }) {
   const { t, lang, online } = useApp();
   const [clip, setClip] = useState<Clip | null>(null);
   const [state, setState] = useState<"idle" | "making" | "record" | "recording">("idle");
+  const [problem, setProblem] = useState<VoiceProblem | null>(null);
   const rec = useRef<MediaRecorder | null>(null);
 
   useEffect(() => () => { if (clip) URL.revokeObjectURL(clip.url); }, [clip]);
   // a new message (other plan, other language) needs a new recording
-  useEffect(() => { setClip(null); setState("idle"); }, [text]);
+  useEffect(() => { setClip(null); setState("idle"); setProblem(null); }, [text]);
 
   const keep = (blob: Blob, ext: string) => setClip({ blob, url: URL.createObjectURL(blob), ext });
 
@@ -41,6 +43,9 @@ export function VoiceNote({ text, name }: { text: string; name?: string }) {
   };
 
   const startRec = async () => {
+    setProblem(null);
+    const p = micProblem();
+    if (p) return setProblem(p);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mime = recorderMime();
@@ -56,7 +61,8 @@ export function VoiceNote({ text, name }: { text: string; name?: string }) {
       rec.current = r;
       r.start();
       setState("recording");
-    } catch {
+    } catch (e) {
+      setProblem(micErrorKind(e));
       setState("record");
     }
   };
@@ -78,6 +84,7 @@ export function VoiceNote({ text, name }: { text: string; name?: string }) {
       {(state === "record" || state === "recording") && (
         <div className="mt-2 space-y-2">
           <p className="text-xs text-[var(--muted)]">{t("record_hint")}</p>
+          {problem && <p role="alert" className="rounded-lg bg-amber-100 p-2 text-xs text-amber-900">⚠️ {t(`voice_err_${problem}`)}</p>}
           <button onClick={() => (state === "recording" ? rec.current?.stop() : startRec())}
             className={`w-full rounded-lg py-2 text-sm font-semibold text-white ${state === "recording" ? "animate-pulse bg-[var(--bad)]" : "bg-[var(--accent)]"}`}>
             {state === "recording" ? `⏹ ${t("stop_recording")}` : `⏺ ${t("record_own")}`}
@@ -86,7 +93,8 @@ export function VoiceNote({ text, name }: { text: string; name?: string }) {
       )}
       {clip && (
         <div className="mt-2 space-y-2">
-          <audio controls src={clip.url} className="w-full" />
+          <audio controls src={clip.url} className="w-full" onError={() => setProblem("play")} />
+          {problem === "play" && <p role="alert" className="rounded-lg bg-amber-100 p-2 text-xs text-amber-900">⚠️ {t("voice_err_play")}</p>}
           <div className="flex gap-2">
             {canShare() && <button onClick={share} className="flex-1 rounded-lg bg-[#25D366] py-2 text-sm font-semibold text-white">📤 {t("share_audio")}</button>}
             <a href={clip.url} download={fileName()} className="flex-1 rounded-lg bg-[var(--card)] py-2 text-center text-sm ring-1 ring-black/10">⬇️ {t("download_audio")}</a>
