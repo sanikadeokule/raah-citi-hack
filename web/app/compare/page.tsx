@@ -2,8 +2,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useMemo, useState } from "react";
-import { Card, Shell } from "@/components/ui";
-import { CashChart, paybackText } from "@/components/plan";
+import { Badge, Card, Shell } from "@/components/ui";
+import { CashChart, incomeSub, paybackText } from "@/components/plan";
 import { computePlan, inr, type PlanOptions } from "@/lib/engine";
 import { useApp } from "@/lib/store";
 
@@ -22,7 +22,7 @@ function CompareView() {
     [t("scholarship_cover"), (r) => (r.scholarship.low ? `− ${inr(r.scholarship.low)}` : "—")],
     [t("stipend_during_training"), (r) => (r.stipend.total ? `− ${inr(r.stipend.total)}` : "—")],
     [t("net_cost"), (r) => <b>{inr(Math.max(0, r.net_cost))}</b>],
-    [t("monthly_income"), (r) => (r.income ? `${inr(r.income.low)}–${inr(r.income.high)}` : "—")],
+    [t("monthly_income"), (r) => (r.income ? <>{inr(r.income.median)} <span className="text-xs text-[var(--muted)]">({incomeSub(t, r.income)})</span>{r.income.estimate && <> <Badge tone="amber">{t("estimate")}</Badge></>}</> : "—")],
     [t("payback"), (r) => <b>{paybackText(t, r.payback.median, data)}</b>],
     [`${t("payback")} (${t("low")})`, (r) => paybackText(t, r.payback.low, data)],
   ];

@@ -83,7 +83,7 @@ export default function CareersPage() {
                 <div>
                   <div className="font-medium">{c.name}</div>
                   <div className="text-xs text-[var(--muted)]">{c.entry_path}</div>
-                  <div className="text-xs text-[var(--muted)]">{c.income_text}</div>
+                  <div className="text-xs text-[var(--muted)]">{c.income_estimate && <Badge tone="amber">{t("estimate")}</Badge>} {c.income_text}</div>
                 </div>
                 {plans[c.id] && <Link href={`/plan/?id=${plans[c.id].id}`} className="shrink-0 rounded-full bg-[var(--brand-soft)] px-3 py-1 text-xs font-semibold text-[var(--brand-ink)]">₹ plan</Link>}
               </div>
