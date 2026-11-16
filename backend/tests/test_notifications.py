@@ -1,8 +1,6 @@
 """Teacher recommendations reach signed-up students in their app."""
 import os
-import tempfile
 
-os.environ.setdefault("RAAH_DB", os.path.join(tempfile.mkdtemp(), "test.db"))
 
 from fastapi.testclient import TestClient  # noqa: E402
 

@@ -1,16 +1,17 @@
-"""Database: PostgreSQL in production, SQLite file for local runs.
+"""Database: PostgreSQL.
 
-Set DATABASE_URL to a Postgres URL, e.g.
-    DATABASE_URL=postgresql+psycopg://raah:secret@localhost:5432/raah
-Without it the app uses a SQLite file (RAAH_DB, default backend/data/raah.db), so
-./run.sh works with nothing to install.
+Set DATABASE_URL (backend/.env), e.g.
+    DATABASE_URL=postgresql://raah:raah@localhost:5432/raah
+`scripts/setup_postgres.ps1` (Windows) or `scripts/setup_postgres.sh` (Mac/Linux), or
+`docker compose up -d db` from the repository root, creates exactly that database.
 
 The schema is defined once below with SQLAlchemy and created on startup
-(init_db). init_db also adds columns that are new since an older database was
-created, so an existing raah.db keeps working after an upgrade.
+(init_db). init_db also adds columns that are newer than an existing table, so
+the database keeps working after an upgrade.
 
-Queries elsewhere use plain SQL with "?" placeholders through `connect()`,
-written to run unchanged on both SQLite and Postgres.
+Queries elsewhere use plain SQL with "?" placeholders through `connect()`.
+The automated tests may point DATABASE_URL at a throwaway SQLite file, so the
+SQL is kept portable, but the app itself refuses to start without Postgres.
 """
 from __future__ import annotations
 
@@ -18,7 +19,6 @@ import os
 import re
 import threading
 from contextlib import contextmanager
-from pathlib import Path
 from typing import Any, Iterator
 
 from sqlalchemy import (Column, Float, ForeignKey, Integer, MetaData, String, Table, Text, UniqueConstraint,
@@ -109,14 +109,21 @@ enrolments = Table(
 )
 
 
+class DatabaseNotConfigured(RuntimeError):
+    pass
+
+
 def database_url() -> str:
     url = os.environ.get("DATABASE_URL", "").strip()
-    if url:
-        # Heroku/Render style URLs say postgres://; SQLAlchemy wants a driver name
-        return re.sub(r"^postgres(ql)?://", "postgresql+psycopg://", url)
-    path = Path(os.environ.get("RAAH_DB", Path(__file__).resolve().parents[1] / "data" / "raah.db"))
-    path.parent.mkdir(parents=True, exist_ok=True)
-    return f"sqlite:///{path}"
+    if not url:
+        raise DatabaseNotConfigured(
+            "DATABASE_URL is not set. Raah stores accounts in PostgreSQL: run scripts/setup_postgres.ps1 (Windows) "
+            "or scripts/setup_postgres.sh (Mac/Linux), or `docker compose up -d db`, then put "
+            "DATABASE_URL=postgresql://raah:raah@localhost:5432/raah in backend/.env")
+    if url.startswith("sqlite") and os.environ.get("RAAH_TESTING") != "1":
+        raise DatabaseNotConfigured("SQLite is only used by the automated tests; set DATABASE_URL to a PostgreSQL URL")
+    # hosting providers give postgres:// URLs; SQLAlchemy wants a driver name
+    return re.sub(r"^postgres(ql)?://", "postgresql+psycopg://", url)
 
 
 _engine: Engine | None = None
