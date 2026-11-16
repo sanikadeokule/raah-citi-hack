@@ -6,8 +6,9 @@ import { useEffect, useRef, useState } from "react";
 import { LANGS, useApp } from "@/lib/store";
 import { cachedAudio, fetchAudio, micErrorKind, micProblem, pickVoice, startRecording, transcribe, voiceStatus, type Recording, type VoiceProblem } from "@/lib/audio";
 
-export function Shell({ title, back = "/", role = "any", publicPage = false, children }: {
-  title?: string; back?: string | null; role?: "any" | "teacher"; publicPage?: boolean; children: React.ReactNode;
+/** `fit`: lay the page out to fill one screen (no bottom padding, main is a flex column) so it needs no scrolling. */
+export function Shell({ title, back = "/", role = "any", publicPage = false, fit = false, children }: {
+  title?: string; back?: string | null; role?: "any" | "teacher"; publicPage?: boolean; fit?: boolean; children: React.ReactNode;
 }) {
   const { t, online, toast, lang, setLang, data, auth, authReady, signOut } = useApp();
   const router = useRouter();
@@ -19,14 +20,14 @@ export function Shell({ title, back = "/", role = "any", publicPage = false, chi
   const wrongRole = !publicPage && auth && role === "teacher" && auth.user.role !== "teacher";
   const ready = publicPage || (authReady && auth);
   return (
-    <div className="mx-auto min-h-screen max-w-md bg-[var(--bg)] pb-24">
+    <div className={`mx-auto max-w-md bg-[var(--bg)] ${fit ? "flex min-h-[100dvh] flex-col" : "min-h-screen pb-24"}`}>
       <header className="sticky top-0 z-20 flex items-center gap-2 bg-[var(--brand)] px-4 py-3 text-white shadow">
         {back !== null && (
           <Link href={back} aria-label={t("back")} className="rounded-full px-2 text-2xl leading-none">‹</Link>
         )}
         <h1 className="flex-1 truncate text-lg font-semibold">{title ?? t("app_name")}</h1>
         <select aria-label="language" value={lang} onChange={(e) => setLang(e.target.value)}
-          className="rounded bg-white/15 px-2 py-1 text-sm">
+          className="h-8 rounded-full bg-white/15 px-2 text-sm font-semibold">
           {LANGS.map((l) => <option key={l.code} value={l.code} className="text-black">{l.label}</option>)}
         </select>
         {auth && (
@@ -37,7 +38,7 @@ export function Shell({ title, back = "/", role = "any", publicPage = false, chi
         )}
       </header>
       {!online && <div className="bg-amber-500 px-4 py-2 text-center text-sm font-medium text-black">📴 {t("offline_banner")}</div>}
-      <main className="space-y-4 p-4">
+      <main className={fit ? "flex flex-1 flex-col gap-3 p-3" : "space-y-4 p-4"}>
         {!ready ? <Loading /> : wrongRole ? (
           <Card>
             <p>🔒 {t("teacher_only")}</p>
