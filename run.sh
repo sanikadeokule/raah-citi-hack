@@ -4,6 +4,8 @@
 #   ./run.sh https   public https link for phones, through a Cloudflare quick tunnel (needs internet)
 #   ./run.sh lan     https://<laptop-ip>:8443 on this Wi-Fi, self-signed certificate (no internet needed)
 cd "$(dirname "$0")/backend"
+# accounts live in PostgreSQL: run scripts/setup_postgres.sh (or docker compose up -d db) once first
+[ -f .env ] || cp .env.example .env
 pip install -q -r requirements.txt
 case "$1" in
   https) exec python3 scripts/serve_https.py ;;
