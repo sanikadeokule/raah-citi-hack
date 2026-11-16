@@ -3,19 +3,22 @@ import os
 import tempfile
 
 os.environ.setdefault("RAAH_DB", os.path.join(tempfile.mkdtemp(), "test.db"))
-os.environ.pop("SMS_PROVIDER", None)
 
 from fastapi.testclient import TestClient  # noqa: E402
 
-from raah import auth, dataset  # noqa: E402
+from raah import dataset  # noqa: E402
 from raah.main import app  # noqa: E402
 
 c = TestClient(app)
 
 
+PIN = "4826"
+
+
 def login(phone, role="student", name=None):
-    c.post("/api/auth/otp/request", json={"phone": phone, "role": role})
-    r = c.post("/api/auth/otp/verify", json={"phone": phone, "role": role, "code": auth.sandbox_code(), "name": name})
+    c.post("/api/auth/register", json={"phone": phone, "role": role, "pin": PIN, "name": name or "Test Student"})
+    r = c.post("/api/auth/login", json={"phone": phone, "role": role, "pin": PIN})
+    assert r.status_code == 200, r.text
     return {"Authorization": "Bearer " + r.json()["access_token"]}
 
 
