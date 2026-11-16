@@ -289,6 +289,33 @@ def load(path: Path = DATASET_PATH) -> dict:
         s["rules"].append({"field": r.get("Field"), "op": op, "value": value, "value_kind": kind, "label": label,
                            "doc": r.get("Document needed"), "where": r.get("Where to get it")})
 
+    # occupation earnings (PLFS by occupation / education / self-employed industry)
+    earnings_groups = {}
+    for r in _rows(wb, "Occupation_Earnings"):
+        name = r.get("Group")
+        if not name:
+            continue
+        areas = {}
+        for area, label in (("all", "All India"), ("rural", "Rural"), ("urban", "Urban")):
+            areas[area] = {"M": num_or_none(r.get(f"{label} male (₹/month)")),
+                           "F": num_or_none(r.get(f"{label} female (₹/month)")),
+                           "all": num_or_none(r.get(f"{label} everyone (₹/month)"))}
+        if areas["all"]["all"] is None and areas["all"]["M"] is None:
+            warnings.append(f"Occupation_Earnings '{name}': no All India figure")
+            continue
+        earnings_groups[str(name).strip()] = {"group": str(name).strip(), "kind": r.get("Kind"), **areas,
+                                              "period": r.get("Period"), "sources": split_urls(r.get("Source")),
+                                              "last_checked": str(r.get("Last checked") or "")}
+
+    def group_text(g: dict) -> str:
+        def pair(a):
+            m, f = g[a]["M"], g[a]["F"]
+            return f"₹{inr(m)} (male) / ₹{inr(f)} (female)" if m is not None and f is not None else f"₹{inr(g[a]['all'])}"
+        out = f"PLFS 2025 average, {g['group'].lower()}: {pair('all')}"
+        if g["rural"]["all"] is not None and g["urban"]["all"] is not None:
+            out += f"; rural {pair('rural')}, urban {pair('urban')}"
+        return out
+
     # careers
     profile_rows = {r.get("Career ID"): r for r in _rows(wb, "Career_Profile")}
     careers, baseline = [], None
@@ -297,15 +324,32 @@ def load(path: Path = DATASET_PATH) -> dict:
         if not cid:
             continue
         flags = _career_flags(r.get("Category"))
+        # a figure typed into the income cell wins; otherwise the linked Occupation_Earnings row is used
         after = parse_income(r.get("Income after training / entry pay"))
+        group_name = str(r.get("Earnings group (Occupation_Earnings)") or "").strip()
+        earnings = earnings_groups.get(group_name) if group_name else None
+        if group_name and not earnings:
+            warnings.append(f"Careers_Income {cid}: earnings group '{group_name}' not found in Occupation_Earnings")
+        if earnings and after is not None:
+            warnings.append(f"Careers_Income {cid}: own income figure used, earnings group '{group_name}' ignored")
+            earnings = None
         training = parse_income(r.get("Income while training"))
+        path_vals = [num_or_none(r.get(f"Pay year {y} (₹/month)")) for y in (1, 3, 5)]
+        pay_path = path_vals if path_vals[0] is not None else None
+        if pay_path is None and any(v is not None for v in path_vals):
+            warnings.append(f"Careers_Income {cid}: Pay year 3/5 given without Pay year 1, growth ignored")
+        status = r.get("Income status") or ""
         cp = profile_rows.get(cid, {})
         item = {
             "id": cid, "name": r.get("Career"), "category": r.get("Category"), "entry_path": r.get("Entry path"),
             "min_qualification": r.get("Minimum qualification"),
             "training_income_text": r.get("Income while training"), "training_income": training,
-            "income_text": r.get("Income after training / entry pay"), "income": after,
-            "income_type": r.get("Income type"), "sources": split_urls(r.get("Source")),
+            "income_text": group_text(earnings) if earnings else r.get("Income after training / entry pay"),
+            "income": after, "earnings": earnings, "pay_path": pay_path,
+            "pay_path_source": r.get("Pay growth source"), "income_status": status,
+            "income_estimate": str(status).strip().lower().startswith("estimate"),
+            "income_type": (earnings["kind"] + " (PLFS 2025)") if earnings else r.get("Income type"),
+            "sources": split_urls(r.get("Source")),
             "last_checked": str(r.get("Last checked") or ""), "flags": flags,
             "tags": split_list(cp.get("Interest tags (use ;)")), "min_class": num_or_none(cp.get("Min class")),
             "stream": cp.get("Stream needed") or "any", "demand": num_or_none(cp.get("Local demand (1-5)")),
@@ -319,7 +363,7 @@ def load(path: Path = DATASET_PATH) -> dict:
             else:
                 warnings.append(f"Careers_Income {cid}: baseline daily wage not readable")
             continue
-        if after is None and r.get("Income after training / entry pay") not in (None, "—"):
+        if after is None and not earnings and r.get("Income after training / entry pay") not in (None, "—"):
             warnings.append(f"Careers_Income {cid}: income '{r.get('Income after training / entry pay')}' not readable")
         careers.append(item)
     by_career = {c["id"]: c for c in careers}
@@ -464,7 +508,7 @@ def load(path: Path = DATASET_PATH) -> dict:
         "version": {"file": path.name, "modified": datetime.fromtimestamp(st.st_mtime, timezone.utc).isoformat(),
                     "loaded_at": datetime.now(timezone.utc).isoformat(), "size": st.st_size},
         "readme": readme, "assumptions": assumptions, "scholarships": schemes, "careers": careers,
-        "baseline": baseline, "plans": plans, "courses": courses, "exams": exams, "mentors": mentors,
+        "baseline": baseline, "earnings_groups": earnings_groups, "plans": plans, "courses": courses, "exams": exams, "mentors": mentors,
         "_private": {"mentor_contacts": mentor_contacts}, "centres": centres, "naps": naps,
         "railway": railway, "stipends": stipends, "students": students, "warnings": warnings,
         "talukas": taluka_list,

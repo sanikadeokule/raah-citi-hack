@@ -124,36 +124,86 @@ def benefit_value(scheme: dict, gender: str, years: float, fees: float) -> dict:
     return {"low": round(low), "high": round(high)}
 
 
+def _group_figure(area: dict, gender: str):
+    v = area.get(gender)
+    return v if v is not None else area.get("all")
+
+
 def plan_income(data: dict, plan: dict, career: dict, gender: str) -> dict | None:
+    """Monthly income after training: low / median / high for year 1, plus the
+    year 1-3-5 pay path when an official pay scale gives one.
+
+    Order: your Plan_Inputs figure > linked Occupation_Earnings row (median = all
+    India, low/high = the rural and urban averages) > official pay path (fixed
+    pay, so low = median = high) > the career's own range > one figure with the
+    Assumptions low/high factors (shown as an estimate)."""
     lo_f, hi_f = A(data, "income_low_factor", 1), A(data, "income_high_factor", 1)
     ov = plan.get("income_override") or {}
     inc = career.get("income")
+    path = career.get("pay_path")
+    est = bool(career.get("income_estimate"))
+    base = {"path": None, "status": career.get("income_status") or ""}
     if ov.get("median") is not None:
         med = ov["median"]
         src = "Plan_Inputs (your figure)"
-        return {"low": ov.get("low") or med * lo_f, "median": med, "high": ov.get("high") or med * hi_f,
-                "source": src, "text": src, "derived": ov.get("low") is None}
+        return {**base, "low": ov.get("low") or med * lo_f, "median": med, "high": ov.get("high") or med * hi_f,
+                "source": src, "text": src, "derived": ov.get("low") is None, "spread": "factor" if ov.get("low") is None else "range",
+                "estimate": ov.get("low") is None, "status": src}
+    g = career.get("earnings")
+    if g:
+        med = _group_figure(g["all"], gender)
+        vals = [v for v in (_group_figure(g["rural"], gender), _group_figure(g["urban"], gender), med) if v is not None]
+        return {**base, "low": min(vals), "median": med, "high": max(vals), "source": career["income_type"],
+                "text": career["income_text"], "derived": False, "spread": "rural_urban", "estimate": est}
+    if path:
+        y1 = path[0]
+        return {**base, "low": y1, "median": y1, "high": y1, "path": path,
+                "source": career.get("pay_path_source") or career["income_type"], "text": career["income_text"],
+                "derived": False, "spread": "fixed", "estimate": est}
     if not inc:
         return None
     if inc.get("by_gender"):
         med = inc["by_gender"].get(gender) or min(inc["by_gender"].values())
-        return {"low": med * lo_f, "median": med, "high": med * hi_f, "source": career["income_type"],
-                "text": career["income_text"], "derived": True}
+        return {**base, "low": med * lo_f, "median": med, "high": med * hi_f, "source": career["income_type"],
+                "text": career["income_text"], "derived": True, "spread": "factor", "estimate": True}
     if inc["low"] != inc["high"]:
-        return {"low": inc["low"], "median": (inc["low"] + inc["high"]) / 2, "high": inc["high"],
-                "source": career["income_type"], "text": career["income_text"], "derived": False}
+        return {**base, "low": inc["low"], "median": (inc["low"] + inc["high"]) / 2, "high": inc["high"],
+                "source": career["income_type"], "text": career["income_text"], "derived": False, "spread": "range",
+                "estimate": est}
     med = inc["low"]
-    return {"low": med * lo_f, "median": med, "high": med * hi_f, "source": career["income_type"],
-            "text": career["income_text"], "derived": True}
+    return {**base, "low": med * lo_f, "median": med, "high": med * hi_f, "source": career["income_type"],
+            "text": career["income_text"], "derived": True, "spread": "factor", "estimate": True}
 
 
-def payback_after(net: float, gain: float, horizon: int) -> int | None:
+def path_value(path: list, year: int) -> float:
+    """Pay in a given year of work from the year 1 / 3 / 5 points (blank points
+    skipped); straight line between points, held flat after the last one."""
+    pts = [(y, v) for y, v in zip((1, 3, 5), path) if v is not None]
+    if year <= pts[0][0]:
+        return pts[0][1]
+    for (x0, a), (x1, b) in zip(pts, pts[1:]):
+        if year <= x1:
+            return a + (b - a) * (year - x0) / (x1 - x0)
+    return pts[-1][1]
+
+
+def income_at(income: dict, key: str, month: int) -> float:
+    """Income in the given month of work (1 = first month after training)."""
+    p = income.get("path")
+    if not p:
+        return income[key]
+    return income[key] * path_value(p, (month - 1) // 12 + 1) / p[0]
+
+
+def payback_after(net: float, income: dict, key: str, base: float, horizon: int) -> int | None:
     if net <= 0:
         return 0
-    if gain <= 0:
-        return None
-    m = math.ceil(net / gain)
-    return m if m <= horizon else None
+    cum = 0.0
+    for m in range(1, horizon + 1):
+        cum += income_at(income, key, m) - base
+        if cum >= net:
+            return m
+    return None
 
 
 def compute_plan(data: dict, profile: dict, plan_id: str, opts: dict | None = None) -> dict:
@@ -212,7 +262,7 @@ def compute_plan(data: dict, profile: dict, plan_id: str, opts: dict | None = No
     pay = {}
     if income:
         for k in ("low", "median"):
-            pm = payback_after(net, income[k] - base, horizon)
+            pm = payback_after(net, income, k, base, horizon)
             pay[k] = {"months_after_training": pm,
                       "month_from_start": None if pm is None else int(months + plan["earn_months"] + pm),
                       "monthly_gain": round(income[k] - base)}
@@ -232,12 +282,13 @@ def compute_plan(data: dict, profile: dict, plan_id: str, opts: dict | None = No
                 cum_med += stipend_month
                 cum_low += stipend_month
             elif income:
-                cum_med += income["median"] - base
-                cum_low += income["low"] - base
+                w = m - months - plan["earn_months"]
+                cum_med += income_at(income, "median", w) - base
+                cum_low += income_at(income, "low", w) - base
         series.append({"month": m, "median": round(cum_med), "low": round(cum_low)})
 
     return {
-        "plan": plan, "career": {k: career[k] for k in ("id", "name", "category", "income_text", "income_type", "sources", "last_checked", "training_income_text")},
+        "plan": plan, "career": {k: career[k] for k in ("id", "name", "category", "income_text", "income_type", "sources", "last_checked", "training_income_text", "income_status")},
         "inputs": {"gender": gender, "hostel": hostel, "commute_km": round(km, 1), "family_contribution": fam,
                    "baseline": baseline_mode, "scholarships": chosen},
         "costs": {"course_fees": plan["fees"], "exam_fees": plan["exam_fees"], "materials": plan["materials"],
