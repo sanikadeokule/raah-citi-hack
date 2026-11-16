@@ -1,6 +1,6 @@
-:HL["/_next/static/chunks/1na4ub9-9x25b.css","style"]
+:HL["/_next/static/chunks/25y2foi3rsawe.css","style"]
 :HL["/_next/static/chunks/0n8kzvw2z_6as.css","style"]
 :HL["https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;600;700&family=Noto+Sans+Devanagari:wght@400;600;700&display=swap","style"]
 2:[["children",{"s":"__PAGE__","h":160}]]
 1:[["children",{"s":"plan","h":96,"c":"$Q2"}]]
-0:{"b":"2OEaAR5bMbIOQfZY8duq7","t":{"t":{"s":"","h":80,"c":"$Q1"}}}
+0:{"b":"cSXwmxLJrxVtopCmhTJhY","t":{"t":{"s":"","h":80,"c":"$Q1"}}}

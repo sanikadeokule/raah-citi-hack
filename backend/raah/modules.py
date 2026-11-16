@@ -12,7 +12,7 @@ from typing import Literal
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field, field_validator, model_validator
 
-from . import auth, dataset
+from . import auth, dataset, db
 from .money import Payee, PaymentIn, create_payment
 
 router = APIRouter(prefix="/api/modules", tags=["modules"])
@@ -72,21 +72,18 @@ def _row(r, with_answers=False) -> dict:
 
 @router.post("")
 def create_module(body: ModuleIn, teacher: dict = Depends(auth.teacher_only)):
-    with auth._lock:
-        con = auth._db()
+    with db.connect() as con:
         cur = con.execute("INSERT INTO modules (teacher_id, title, lang, lesson, quiz, price_model, price, created_at) "
-                          "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                          "VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id",
                           (teacher["id"], body.title, body.lang, body.lesson, json.dumps([q.model_dump() for q in body.quiz], ensure_ascii=False),
                            body.price_model, body.price, int(time.time())))
-        con.commit()
-        row = con.execute("SELECT * FROM modules WHERE id = ?", (cur.lastrowid,)).fetchone()
+        row = con.execute("SELECT * FROM modules WHERE id = ?", (cur.scalar(),)).fetchone()
     return _row(row, with_answers=True)
 
 
 @router.get("/mine")
 def my_modules(teacher: dict = Depends(auth.teacher_only)):
-    with auth._lock:
-        con = auth._db()
+    with db.connect() as con:
         rows = con.execute("SELECT m.*, COUNT(e.id) AS enrolled, COUNT(e.completed_at) AS completed, COALESCE(SUM(e.paid), 0) AS sales "
                            "FROM modules m LEFT JOIN enrolments e ON e.module_id = m.id WHERE m.teacher_id = ? "
                            "GROUP BY m.id ORDER BY m.id DESC", (teacher["id"],)).fetchall()
@@ -95,8 +92,8 @@ def my_modules(teacher: dict = Depends(auth.teacher_only)):
 
 @router.get("/earnings")
 def earnings(teacher: dict = Depends(auth.teacher_only)):
-    with auth._lock:
-        rows = auth._db().execute("SELECT e.*, m.title FROM enrolments e JOIN modules m ON m.id = e.module_id "
+    with db.connect() as con:
+        rows = con.execute("SELECT e.*, m.title FROM enrolments e JOIN modules m ON m.id = e.module_id "
                                   "WHERE m.teacher_id = ? ORDER BY e.id DESC", (teacher["id"],)).fetchall()
     sales_share = sum(r["teacher_share"] for r in rows)
     completion = sum(r["completion_payout"] for r in rows)
@@ -127,11 +124,9 @@ def payout(body: PayoutIn, teacher: dict = Depends(auth.teacher_only)):
     pay = create_payment(PaymentIn(kind="teacher_payout", amount=e["unpaid"],
                                    payees=[Payee(name=body.name, account=body.account, ifsc=body.ifsc)],
                                    purpose=f"Raah module earnings ({e['enrolments']} enrolments, {e['completions']} completions)"))
-    with auth._lock:
-        con = auth._db()
+    with db.connect() as con:
         con.execute("UPDATE enrolments SET payout_id = ? WHERE payout_id IS NULL AND module_id IN "
                     "(SELECT id FROM modules WHERE teacher_id = ?)", (pay["msg_id"], teacher["id"]))
-        con.commit()
     return pay
 
 
@@ -139,8 +134,7 @@ def payout(body: PayoutIn, teacher: dict = Depends(auth.teacher_only)):
 
 @router.get("")
 def list_modules(user: dict = Depends(auth.current_user)):
-    with auth._lock:
-        con = auth._db()
+    with db.connect() as con:
         rows = con.execute("SELECT m.*, u.name AS teacher_name FROM modules m JOIN users u ON u.id = m.teacher_id "
                            "WHERE m.published = 1 ORDER BY m.id DESC LIMIT 50").fetchall()
         mine = {r["module_id"]: r for r in con.execute("SELECT * FROM enrolments WHERE user_id = ?", (user["id"],)).fetchall()}
@@ -163,8 +157,7 @@ def _subscribed(con, user_id: int, teacher_id: int) -> bool:
 @router.post("/{module_id}/enrol")
 def enrol(module_id: int, user: dict = Depends(auth.require_role("student"))):
     share = _setting("teacher_share_of_module_sales")
-    with auth._lock:
-        con = auth._db()
+    with db.connect() as con:
         m = con.execute("SELECT * FROM modules WHERE id = ? AND published = 1", (module_id,)).fetchone()
         if m is None:
             raise HTTPException(404, "module not found")
@@ -176,7 +169,6 @@ def enrol(module_id: int, user: dict = Depends(auth.require_role("student"))):
             paid = 0.0
         con.execute("INSERT INTO enrolments (module_id, user_id, paid, teacher_share, created_at) VALUES (?, ?, ?, ?, ?)",
                     (module_id, user["id"], paid, round(paid * share, 2), int(time.time())))
-        con.commit()
     return {"enrolled": True, "paid": paid, "already": False, "sandbox": True}
 
 
@@ -187,8 +179,7 @@ class CompleteIn(BaseModel):
 @router.post("/{module_id}/complete")
 def complete(module_id: int, body: CompleteIn, user: dict = Depends(auth.require_role("student"))):
     per_completion = _setting("payout_per_completed_enrolment")
-    with auth._lock:
-        con = auth._db()
+    with db.connect() as con:
         m = con.execute("SELECT * FROM modules WHERE id = ?", (module_id,)).fetchone()
         e = con.execute("SELECT * FROM enrolments WHERE module_id = ? AND user_id = ?", (module_id, user["id"])).fetchone()
         if m is None or e is None:
@@ -200,5 +191,4 @@ def complete(module_id: int, body: CompleteIn, user: dict = Depends(auth.require
                         (score, int(time.time()), per_completion, e["id"]))
         else:
             con.execute("UPDATE enrolments SET score = ? WHERE id = ?", (score, e["id"]))
-        con.commit()
     return {"score": score, "total": len(quiz), "answers": [q["answer"] for q in quiz]}
