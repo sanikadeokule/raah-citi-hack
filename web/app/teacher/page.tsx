@@ -6,6 +6,31 @@ import { useApp } from "@/lib/store";
 import { getKV, setKV } from "@/lib/db";
 import { MentorRequests, TeacherModules } from "@/components/modules";
 
+/** A student forgot their PIN: clear it so they can register again with the same number. */
+function ResetStudentPin() {
+  const { t, authFetch, showToast } = useApp();
+  const [phone, setPhone] = useState("");
+  const [msg, setMsg] = useState<string | null>(null);
+  const reset = async () => {
+    const r = await authFetch("/api/auth/reset-pin", { method: "POST", body: JSON.stringify({ phone }) });
+    const j = await r.json();
+    if (r.ok) { showToast(t("pin_reset_done")); setPhone(""); setMsg(null); }
+    else setMsg(typeof j.detail === "string" ? j.detail : "Error");
+  };
+  return (
+    <Card className="space-y-2">
+      <h2 className="font-bold">🔑 {t("reset_pin_title")}</h2>
+      <p className="text-xs text-[var(--muted)]">{t("reset_pin_help")}</p>
+      <div className="flex gap-2">
+        <input value={phone} onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))} inputMode="numeric"
+          placeholder="98XXXXXXXX" className="flex-1 rounded-lg bg-[var(--bg)] p-2" />
+        <button onClick={reset} disabled={phone.length !== 10} className="rounded-lg bg-[var(--brand)] px-4 font-semibold text-white disabled:opacity-40">{t("reset_pin")}</button>
+      </div>
+      {msg && <p className="text-sm text-rose-800">{msg}</p>}
+    </Card>
+  );
+}
+
 export default function Teacher() {
   const { data, t, showToast, authFetch, auth } = useApp();
   const [cls, setCls] = useState<any>(null);
@@ -86,6 +111,7 @@ export default function Teacher() {
       </Card>
       <MentorRequests />
       <TeacherModules />
+      <ResetStudentPin />
     </Shell>
   );
 }

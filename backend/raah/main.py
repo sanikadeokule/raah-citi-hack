@@ -36,6 +36,13 @@ app = FastAPI(
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 
+@app.on_event("startup")
+def _connect_database() -> None:
+    """Fail at start with a clear message if PostgreSQL is not set up, instead of on the first sign-in."""
+    from . import db
+    db.engine()
+
+
 class Profile(BaseModel):
     name: str | None = None
     age: float | None = None

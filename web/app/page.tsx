@@ -21,7 +21,11 @@ const STAFF = [
 ];
 
 export default function Home() {
-  const { t, lang, setLang, profile, setProfile, data } = useApp();
+  const { t, lang, setLang, profile, setProfile, data, auth } = useApp();
+  const isTeacher = auth?.user.role === "teacher";
+  // greet the signed-in person by their registered name, never by a demo profile
+  const greetName = auth?.user.name || (isTeacher ? null : profile?.name) || "";
+  const details = profile ? [profile.class && `Class ${profile.class}`, profile.taluka, profile.category].filter(Boolean).join(" · ") : "";
   return (
     <Shell back={null}>
       <div className="flex gap-2">
@@ -34,18 +38,26 @@ export default function Home() {
       </div>
       <p className="text-sm text-[var(--muted)]">{t("tagline")}</p>
 
-      {profile && (
-        <Card className="flex items-center gap-3">
-          <div className="grid h-12 w-12 place-items-center rounded-full bg-[var(--brand-soft)] text-2xl">🙂</div>
-          <div className="flex-1">
-            <div className="font-semibold">{t("hello")}, {profile.name}</div>
-            <div className="text-xs text-[var(--muted)]">Class {profile.class} · {profile.taluka} · {profile.category}</div>
+      {auth && (
+        <Card className="space-y-2">
+          <div className="flex items-center gap-3">
+            <div className="grid h-12 w-12 place-items-center rounded-full bg-[var(--brand-soft)] text-2xl">{isTeacher ? "👩‍🏫" : "🙂"}</div>
+            <div className="flex-1">
+              <div className="text-lg font-semibold">{t("hello")}{greetName ? `, ${greetName}` : ""}</div>
+              {!isTeacher && (details
+                ? <div className="text-xs text-[var(--muted)]">{details}</div>
+                : <Link href="/profile/" className="text-xs font-semibold text-[var(--brand)] underline">{t("my_details")}</Link>)}
+            </div>
           </div>
-          <select aria-label={t("demo_profile")} value={profile.id ?? ""} onChange={(e) => setProfile(data.students.find((s: any) => s.id === e.target.value))}
-            className="rounded bg-[var(--bg)] px-2 py-1 text-sm">
-            {data?.students.map((s: any) => <option key={s.id} value={s.id}>{s.name}</option>)}
-            {profile.id === undefined && <option value="">{profile.name}</option>}
-          </select>
+          {isTeacher && profile && data?.students?.length > 0 && (
+            <label className="flex items-center gap-2 text-sm text-[var(--muted)]">
+              {t("preview_demo")}
+              <select aria-label={t("preview_demo")} value={profile.id ?? ""} onChange={(e) => setProfile(data.students.find((s: any) => s.id === e.target.value))}
+                className="flex-1 rounded bg-[var(--bg)] px-2 py-1 text-sm">
+                {data.students.map((s: any) => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+            </label>
+          )}
         </Card>
       )}
 
