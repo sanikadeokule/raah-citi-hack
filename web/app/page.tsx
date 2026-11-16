@@ -63,6 +63,14 @@ export default function Home() {
 
       <TeacherInbox />
 
+      <Link href="/ask/" className="flex items-center gap-3 rounded-2xl border-b-4 border-[var(--accent)] bg-[var(--brand)] p-4 text-white shadow-sm active:scale-95">
+        <span className="text-4xl">💬</span>
+        <span className="flex-1">
+          <span className="block text-lg font-semibold">{t("home_ask")}</span>
+          <span className="block text-xs text-white/80">{t("ask_ex1")}</span>
+        </span>
+      </Link>
+
       <div className="grid grid-cols-2 gap-3">
         {TILES.map((x) => (
           <Link key={x.href} href={x.href} className="flex aspect-square flex-col items-center justify-center rounded-2xl border-b-4 border-[var(--accent)] bg-[var(--card)] text-[var(--brand-ink)] shadow-sm ring-1 ring-black/5 active:scale-95">
