@@ -113,3 +113,21 @@ def test_prompt_names_the_exam_and_skips_known_name(monkeypatch):
     s = seen["system"]
     assert "Next question to ask: marks_exam" in s and "unit test" in s
     assert "Sanika. Do not ask it again" in s
+
+
+def test_typed_taluka_not_in_list_is_kept_without_map_point():
+    clean, rejected = chat.validate_profile({"taluka": "sangamner"}, ["Junnar", "Ambegaon"], [])
+    assert clean["taluka"] == "Sangamner" and not rejected
+    clean, _ = chat.validate_profile({"taluka": "junnar taluka"}, ["Junnar", "Ambegaon"], [])
+    assert clean["taluka"] == "Junnar"
+    _, rejected = chat.validate_profile({"taluka": "12345"}, ["Junnar"], [])
+    assert rejected == ["taluka"]
+
+
+def test_age_that_does_not_fit_class_is_questioned():
+    assert chat.age_fits_class(16, 11) and chat.age_fits_class(14, 10) and chat.age_fits_class(17, 10)
+    assert not chat.age_fits_class(16, 8) and not chat.age_fits_class(12, 10)
+    p = {"name": "S", "age": 16, "gender": "F", "class": 8}
+    assert chat.missing_fields(p)[0] == "age_class_ok"
+    assert "age_class_ok" not in chat.missing_fields({**p, "age_class_ok": True})
+    assert "age_class_ok" not in chat.missing_fields({**p, "class": 11})

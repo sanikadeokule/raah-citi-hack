@@ -17,6 +17,8 @@ export type Q = {
   options?: (d: any, t: T, p: any) => Opt[];
   /** turn a typed or spoken answer into a value, or explain what is wrong with it */
   parse?: (raw: string) => Parsed;
+  /** choice question that also takes a typed answer that is not one of the chips */
+  free?: boolean;
   /** true when the profile already answers this question */
   answered?: (p: any) => boolean;
 };
@@ -80,6 +82,21 @@ export function parseMarks(raw: string): Parsed {
   return { ok: true, value: Math.round((got / total) * 1000) / 10, extra: { marks_obtained: got, marks_total: total } };
 }
 
+/** Usual age range for a class in Maharashtra: Class 1 at about 6, so Class N at N+5 to N+6.
+ *  We allow 1 year below and 1 year above that (repeating a year, starting late). */
+export const USUAL_AGE_GAP = [5, 6] as const;
+export const AGE_BUFFER = 1;
+export function usualAge(cls: number) {
+  return { min: cls + USUAL_AGE_GAP[0], max: cls + USUAL_AGE_GAP[1] };
+}
+/** true when age and class fit together (or one is not known yet) */
+export function ageFitsClass(age: any, cls: any) {
+  const a = Number(age), c = Number(cls);
+  if (!a || !c) return true;
+  const u = usualAge(c);
+  return a >= u.min - AGE_BUFFER && a <= u.max + AGE_BUFFER;
+}
+
 const INCOME: [number, string][] = [[100000, "inc_lt1"], [180000, "inc_1_2"], [240000, "inc_2_25"], [320000, "inc_25_35"],
   [450000, "inc_35_45"], [700000, "inc_45_8"], [900000, "inc_gt8"]];
 const DOCS = ["aadhaar", "marksheet_10", "caste_certificate", "income_certificate", "domicile_certificate", "bank_passbook"];
@@ -97,6 +114,15 @@ export const QUESTIONS: Q[] = [
     options: (_d, t) => [{ v: "F", label: t("opt_girl"), icon: "👧" }, { v: "M", label: t("opt_boy"), icon: "👦" }] },
   { key: "class", kind: "choice", ask: ask("class"),
     options: (_d, t) => [8, 9, 10, 11, 12].map((c) => ({ v: c, label: t("opt_class", { n: c }) })) },
+  // only asked when the age and class do not fit together: a 16-year-old in Class 8 is asked to check
+  { key: "age_class_ok", kind: "choice",
+    ask: ask("age_check", (p) => ({ age: p.age, class: p.class, min: usualAge(p.class).min, max: usualAge(p.class).max })),
+    answered: (p) => p.age_class_ok === true || ageFitsClass(p.age, p.class),
+    options: (_d, t) => [
+      { v: true, label: t("opt_age_class_right"), icon: "✅" },
+      { v: undefined, label: t("opt_fix_age"), icon: "✏️", patch: { age: undefined } },
+      { v: undefined, label: t("opt_fix_class"), icon: "✏️", patch: { class: undefined } },
+    ] },
   { key: "interests", kind: "multi", ask: ask("interests"),
     options: (d) => {
       const count: Record<string, number> = {};
@@ -109,7 +135,7 @@ export const QUESTIONS: Q[] = [
   { key: "marks_pct", kind: "text", ask: ask("marks", (p, t) => ({ exam: t(`exam_${p.marks_exam}`) })), parse: parseMarks,
     answered: (p) => !isMissing(p.marks_pct) || p.marks_exam === "unknown",
     options: (_d, t) => [{ v: null, label: t("opt_dont_remember"), icon: "🤷", patch: { marks_exam: "unknown" } }] },
-  { key: "taluka", kind: "choice", ask: ask("taluka"),
+  { key: "taluka", kind: "choice", free: true, ask: ask("taluka"),
     options: (d) => d.talukas.filter((x: any) => x.name !== "Pune city").map((x: any) => ({ v: x.name, label: x.name })) },
   { key: "category", kind: "choice", ask: ask("category"),
     options: (_d, t) => CATEGORIES.map((c) => ({ v: c, label: c === "General" ? t("opt_general") : c })) },
@@ -130,4 +156,11 @@ export const answered = (q: Q, p: any) => (q.answered ? q.answered(p) : !isMissi
 export function firstMissing(p: any, from = 0) {
   const i = QUESTIONS.findIndex((q, k) => k >= from && !answered(q, p));
   return i === -1 ? QUESTIONS.length : i;
+}
+
+/** A typed place name, tidied: "  junnar " -> "Junnar". Empty or too long (not a name) gives null. */
+export function cleanPlace(raw: string): string | null {
+  const v = raw.trim().replace(/\s+/g, " ").replace(/[.,!?]+$/, "");
+  if (!v || v.length > 40 || /\d/.test(v)) return null;
+  return v.replace(/\b[a-z]/g, (c) => c.toUpperCase());
 }

@@ -6,7 +6,7 @@ import { Card, MicButton, Shell, SpeakButton } from "@/components/ui";
 import { useApp } from "@/lib/store";
 import { setKV } from "@/lib/db";
 import { aiAvailable, postAi, resetAiStatus } from "@/lib/ai";
-import { QUESTIONS, firstMissing, type Opt } from "@/lib/questions";
+import { QUESTIONS, cleanPlace, firstMissing, type Opt } from "@/lib/questions";
 
 // Two modes fill the same profile fields:
 // - AI chat: an open-source LLM (see backend/raah/llm.py) asks questions and returns the fields it understood;
@@ -119,7 +119,8 @@ export default function Discover() {
     setDraft(next);
     setMsgs((m) => [...m, { from: "me", text: shown, learned }]);
     setText(""); setMulti([]);
-    const n = firstMissing(next, step + 1);
+    // always go to the first unanswered question: "fix my age" sends the student back to the age question
+    const n = firstMissing(next);
     if (n < QUESTIONS.length) setStep(n);
     else finish(next);
   };
@@ -138,7 +139,12 @@ export default function Discover() {
       const low = raw.toLowerCase();
       const hit = options.find((o) => low.includes(String(o.label).toLowerCase()) || low.includes(String(o.v).toLowerCase()));
       if (hit) answer(hit.v, raw, undefined, hit.patch);
-      else retry(raw, "q_pick_one");
+      else if (q.free && cleanPlace(raw)) {
+        // a taluka we do not have on the map yet: keep it, and say centre distances will be missing
+        const place = cleanPlace(raw)!;
+        answer(place, raw);
+        setMsgs((m) => [...m, { from: "raah", text: t("q_taluka_not_listed", { taluka: place }) }]);
+      } else retry(raw, "q_pick_one");
     } else if (q.kind === "multi") {
       const hits = options.filter((o) => raw.toLowerCase().includes(String(o.v).toLowerCase())).map((o) => o.v);
       // interests said in the student's own words (any language) are mapped to the dataset's tags on the server
@@ -202,7 +208,7 @@ export default function Discover() {
               {options.map((o) => {
                 const on = multi.includes(o.v);
                 return (
-                  <button key={String(o.v)} onClick={() => (q.kind === "multi" ? setMulti(on ? multi.filter((x) => x !== o.v) : [...multi, o.v]) : answer(o.v, o.label, undefined, o.patch))}
+                  <button key={o.label} onClick={() => (q.kind === "multi" ? setMulti(on ? multi.filter((x) => x !== o.v) : [...multi, o.v]) : answer(o.v, o.label, undefined, o.patch))}
                     className={`rounded-full px-3 py-2 text-sm ring-1 ring-black/10 ${on ? "bg-[var(--brand)] text-white" : "bg-[var(--bg)]"}`}>
                     {o.icon} {o.label}
                   </button>

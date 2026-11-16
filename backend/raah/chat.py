@@ -27,6 +27,8 @@ DOCS = ["aadhaar", "marksheet_10", "marksheet_12", "caste_certificate", "income_
         "domicile_certificate", "bank_passbook", "disability_certificate"]
 # full-year exams only (same ids as web/lib/questions.ts); "unknown" means the student does not remember
 EXAMS = ["class7_final", "class8_final", "class9_final", "class10_board", "class11_final", "class12_board", "unknown"]
+# usual age for Class N is N+5 to N+6 (same rule as web/lib/questions.ts), with a 1-year buffer either side
+USUAL_AGE_GAP, AGE_BUFFER = (5, 6), 1
 MIN_EXAM_TOTAL = 100  # a total below this is a unit test, class test or one subject, not a year's result
 
 
@@ -41,6 +43,7 @@ class ProfileExtract(BaseModel):
     marks_obtained: float | None = Field(None, ge=0, le=1500)
     marks_total: float | None = Field(None, ge=MIN_EXAM_TOTAL, le=1500)
     documents_none: bool | None = None
+    age_class_ok: bool | None = None
     interests: list[str] | None = None
     taluka: str | None = None
     category: str | None = None
@@ -84,10 +87,14 @@ def validate_profile(raw: dict, talukas: list[str], tags: list[str]) -> tuple[di
             rejected.append(k)
             continue
         if k == "taluka":
-            v = next((t for t in talukas if t.lower() in str(v).lower() or str(v).lower() in t.lower()), None)
+            # a known taluka gets its map point; any other place name the student types is kept as they wrote it
+            typed = re.sub(r"\s+", " ", str(v)).strip(" .,!?")
+            v = next((t for t in talukas if t.lower() in typed.lower() or typed.lower() in t.lower()), None)
             if v is None:
-                rejected.append(k)
-                continue
+                if not typed or len(typed) > 40 or re.search(r"\d", typed):
+                    rejected.append(k)
+                    continue
+                v = typed.title() if typed.islower() else typed
         if k == "interests":
             exact = [t for t in tags if any(t in i.lower() or i.lower() in t for i in v)]
             # words the model kept in the student's own phrasing go through the embedding matcher
@@ -121,6 +128,15 @@ REQUIRED = ["name", "age", "gender", "class", "interests", "marks_exam", "marks_
             "family_income_annual", "max_commute_km", "can_stay_hostel", "documents"]
 
 
+def age_fits_class(age, cls) -> bool:
+    """True when age and class fit together, or either is unknown."""
+    try:
+        a, c = int(age), int(cls)
+    except (TypeError, ValueError):
+        return True
+    return c + USUAL_AGE_GAP[0] - AGE_BUFFER <= a <= c + USUAL_AGE_GAP[1] + AGE_BUFFER
+
+
 def missing_fields(p: dict) -> list[str]:
     """Fields still to ask, in the order the scripted questions ask them."""
     def done(f):
@@ -129,7 +145,11 @@ def missing_fields(p: dict) -> list[str]:
         if f == "documents" and p.get("documents_none") is True:
             return True
         return p.get(f) not in (None, "", [])
-    return [f for f in REQUIRED if not done(f)]
+    out = [f for f in REQUIRED if not done(f)]
+    if not age_fits_class(p.get("age"), p.get("class")) and p.get("age_class_ok") is not True:
+        # ask the student to check their age and class straight after the class question
+        out.insert(out.index("interests") if "interests" in out else 0, "age_class_ok")
+    return out
 
 
 # How to ask for each field. Only the guide for the next field goes into the prompt, so a small model stays on track.
@@ -138,6 +158,9 @@ ASK = {
     "age": "Ask their age in years. Example answer: 15.",
     "gender": "Ask if they are a girl or a boy, and say it is because some scholarships are only for girls.",
     "class": "Ask which class (standard) they are studying in now, 8 to 12. In the holidays, the class they are going into.",
+    "age_class_ok": ("The age and class do not fit together (Class N students are usually N+5 to N+6 years old). "
+                     "Kindly repeat both back, say most students in that class are that age, and ask if it is right. "
+                     "Set age_class_ok true if they confirm; if they correct the age or class, return the corrected value."),
     "interests": "Ask what they enjoy doing, with examples like helping people, fixing machines, farming, drawing.",
     "marks_exam": ("Ask which FULL-YEAR exam result they can tell you: for a Class N student, the Class N-1 final exam, "
                    "or the Class 10 board (SSC) / Class 12 board (HSC). Say clearly it must NOT be a unit test or class test. "
@@ -145,7 +168,8 @@ ASK = {
     "marks_pct": ("Ask, naming that exact exam, how many marks they got OUT OF how many total marks, e.g. '412 out of 500', "
                   "or their percentage like '82%'. If they give one number without 'out of' or '%', ask out of how much. "
                   f"If the total is under {MIN_EXAM_TOTAL} it is a unit test: kindly ask for the full-year result instead."),
-    "taluka": "Ask which taluka their home is in, explaining a taluka is the block their village belongs to (e.g. Junnar, Ambegaon).",
+    "taluka": ("Ask which taluka their home is in, explaining a taluka is the block their village belongs to (e.g. Junnar, Ambegaon). "
+               "Any taluka is fine, even one not in the list."),
     "category": ("Ask their caste category as written on their caste certificate. If unsure, ask parents; "
                  "with no certificate, choose General for now."),
     "family_income_annual": ("Ask the whole family's income in ONE YEAR, everyone added together; a rough guess is fine, "
@@ -181,7 +205,7 @@ Next question to ask: {nxt or 'none, thank the student and say their career list
 Still missing after that: {', '.join(missing[1:]) or 'nothing'}.
 Allowed values: gender F or M; class 1-12; marks_exam one of {EXAMS}; marks_obtained and marks_total as the two numbers the student said
 (marks_total is the exam's total, at least {MIN_EXAM_TOTAL}); marks_pct only if they gave a percentage; category one of {CATEGORIES};
-taluka one of {talukas}; interests chosen from {tags}; documents chosen from {DOCS} (documents_none true if they have none);
+taluka: the taluka the student named, spelled like this list when it is one of them: {talukas}; interests chosen from {tags}; documents chosen from {DOCS} (documents_none true if they have none);
 family_income_annual in rupees per year; max_commute_km in km.
 Reply with JSON only:
 {{"reply": "<your next message to the student>", "profile": {{<only fields the student actually told you>}}, "done": <true when nothing important is missing>}}

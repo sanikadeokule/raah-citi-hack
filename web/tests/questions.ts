@@ -1,6 +1,6 @@
 // Usage: npx tsx tests/questions.ts  -> exits non-zero if a Discover answer check is wrong (also run by backend/tests/test_questions.py)
 import assert from "node:assert/strict";
-import { examsFor, firstMissing, parseAge, parseMarks, QUESTIONS } from "../lib/questions";
+import { ageFitsClass, cleanPlace, examsFor, firstMissing, parseAge, parseMarks, QUESTIONS } from "../lib/questions";
 
 const ok = (r: any) => (assert.ok(r.ok, JSON.stringify(r)), r);
 const err = (r: any, e: string) => (assert.ok(!r.ok && r.error === e, JSON.stringify(r)), r);
@@ -42,4 +42,12 @@ for (const lang of ["en", "mr", "hi"]) {
     q.options?.(d, t, { class: 12 });
   }
 }
+assert.equal(cleanPlace("  sangamner. "), "Sangamner");
+assert.equal(cleanPlace("संगमनेर"), "संगमनेर");
+assert.equal(cleanPlace("412"), null);
+assert.ok(ageFitsClass(16, 11) && ageFitsClass(14, 10) && ageFitsClass(17, 10));
+assert.ok(!ageFitsClass(16, 8) && !ageFitsClass(12, 10));
+assert.equal(firstMissing({ name: "S", age: 16, gender: "F", class: 8 }), at("age_class_ok"));
+assert.equal(firstMissing({ name: "S", age: 16, gender: "F", class: 8, age_class_ok: true }), at("interests"));
+assert.equal(firstMissing({ name: "S", gender: "F", class: 8 }), at("age")); // "change my age" goes back to age
 console.log("questions ok");

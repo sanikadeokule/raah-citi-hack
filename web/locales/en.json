@@ -245,7 +245,7 @@
  "q_marks_err_small_total": "A total of {total} marks looks like a unit test or one subject. Please tell us the full-year exam result, where the total is usually 500 or more, or write your percentage like 82%.",
  "q_marks_err_pct": "A percentage must be between 0 and 100, for example 82%.",
  "q_taluka": "Which taluka is your home in?",
- "q_taluka_hint": "A taluka is the block your village belongs to, for example Junnar or Ambegaon. It helps us find colleges and centres near you.",
+ "q_taluka_hint": "Tap your taluka below, or type its name if it is not there. A taluka is the block your village belongs to, for example Junnar or Ambegaon. It helps us find colleges and centres near you.",
  "q_category": "What is your caste category? It is written on your caste certificate.",
  "q_category_hint": "Scholarships depend on this. If you are not sure, ask your parents. If you have no caste certificate, pick General for now; you can change it later in My details.",
  "opt_general": "General (Open)",
@@ -274,5 +274,11 @@
  "doc_domicile_certificate": "Domicile certificate",
  "doc_bank_passbook": "Bank passbook",
  "opt_none_of_these": "I have none of these",
- "q_pick_one": "Please tap one of the answers below."
+ "q_pick_one": "Please tap one of the answers below.",
+ "q_taluka_not_listed": "Noted: {taluka}. It is not on our map yet, so distances to centres may be missing.",
+ "q_age_check": "You said you are {age} years old and in Class {class}. Most Class {class} students are {min} to {max} years old. Is that right?",
+ "q_age_check_hint": "It is fine if you missed a year or started late. Just check that the age and class are typed correctly.",
+ "opt_age_class_right": "Yes, that is right",
+ "opt_fix_age": "Change my age",
+ "opt_fix_class": "Change my class"
 }
