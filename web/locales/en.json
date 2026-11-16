@@ -199,5 +199,16 @@
  "module_stats": "{e} enrolled · {c} completed · {s} sales",
  "mentor_connections": "Students connected to mentors",
  "map_offline": "The map needs internet. Distances below work offline.",
- "map_approx_note": "Centres without exact coordinates are placed at their taluka point, so the map and distances are approximate."
+ "map_approx_note": "Centres without exact coordinates are placed at their taluka point, so the map and distances are approximate.",
+ "home_ask": "Ask Raah",
+ "ask_intro": "Ask anything about scholarships, apprenticeships, training centres, courses, exams or careers. Answers come only from Raah's verified data, with the source for every fact.",
+ "ask_ex1": "Which scholarship helps an OBC girl with hostel costs?",
+ "ask_ex2": "Which railway apprentice trades are open in Pune, and what is the stipend?",
+ "ask_ex3": "What documents do I need for NMMS?",
+ "ask_placeholder": "Type or speak your question",
+ "ask_searching": "Searching Raah's data…",
+ "ask_row": "row",
+ "ask_offline": "Asking needs the internet. Your saved pages still work offline.",
+ "ask_note_no_ai": "The AI is not running right now, so these are the matching rows from the data.",
+ "ask_note_ungrounded": "The AI's answer had a figure that is not in the data, so the data rows are shown instead."
 }
