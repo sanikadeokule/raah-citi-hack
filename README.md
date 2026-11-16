@@ -48,11 +48,11 @@ Eligibility, costs, payback months, distances and career ranking are computed by
 | **Discover chat** | When a language model is reachable, Raah holds a free conversation ("I'm Asha, 15, in Class 10 and I like computers") and shows the fields it understood as chips under each reply. Otherwise, or with one tap, it asks 12 short scripted questions (name, age, class, interests, marks, taluka, category, family income, travel limit, hostel, documents). Answer chips for low-literacy use; mic on every question. |
 | **Why this career** | Each shortlisted career gets a one or two sentence reason. The model writes it from the score breakdown and dataset rows; if its text contains a number that is not in those rows, the template sentence is shown instead. |
 | **Parental consent** | Students under 18 need a parent's OTP before the profile is saved. A consent record with purpose and timestamp is stored (DPDP Act 2023). |
-| **Career shortlist** | Top 5 out of 40 careers, scored on interest match (50%), eligibility (20%), affordability (20%) and local demand (10%). The top 5 always includes at least one vocational and one non-STEM or self-employment option. |
+| **Career shortlist** | Top 5 out of 45 careers, scored on interest match (50%), eligibility (20%), affordability (20%) and local demand (10%). The top 5 always includes at least one vocational and one non-STEM or self-employment option. |
 | **Cost & payback card** | Course fees, exam fees, materials, travel or hostel, scholarship cover, stipend while training, net family cost, monthly income range and the payback month at typical and low income. |
 | **What-if planner** | Toggle the scholarship, pick which scheme counts, move the commute slider, switch to hostel, set a monthly family contribution, or compare against leaving school for daily-wage work. Recalculates instantly, offline. |
 | **Side-by-side compare** | Any two paths in two columns plus a cumulative cash chart with break-even marked. |
-| **Scholarship check** | 17 central and Maharashtra schemes checked rule by rule (✅ ❌ ❔ 📄). Names the missing document and where to get it (tehsil office, Aaple Sarkar Seva Kendra, school). |
+| **Scholarship check** | 48 central and Maharashtra schemes checked rule by rule (✅ ❌ ❔ 📄). Names the missing document and where to get it (tehsil office, Aaple Sarkar Seva Kendra, school). |
 | **Nearest training centres** | 3 nearest Govt ITIs or nursing schools for the chosen path on a Leaflet / OpenStreetMap map with the student's home, plus distance, fees and source. Offline the map is hidden and the list still works. Centres without exact coordinates sit at their taluka point and are marked approximate. |
 | **Parent voice note** | A short message for parents in the chosen language with the plan's numbers, played aloud and shareable on WhatsApp as text or as an audio file. With BHASHINI keys the file is generated speech (WAV); without them the student records the message in their own voice. On phones the file goes to the share sheet (WhatsApp, Bluetooth, Files); elsewhere it downloads. |
 | **Audio lessons + quiz** | "What is an ITI?", "What is an apprenticeship?", "How do scholarships work?" plus a 5-question quiz. Facts inside lessons and quiz (stipend rates, income limits, ITI count) come from the dataset. With BHASHINI keys, "Save lesson audio for offline" stores each lesson as an audio file on the phone; the file is tied to the exact lesson text, so after a dataset edit the new figures are spoken rather than an old recording. Without keys the phone's own voice reads them, which also works offline. |
@@ -135,7 +135,7 @@ All figures are loaded from `raah-dataset.xlsx` at runtime. Editing a cell and s
 | Sheet | Used for |
 |---|---|
 | `Scholarships` | Scheme names, income limits, amounts, documents, apply links. The income limit and amount cells feed the rules and payback maths directly. |
-| `Careers_Income` | 40 careers with income while training and after training. Row `CAR40` (casual daily wage) is the "dropping out" baseline. |
+| `Careers_Income` | 46 careers with income while training and after training. Row `CAR40` (casual daily wage) is the "dropping out" baseline. |
 | `Apprenticeships_NAPS`, `Apprenticeships_Railway` | Opportunity screen. |
 | `Stipend_Rates` | Minimum apprentice stipends used in lessons and quiz. |
 | `Training_Centres` | Nearest-centre lookup. |
@@ -362,6 +362,7 @@ run.sh
 
 - **Language:** copy `web/locales/en.json` to `web/locales/<code>.json`, translate the values, and add the code to `LANGS` in `web/lib/store.tsx`.
 - **Scholarship:** add a row to `Scholarships`, then its rules to `Eligibility_Rules` (use `@income` for the income limit). No code change.
+  Freeship schemes that are only for families above a limit use operator `>` with `@income`. Course tags used by rules include `post_matric`, `ug`, `pg`, `iti_govt`, `iti_ppp` (ITI seat taken under PPP), `technical_professional`, `top_institute`. The Profile screen also asks religion and whether a parent is a registered construction worker or an ex-serviceman, because some schemes depend on them; a rule on a field the student has not filled shows as ❔ rather than ❌.
 - **Career path with a cost plan:** add the career to `Careers_Income` and `Career_Profile`, and a row to `Plan_Inputs`.
 - **Training centre coordinates:** fill `Lat` and `Lon` in `Training_Centres`.
 
@@ -379,7 +380,7 @@ RAAH_DATASET=../raah-dataset.xlsx python -m pytest -q tests
 
 ## Data sources
 
-National Scholarship Portal, MahaDBT, Ministry of Social Justice & Empowerment, Ministry of Education, AICTE, DST INSPIRE, apprenticeshipindia.gov.in (NAPS), RRC Central Railway, DGT stipend notification (Sep 2025), DVET Maharashtra, MSBNPE, PLFS 2025 (MoSPI), PIB, India Post, Skill India Digital Hub, SWAYAM and DIKSHA. Each row in the spreadsheet links to its exact source page and check date.
+National Scholarship Portal, MahaDBT, Ministry of Social Justice & Empowerment, Ministry of Education, AICTE, DST INSPIRE, apprenticeshipindia.gov.in (NAPS), RRC Central Railway, DGT stipend notification (Sep 2025), DVET Maharashtra, MSBNPE, PLFS 2025 (MoSPI), PIB, India Post, Ministry of Tribal Affairs, Ministry of Minority Affairs guidelines, Dept of Ex-Servicemen Welfare, MAHABOCW (construction workers board), Washim district OBC Bahujan Welfare page, RRB (ALP notice), Govt Polytechnic Awasari, Skill India Digital Hub, SWAYAM and DIKSHA. Each row in the spreadsheet links to its exact source page and check date.
 
 The teacher's class, the dropout model's training data and the family bank data are synthetic.
 
