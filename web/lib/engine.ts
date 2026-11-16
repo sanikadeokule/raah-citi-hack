@@ -139,31 +139,78 @@ export function pyRound(x: number) {
   return Math.round(x);
 }
 
+function groupFigure(area: any, gender: string) {
+  const v = area[gender];
+  return v !== null && v !== undefined ? v : area.all;
+}
+
+// Mirrors plan_income in backend/raah/engine.py (see the docstring there for the order).
 export function planIncome(data: Data, plan: any, career: any, gender: string) {
   const loF = A(data, "income_low_factor", 1), hiF = A(data, "income_high_factor", 1);
   const ov = plan.income_override || {};
   const inc = career.income;
+  const path = career.pay_path;
+  const est = Boolean(career.income_estimate);
+  const base = { path: null as number[] | null, status: career.income_status || "" };
   if (ov.median !== null && ov.median !== undefined) {
     const med = ov.median, src = "Plan_Inputs (your figure)";
-    return { low: ov.low ?? med * loF, median: med, high: ov.high ?? med * hiF, source: src, text: src, derived: ov.low == null };
+    return { ...base, low: ov.low || med * loF, median: med, high: ov.high || med * hiF, source: src, text: src,
+      derived: ov.low == null, spread: ov.low == null ? "factor" : "range", estimate: ov.low == null, status: src };
+  }
+  const g = career.earnings;
+  if (g) {
+    const med = groupFigure(g.all, gender);
+    const vals = [groupFigure(g.rural, gender), groupFigure(g.urban, gender), med].filter((v) => v !== null && v !== undefined);
+    return { ...base, low: Math.min(...vals), median: med, high: Math.max(...vals), source: career.income_type,
+      text: career.income_text, derived: false, spread: "rural_urban", estimate: est };
+  }
+  if (path) {
+    const y1 = path[0];
+    return { ...base, low: y1, median: y1, high: y1, path, source: career.pay_path_source || career.income_type,
+      text: career.income_text, derived: false, spread: "fixed", estimate: est };
   }
   if (!inc) return null;
   if (inc.by_gender) {
-    const med = inc.by_gender[gender] ?? Math.min(...(Object.values(inc.by_gender) as number[]));
-    return { low: med * loF, median: med, high: med * hiF, source: career.income_type, text: career.income_text, derived: true };
+    const med = inc.by_gender[gender] || Math.min(...(Object.values(inc.by_gender) as number[]));
+    return { ...base, low: med * loF, median: med, high: med * hiF, source: career.income_type, text: career.income_text,
+      derived: true, spread: "factor", estimate: true };
   }
   if (inc.low !== inc.high) {
-    return { low: inc.low, median: (inc.low + inc.high) / 2, high: inc.high, source: career.income_type, text: career.income_text, derived: false };
+    return { ...base, low: inc.low, median: (inc.low + inc.high) / 2, high: inc.high, source: career.income_type,
+      text: career.income_text, derived: false, spread: "range", estimate: est };
   }
   const med = inc.low;
-  return { low: med * loF, median: med, high: med * hiF, source: career.income_type, text: career.income_text, derived: true };
+  return { ...base, low: med * loF, median: med, high: med * hiF, source: career.income_type, text: career.income_text,
+    derived: true, spread: "factor", estimate: true };
 }
 
-function paybackAfter(net: number, gain: number, horizon: number): number | null {
+// Pay in a given year of work from the year 1 / 3 / 5 points (blank points skipped).
+export function pathValue(path: (number | null)[], year: number): number {
+  const pts = ([1, 3, 5] as const).map((y, i) => [y, path[i]] as [number, number | null])
+    .filter((p) => p[1] !== null && p[1] !== undefined) as [number, number][];
+  if (year <= pts[0][0]) return pts[0][1];
+  for (let i = 0; i + 1 < pts.length; i++) {
+    const [x0, a] = pts[i], [x1, b] = pts[i + 1];
+    if (year <= x1) return a + (b - a) * (year - x0) / (x1 - x0);
+  }
+  return pts[pts.length - 1][1];
+}
+
+// Income in the given month of work (1 = first month after training).
+export function incomeAt(income: any, key: "low" | "median" | "high", month: number): number {
+  const p = income.path;
+  if (!p) return income[key];
+  return income[key] * pathValue(p, Math.floor((month - 1) / 12) + 1) / p[0];
+}
+
+function paybackAfter(net: number, income: any, key: "low" | "median", base: number, horizon: number): number | null {
   if (net <= 0) return 0;
-  if (gain <= 0) return null;
-  const m = Math.ceil(net / gain);
-  return m <= horizon ? m : null;
+  let cum = 0;
+  for (let m = 1; m <= horizon; m++) {
+    cum += incomeAt(income, key, m) - base;
+    if (cum >= net) return m;
+  }
+  return null;
 }
 
 export interface PlanOptions {
@@ -224,7 +271,7 @@ export function computePlan(data: Data, profile: Profile, planId: string, opts: 
   const pay: Record<string, any> = {};
   if (income) {
     for (const k of ["low", "median"] as const) {
-      const pm = paybackAfter(net, income[k] - base, horizon);
+      const pm = paybackAfter(net, income, k, base, horizon);
       pay[k] = {
         months_after_training: pm,
         month_from_start: pm === null ? null : Math.trunc(months + plan.earn_months + pm),
@@ -241,7 +288,10 @@ export function computePlan(data: Data, profile: Profile, planId: string, opts: 
     if (m > 0) {
       if (m <= months) { cumMed -= monthlyCost; cumLow -= monthlyCost; }
       else if (m <= months + plan.earn_months) { cumMed += stipendMonth; cumLow += stipendMonth; }
-      else if (income) { cumMed += income.median - base; cumLow += income.low - base; }
+      else if (income) {
+        const w = m - months - plan.earn_months;
+        cumMed += incomeAt(income, "median", w) - base; cumLow += incomeAt(income, "low", w) - base;
+      }
     }
     series.push({ month: m, median: pyRound(cumMed), low: pyRound(cumLow) });
   }

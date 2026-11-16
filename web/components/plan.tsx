@@ -7,6 +7,16 @@ import { useApp } from "@/lib/store";
 import { SERIES } from "@/lib/theme";
 import { VoiceNote } from "./voicenote";
 
+// Year-5 pay when an official scale gives one, else the low/high band.
+export function incomeSub(t: any, inc: any) {
+  if (inc.path) {
+    const last = [...inc.path].reverse().find((v: any) => v != null);
+    const y = 1 + 2 * inc.path.lastIndexOf(last);
+    return y > 1 ? t("pay_by_year", { v: inr(last), y }) : t("fixed_pay");
+  }
+  return `${t("low")} ${inr(inc.low)} · ${t("high")} ${inr(inc.high)}`;
+}
+
 export function paybackText(t: any, p: any, data: any) {
   if (!p) return "—";
   if (p.months_after_training === null) return t("not_in_horizon", { h: A(data, "payback_horizon_months", 120) });
@@ -44,7 +54,7 @@ export function PaybackCard({ r }: { r: any }) {
       <div className="mt-3 grid grid-cols-2 gap-2">
         <Stat label={t("net_cost")} value={inr(Math.max(0, r.net_cost))} tone={r.net_cost <= 0 ? "text-[var(--good)]" : ""} />
         <Stat label={t("monthly_income")} value={r.income ? inr(r.income.median) : "—"}
-          sub={r.income ? `${t("low")} ${inr(r.income.low)} · ${t("high")} ${inr(r.income.high)}` : t("no_plan_yet")} />
+          sub={r.income ? incomeSub(t, r.income) : t("no_plan_yet")} />
       </div>
       <div className="mt-3 rounded-xl bg-[var(--brand)] p-3 text-white">
         <div className="text-xs opacity-80">{t("payback")} ({t("median")})</div>
@@ -54,7 +64,10 @@ export function PaybackCard({ r }: { r: any }) {
       </div>
       {r.baseline_monthly > 0 && <p className="mt-2 text-xs text-[var(--muted)]">Gain measured against daily-wage work: {inr(r.baseline_monthly)}{t("per_month")} (PLFS casual wage × {A(data, "working_days_per_month")} days)</p>}
       <div className="mt-2 space-y-0.5">
-        {r.income && <div className="text-xs text-[var(--muted)]">{t("income_note")}: {r.income.text}{r.income.derived ? ` · low/high = ×${A(data, "income_low_factor")}/×${A(data, "income_high_factor")} (Assumptions)` : ""}</div>}
+        {r.income && <div className="text-xs text-[var(--muted)]">{r.income.estimate && <Badge tone="amber">{t("estimate")}</Badge>} {t("income_note")}: {r.income.text}
+          {r.income.derived ? ` · low/high = ×${A(data, "income_low_factor")}/×${A(data, "income_high_factor")} (Assumptions)` : ""}
+          {r.income.spread === "rural_urban" ? ` · ${t("spread_rural_urban")}` : ""}
+          {r.income.path ? ` · ${t("fixed_pay")}: ${r.income.path.filter((v: any) => v != null).map((v: number) => inr(v)).join(" → ")}` : ""}</div>}
         <div><Source url={r.career.sources?.[0]} label={r.career.income_type} date={r.career.last_checked} /></div>
         <div className="text-xs text-[var(--muted)]">Fees: {r.plan.status}</div>
       </div>

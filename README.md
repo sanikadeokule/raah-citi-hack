@@ -136,7 +136,8 @@ All figures are loaded from `raah-dataset.xlsx` at runtime. Editing a cell and s
 | Sheet | Used for |
 |---|---|
 | `Scholarships` | Scheme names, income limits, amounts, documents, apply links. The income limit and amount cells feed the rules and payback maths directly. |
-| `Careers_Income` | 46 careers with income while training and after training. Row `CAR40` (casual daily wage) is the "dropping out" baseline. |
+| `Careers_Income` | 46 careers with income while training and after training. Row `CAR40` (casual daily wage) is the "dropping out" baseline. `Earnings group` links a row of `Occupation_Earnings`; `Pay year 1 / 3 / 5` hold official pay-scale steps (7th CPC pay matrix, Agnipath package); `Income status` says "Sourced ..." or "Estimate ...", and estimates get an amber badge in the app. A ₹ figure typed into the income cell overrides the link. |
+| `Occupation_Earnings` | PLFS 2025 average monthly earnings for regular-wage employees by occupation division (craft trades, machine operators, clerical, service & sales, technicians, professionals) and for graduates, plus self-employed earnings by industry; men / women / everyone, all India / rural / urban. Electrician and welder share the craft-trades row: PLFS does not publish single trades. |
 | `Apprenticeships_NAPS`, `Apprenticeships_Railway` | Opportunity screen. |
 | `Stipend_Rates` | Minimum apprentice stipends used in lessons and quiz. |
 | `Training_Centres` | Nearest-centre lookup. |
@@ -150,7 +151,7 @@ All figures are loaded from `raah-dataset.xlsx` at runtime. Editing a cell and s
 | `Talukas` | Taluka points used for distance while a centre has no Lat/Lon. Exact centre coordinates take priority once filled in. |
 | `Demo_Students` | Hero profiles for the demo (Priya, Rohan, Sana). |
 
-`backend/scripts/add_app_sheets.py` adds the app sheets to a workbook that does not have them yet and never overwrites a sheet that already exists.
+`backend/scripts/add_app_sheets.py` adds the app sheets to a workbook that does not have them yet and never overwrites a sheet that already exists. `backend/scripts/add_income_detail.py` adds `Occupation_Earnings` and the per-career income columns the same way (it only fills empty cells).
 
 ## How the numbers are calculated
 
@@ -163,12 +164,14 @@ scholarship   = best eligible scheme (or the sum, if stack_scholarships = 1):
               + per-month amount × months_paid_per_year × years
 stipend       = lowest listed stipend × months earning while training
 net_cost      = total_cost − scholarship − stipend
-monthly_gain  = income (typical or low) − baseline          baseline = 0 for a student, or PLFS daily wage × working days
+income(month)  = year-1 income, grown along the Pay year 1 → 3 → 5 steps when the career has them
+                 (straight line between steps, flat after the last one), otherwise flat
+monthly_gain  = income(month) (typical or low) − baseline   baseline = 0 for a student, or PLFS daily wage × working days
 payback       = first month after training where cumulative gain ≥ net_cost
 ```
 
 - Income uses the student's gender where the source splits it (PLFS male / female averages).
-- When a source gives a single figure, low and high are that figure × `income_low_factor` / `income_high_factor` from `Assumptions`.
+- Which income a career uses, in order: your figure in `Plan_Inputs` → its `Occupation_Earnings` row (typical = all-India average, low / high = the rural and urban averages) → its official pay steps (fixed pay, so low = typical = high) → its own published range (e.g. GDS TRCA) → a single figure × `income_low_factor` / `income_high_factor`, shown as an estimate.
 - Scholarship values use the lower end of a range so the payback is never overstated; the upper end is shown alongside.
 - A scheme counts as eligible for the plan when every rule passes or the only gap is a document the student can still get.
 
@@ -410,6 +413,7 @@ backend/
     money.py        pain.001, Account Aggregator mock, skills passport
     partners.py     OAuth2 partner endpoints
   scripts/add_app_sheets.py
+  scripts/add_income_detail.py
   scripts/serve_https.py   https for phones (Cloudflare tunnel or self-signed LAN)
   tests/            parity and spreadsheet-edit tests
 web/
@@ -446,11 +450,11 @@ Tests never use the app's `DATABASE_URL`. Without `TEST_DATABASE_URL` they run o
 - `test_parity.py`: Python and TypeScript engines agree on 105 scenarios (3 students × 7 plans × 5 what-if settings), including eligibility and ranking.
 - `test_auth.py`: register then sign in, registered name in the token and `/me`, Argon2 PIN hashing, duplicate and weak-PIN rejection, wrong-PIN countdown and lockout, teacher PIN reset, upgrading an old account, teacher allowlist, role checks on teacher and money endpoints, consent ownership, profile sync and account deletion.
 - `test_rag.py`: one chunk per row with path, row and source; tables kept whole in documents; exact codes found; hybrid search; Marathi questions without a model; re-index after a spreadsheet edit; citations; invented numbers rejected; Weaviate path and its fallback.
-- `test_data_driven.py`: edits a copy of the spreadsheet (income limit, course fee, income, assumption) and checks the eligibility, cost, payback and cached data change accordingly.
+- `test_data_driven.py`: edits a copy of the spreadsheet (income limit, course fee, income, occupation earnings, assumption) and checks the eligibility, cost, payback and cached data change accordingly.
 
 ## Data sources
 
-National Scholarship Portal, MahaDBT, Ministry of Social Justice & Empowerment, Ministry of Education, AICTE, DST INSPIRE, apprenticeshipindia.gov.in (NAPS), RRC Central Railway, DGT stipend notification (Sep 2025), DVET Maharashtra, MSBNPE, PLFS 2025 (MoSPI), PIB, India Post, Ministry of Tribal Affairs, Ministry of Minority Affairs guidelines, Dept of Ex-Servicemen Welfare, MAHABOCW (construction workers board), Washim district OBC Bahujan Welfare page, RRB (ALP notice), Govt Polytechnic Awasari, Skill India Digital Hub, SWAYAM and DIKSHA. Each row in the spreadsheet links to its exact source page and check date.
+National Scholarship Portal, MahaDBT, Ministry of Social Justice & Empowerment, Ministry of Education, AICTE, DST INSPIRE, apprenticeshipindia.gov.in (NAPS), RRC Central Railway, DGT stipend notification (Sep 2025), DVET Maharashtra, MSBNPE, PLFS 2025 (MoSPI; occupation-level averages computed from the unit data by India Labour Observatory, CC BY 4.0), 7th CPC pay matrix, PIB, India Post, Ministry of Tribal Affairs, Ministry of Minority Affairs guidelines, Dept of Ex-Servicemen Welfare, MAHABOCW (construction workers board), Washim district OBC Bahujan Welfare page, RRB (ALP notice), Govt Polytechnic Awasari, Skill India Digital Hub, SWAYAM and DIKSHA. Each row in the spreadsheet links to its exact source page and check date.
 
 The teacher's class, the dropout model's training data and the family bank data are synthetic.
 

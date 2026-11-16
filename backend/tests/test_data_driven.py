@@ -79,3 +79,39 @@ def test_exam_fee_and_plan_link_come_from_the_exams_sheet():
         assert next(e for e in d["exams"] if e["id"] == "EX01")["fee_open"] == 175
         assert next(pl for pl in d["plans"] if pl["id"] == "PLN03")["exams"] == ["EX01"]
         assert any("EX99" in w for w in d["warnings"])
+
+
+def test_occupation_earnings_edit_flows_to_linked_careers():
+    with tempfile.TemporaryDirectory() as tmp:
+        p = Path(tmp) / "d.xlsx"
+        shutil.copy(SRC, p)
+        d = dataset.load(p)
+        ele = next(c for c in d["careers"] if c["id"] == "CAR01")
+        assert ele["earnings"]["group"] == "Craft and related trades workers"
+        wb = openpyxl.load_workbook(p)
+        ws = wb["Occupation_Earnings"]
+        head = [c.value for c in ws[1]]
+        for r in range(2, ws.max_row + 1):
+            if ws.cell(r, 1).value == "Craft and related trades workers":
+                ws.cell(r, head.index("All India male (₹/month)") + 1).value = 30000
+        wb.save(p)
+        d = dataset.load(p)
+        man = {**d["students"][0], "gender": "M"}
+        r = engine.compute_plan(d, man, "PLN03", {})
+        assert r["income"]["median"] == 30000 and r["income"]["spread"] == "rural_urban"
+        # low / high are the rural and urban averages, not blanket factors
+        assert r["income"]["low"] < 30000 and r["income"]["derived"] is False
+
+
+def test_pay_path_grows_income_and_shortens_payback():
+    d = dataset.load(SRC)
+    gnm = next(c for c in d["careers"] if c["id"] == "CAR24")
+    assert gnm["pay_path"][0] < gnm["pay_path"][-1]
+    inc = engine.plan_income(d, {}, gnm, "F")
+    assert engine.income_at(inc, "median", 1) == gnm["pay_path"][0]
+    assert engine.income_at(inc, "median", 49) == gnm["pay_path"][2]  # year 5
+    flat = {**inc, "path": None}
+    net = inc["median"] * 40
+    assert engine.payback_after(net, inc, "median", 0, 120) < engine.payback_after(net, flat, "median", 0, 120)
+    # a blank year-5 cell holds the last known pay (Agniveer's term ends after year 4)
+    assert engine.path_value([30000, 36500, None], 5) == 36500
