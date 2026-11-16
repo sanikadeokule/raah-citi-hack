@@ -95,6 +95,21 @@ export function eligibility(data: Data, profile: Profile, plan?: any, hostel?: b
   return out;
 }
 
+/** What choosing this plan changes against the student's situation now, so the screen can say so.
+ * Most schemes depend on the student (class, category, income), not on the course; only rules on
+ * course_tags (and class, for courses after Class 10) move when the plan changes. */
+export function eligibilityChanges(data: Data, profile: Profile, plan: any, hostel?: boolean) {
+  const now: Record<string, string> = Object.fromEntries(eligibility(data, profile, undefined, hostel).map((e: any) => [e.id, e.status]));
+  const tags = new Set<string>(plan.course_tags);
+  const forCourse = data.scholarships
+    .filter((s: any) => s.rules.some((r: any) => r.field === "course_tags" && (r.value || []).some((v: string) => tags.has(v))))
+    .map((s: any) => s.id);
+  const changed = eligibility(data, profile, plan, hostel)
+    .filter((e: any) => now[e.id] !== e.status)
+    .map((e: any) => ({ id: e.id, name: e.name, before: now[e.id] ?? null, after: e.status }));
+  return { plan_id: plan.id, for_this_course: forCourse, changed };
+}
+
 export const A = (data: Data, key: string, d = 0): number => {
   const a = data.assumptions?.[key];
   return a && a.value !== null && a.value !== undefined ? a.value : d;
@@ -266,25 +281,39 @@ export function nearestCentres(data: Data, profile: Profile, centreType: string 
   return out.slice(0, n);
 }
 
+/** Singular form, so 'computer' matches the tag 'computers' and 'phone' matches 'phones'. */
+const word = (w: string) => (w.length > 3 && w.endsWith("s") && !w.endsWith("ss") ? w.slice(0, -1) : w);
+const phrase = (t: any) => String(t).toLowerCase().replace(/-/g, " ").split(/\s+/).filter(Boolean).map(word).join(" ");
+
 const tokens = (items: any[]) => {
   const out = new Set<string>();
-  for (const it of items || []) for (const w of String(it).toLowerCase().replace(/-/g, " ").split(/\s+/)) if (w.length > 2) out.add(w);
+  for (const it of items || []) for (const w of phrase(it).split(" ")) if (w.length > 2) out.add(w);
   return out;
 };
 
+// a career that only shares tags with the direct matches counts at most half a direct match
+const RELATED_WEIGHT = 0.5;
+const TIER: Record<string, number> = { direct: 0, related: 1, none: 2 };
+
 export function rankCareers(data: Data, profile: Profile, n = 5) {
-  const interests = tokens(profile.interests);
-  const phrases = new Set<string>((profile.interests || []).map((i: string) => String(i).trim().toLowerCase()));
+  const said: Record<string, string> = {};
+  for (const i of profile.interests || []) if (String(i).trim()) said[phrase(i)] = String(i).trim().toLowerCase();
+  const phrases = new Set<string>(Object.keys(said));
   const cls = profile.class || 10;
   const plansByCareer: Record<string, any> = Object.fromEntries(data.plans.map((p: any) => [p.career_id, p]));
   const fam = profile.family_income_annual || 0;
-  const scored = data.careers.map((c: any) => {
-    const tags = tokens(c.tags);
-    const tagPhrases = new Set<string>((c.tags || []).map((t: string) => String(t).trim().toLowerCase()));
-    const exact = [...phrases].filter((p) => tagPhrases.has(p));
+  // a loose (word-level) match only counts on words that belong to one tag; 'people' is in both
+  // 'helping people' and 'talking to people', so it says nothing about which one the student meant
+  const wordTags: Record<string, Set<string>> = {};
+  for (const c of data.careers) for (const t of c.tags || []) for (const w of tokens([t])) (wordTags[w] ||= new Set()).add(phrase(t));
+  const distinctive = new Set(Object.keys(wordTags).filter((w) => wordTags[w].size === 1));
+  const scored: any[] = data.careers.map((c: any) => {
+    const tags = new Set([...tokens(c.tags)].filter((w) => distinctive.has(w)));
+    const byPhrase: Record<string, string> = {};
+    for (const t of c.tags || []) byPhrase[phrase(t)] = String(t).trim().toLowerCase();
+    const exact = [...phrases].filter((p) => p in byPhrase);
     const loose = [...phrases].filter((p) => !exact.includes(p) && [...tokens([p])].some((t) => tags.has(t)));
-    const interest = phrases.size ? (exact.length + 0.5 * loose.length) / phrases.size : 0;
-    void interests;
+    const direct = phrases.size ? (exact.length + 0.5 * loose.length) / phrases.size : 0;
     const minC = c.min_class || 0;
     const elig = cls >= minC ? 1.0 : minC - cls <= 2 ? 0.7 : 0.3;
     let afford = 0.5;
@@ -294,30 +323,53 @@ export function rankCareers(data: Data, profile: Profile, n = 5) {
       afford = cost <= 0.25 * fam ? 1.0 : cost <= fam ? 0.6 : 0.2;
     }
     const demand = (c.demand || 3) / 5;
-    const score = 0.5 * interest + 0.2 * elig + 0.2 * afford + 0.1 * demand;
     return {
-      career: c, score: Math.round(score * 1000) / 1000, plan_id: p ? p.id : null,
-      breakdown: { interest: Math.round(interest * 100) / 100, eligibility: elig, affordability: afford, demand: Math.round(demand * 100) / 100 },
-      matched: [...exact.sort(), ...loose.sort()],
+      career: c, plan_id: p ? p.id : null, direct, elig, afford, demand, byPhrase,
+      matched: [...exact.map((x) => byPhrase[x]).sort(), ...loose.map((x) => said[x]).sort()],
     };
   });
-  scored.sort((a: any, b: any) => b.score - a.score);
-  const top = scored.slice(0, n);
+  // careers that share tags with the direct matches are related to the interest (e.g. 'computers' -> CNC Operator
+  // -> 'machines' -> Electrician); everything else has no link to what the student said they enjoy
+  const near = new Set<string>();
+  for (const s of scored) if (s.direct > 0) for (const k of Object.keys(s.byPhrase)) near.add(k);
+  for (const p of phrases) near.delete(p);
+  const ranked = scored.map((s: any) => {
+    const keys = Object.keys(s.byPhrase);
+    const related = s.direct === 0 ? keys.filter((k) => near.has(k)).map((k) => s.byPhrase[k]).sort() : [];
+    const interest = s.direct || (related.length ? (RELATED_WEIGHT * related.length) / keys.length : 0);
+    const score = 0.5 * interest + 0.2 * s.elig + 0.2 * s.afford + 0.1 * s.demand;
+    return {
+      career: s.career, plan_id: s.plan_id, matched: s.matched, related,
+      fit: s.direct > 0 ? "direct" : related.length ? "related" : "none",
+      score: Math.round(score * 1000) / 1000, raw: score,
+      breakdown: { interest: Math.round(interest * 100) / 100, eligibility: s.elig, affordability: s.afford, demand: Math.round(s.demand * 100) / 100 },
+      diversity: false, has_interests: phrases.size > 0,
+    };
+  });
+  const cmp = (a: any, b: any) => TIER[a.fit] - TIER[b.fit] || b.raw - a.raw;
+  ranked.sort(cmp);
+  const top = ranked.slice(0, n);
+  // diversity: show at least one vocational and one non-STEM / self-employment option, but only one that
+  // links to the student's interests, or in place of another career that does not
   for (const flag of ["vocational", "non_stem"]) {
-    if (!top.some((s: any) => s.career.flags[flag])) {
-      const extra = scored.slice(n).find((s: any) => s.career.flags[flag]);
-      if (extra) { top[top.length - 1] = extra; top.sort((a: any, b: any) => b.score - a.score); }
+    if (top.length && !top.some((s: any) => s.career.flags[flag])) {
+      const last = top[top.length - 1];
+      const extra = ranked.slice(n).find((s: any) => s.career.flags[flag] && (s.fit !== "none" || last.fit === "none" || !phrases.size));
+      if (extra) { extra.diversity = true; top[top.length - 1] = extra; top.sort(cmp); }
     }
   }
-  return top.map((s: any) => ({ ...s, why: whyLine(s) }));
+  return top.map(({ raw, ...s }: any) => ({ ...s, why: whyLine(s) }));
 }
 
 export function whyLine(s: any) {
   const parts: string[] = [];
   if (s.matched.length) parts.push("matches your interest in " + s.matched.slice(0, 3).join(", "));
+  else if (s.related?.length) parts.push("close to your interests through " + s.related.slice(0, 3).join(", "));
   if (s.breakdown.affordability >= 1) parts.push("low cost for your family");
   if (s.breakdown.demand >= 0.8) parts.push("many openings near Pune");
   if (s.career.flags.vocational) parts.push("start earning sooner");
+  // never call an unrelated career a fit: say plainly why it is on the list
+  if (s.fit === "none" && s.has_interests) return "A different kind of path, not linked to your interests" + (parts.length ? ": " + parts.join("; ") : "");
   return parts.length ? "Fits you: " + parts.join("; ") : "A different option worth knowing about";
 }
 

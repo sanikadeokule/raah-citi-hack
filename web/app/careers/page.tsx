@@ -59,7 +59,12 @@ export default function CareersPage() {
                   <div><span className="mr-1 text-[var(--muted)]">{i + 1}.</span><b>{s.career.name}</b></div>
                   <span className="text-xs text-[var(--muted)]">{Math.round(s.score * 100)}%</span>
                 </div>
-                <div className="mt-1">{flagBadges(s.career)}</div>
+                <div className="mt-1 flex flex-wrap gap-1">
+                  {flagBadges(s.career)}
+                  {/* say plainly when a career is only near the student's interests, or not linked to them at all */}
+                  {s.has_interests && s.fit === "related" && <Badge tone="green">{t("fit_related")}</Badge>}
+                  {s.has_interests && s.fit === "none" && <Badge>{t("fit_none")}</Badge>}
+                </div>
                 <WhyLine s={s} profile={profile} lang={lang} />
                 {r ? (
                   <Link href={`/plan/?id=${s.plan_id}`} className="mt-2 flex items-center justify-between rounded-lg bg-[var(--brand)] px-3 py-2 text-sm text-white">

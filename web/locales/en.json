@@ -308,5 +308,15 @@
  "q_age_check_hint": "It is fine if you missed a year or started late. Just check that the age and class are typed correctly.",
  "opt_age_class_right": "Yes, that is right",
  "opt_fix_age": "Change my age",
- "opt_fix_class": "Change my class"
+ "opt_fix_class": "Change my class",
+ "elig_plan_summary": "{m} months · course and exam fees {f} · books and tools {k}",
+ "elig_plan_exams": "Exams to clear",
+ "elig_hostel": "I will stay in a hostel for this course",
+ "elig_changed": "This plan changes {n} scholarship result(s) compared with now:",
+ "elig_same_as_now": "Same result as now: the scholarships in our list depend on you (class, category, family income), not on this course.",
+ "elig_no_course_scheme": "No scholarship in our list is meant for this kind of course yet.",
+ "elig_tag_changed": "Changed by this plan",
+ "elig_tag_course": "For this course",
+ "fit_related": "Close to your interests",
+ "fit_none": "Not linked to your interests"
 }

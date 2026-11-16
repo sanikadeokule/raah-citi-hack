@@ -157,7 +157,7 @@ export function CashChart({ results, height = 240 }: { results: any[]; height?: 
   );
 }
 
-export function SchemeResult({ e, open = false }: { e: any; open?: boolean }) {
+export function SchemeResult({ e, open = false, tag }: { e: any; open?: boolean; tag?: string }) {
   const { t, data } = useApp();
   const scheme = data.scholarships.find((s: any) => s.id === e.id);
   const icon: Record<string, string> = { pass: "✅", fail: "❌", unknown: "❔", missing_doc: "📄" };
@@ -169,6 +169,7 @@ export function SchemeResult({ e, open = false }: { e: any; open?: boolean }) {
           <Badge tone={STATUS_TONE[e.status]}>{t(e.status)}</Badge>
         </div>
         <div className="mt-1 text-xs text-[var(--muted)]">{t("rules_met", { p: e.passed, t: e.total })} · {e.amount_text}</div>
+        {tag && <div className="mt-1"><Badge tone="blue">{tag}</Badge></div>}
       </summary>
       <ul className="mt-2 space-y-1 text-sm">
         {e.rules.map((r: any, i: number) => (
