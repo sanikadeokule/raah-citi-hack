@@ -199,5 +199,15 @@
  "module_stats": "{e} enrolled · {c} completed · {s} sales",
  "mentor_connections": "Students connected to mentors",
  "map_offline": "The map needs internet. Distances below work offline.",
- "map_approx_note": "Centres without exact coordinates are placed at their taluka point, so the map and distances are approximate."
+ "map_approx_note": "Centres without exact coordinates are placed at their taluka point, so the map and distances are approximate.",
+ "elig_plan_summary": "{m} months · course and exam fees {f} · books and tools {k}",
+ "elig_plan_exams": "Exams to clear",
+ "elig_hostel": "I will stay in a hostel for this course",
+ "elig_changed": "This plan changes {n} scholarship result(s) compared with now:",
+ "elig_same_as_now": "Same result as now: the scholarships in our list depend on you (class, category, family income), not on this course.",
+ "elig_no_course_scheme": "No scholarship in our list is meant for this kind of course yet.",
+ "elig_tag_changed": "Changed by this plan",
+ "elig_tag_course": "For this course",
+ "fit_related": "Close to your interests",
+ "fit_none": "Not linked to your interests"
 }
