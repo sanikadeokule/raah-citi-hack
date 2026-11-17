@@ -1,5 +1,6 @@
 "use client";
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { applyUrl } from "@/lib/helpers";
 import { Area, CartesianGrid, ComposedChart, Legend, Line, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Badge, Card, Source, SpeakButton, Stat, STATUS_TONE, docLabel } from "./ui";
 import { A, inr, type PlanOptions } from "@/lib/engine";
@@ -200,7 +201,7 @@ export function SchemeResult({ e, open = false, tag }: { e: any; open?: boolean;
       {scheme?.rules_text && <p className="mt-2 text-xs text-[var(--muted)]">{scheme.rules_text}</p>}
       <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
         <Source url={e.source} date={e.last_checked} />
-        <a className="text-sm font-medium text-[var(--brand-ink)] underline" href={e.source} target="_blank" rel="noreferrer">{e.apply_via}</a>
+        <a className="text-sm font-medium text-[var(--brand-ink)] underline" href={applyUrl(e.apply_via, e.source)} target="_blank" rel="noreferrer">{e.apply_via}</a>
       </div>
     </details>
   );

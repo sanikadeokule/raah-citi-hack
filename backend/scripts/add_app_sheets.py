@@ -241,6 +241,13 @@ SHEETS["Demo_Students"] = (
 )
 
 
+# ---------------------------------------------------------------- Lessons (audio lessons + quiz)
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from lesson_sheets import SHEETS as LESSON_SHEETS  # noqa: E402
+
+SHEETS.update(LESSON_SHEETS)
+
+
 def style(ws, n_cols):
     for c in ws[1]:
         c.fill, c.font = HEAD_FILL, HEAD_FONT
@@ -279,6 +286,8 @@ def main(path):
             "Talukas": "Talukas - approximate taluka points, used for distance only when a centre has no Lat/Lon.",
             "Demo_Students": "Demo_Students - synthetic hero profiles (Priya etc.) for the demo.",
             "Mentors": "Mentors - synthetic demo mentors per career and taluka. Phone numbers are never sent to the app until a student accepts sharing their details with that mentor.",
+            "Lesson_Topics": "Lesson_Topics - the topics in the Learn screen's dropdown, with their Hindi and Marathi names and order.",
+            "Lessons": "Lessons - short audio lessons (English, Hindi, Marathi) with one easy quiz question each. 'Career IDs' and 'Interest tags' decide which students see a lesson under 'For you'.",
             "Exams": "Exams - entrance tests and admission rounds (fee, who can apply, last dates, official site). Plan_Inputs links them by ID in 'Exams / admissions (IDs, use ;)'; they show as a step in the student's path and on the Exams screen.",
         }
         for n in added:

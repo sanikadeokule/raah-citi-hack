@@ -2,19 +2,26 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useMemo, useState } from "react";
 import { Card, Shell, SpeakButton } from "@/components/ui";
-import { lessons, quiz } from "@/lib/lessons";
+import { FOR_YOU, forYou, lessonTopics, lessons, quiz } from "@/lib/lessons";
 import { useApp } from "@/lib/store";
 import { StudentModules } from "@/components/modules";
 import { getKV, setKV } from "@/lib/db";
 import { cachedAudio, fetchAudio, voiceAvailable } from "@/lib/audio";
 
 export default function Learn() {
-  const { data, lang, t, queueAction } = useApp();
-  const ls = useMemo(() => (data ? lessons(data, lang) : []), [data, lang]);
-  const qs = useMemo(() => (data ? quiz(data) : []), [data]);
+  const { data, profile, lang, t, queueAction } = useApp();
+  const all = useMemo(() => (data ? lessons(data, lang) : []), [data, lang]);
+  const topics = useMemo(() => (data ? lessonTopics(data, lang, all) : []), [data, lang, all]);
+  const mine = useMemo(() => (data ? forYou(data, profile, all) : []), [data, profile, all]);
+  // the dropdown opens on the student's own careers; until we know their interests, on the basics
+  const [picked, setPicked] = useState<string | null>(null);
+  const topic = picked ?? (mine.length ? FOR_YOU : "basics");
+  const ls = useMemo(() => (topic === FOR_YOU ? mine : all.filter((l) => l.topic === topic)), [topic, mine, all]);
+  const qs = useMemo(() => quiz(ls), [ls]);
   const [done, setDone] = useState<string[]>([]);
   const [ans, setAns] = useState<Record<number, number>>({});
   const [checked, setChecked] = useState(false);
+  const pickTopic = (id: string) => { setPicked(id); setAns({}); setChecked(false); };
   useEffect(() => { getKV<string[]>("lessons_done").then((v) => v && setDone(v)); }, []);
   // audio files for offline lessons: which lessons already have one saved for the current text
   const [voice, setVoice] = useState(false);
@@ -39,13 +46,22 @@ export default function Learn() {
   const score = qs.reduce((a, q, i) => a + (ans[i] === q.answer ? 1 : 0), 0);
   const check = async () => {
     setChecked(true);
-    const rec = { quiz: "Q1", score, total: qs.length, at: new Date().toISOString() };
-    await setKV("quiz_Q1", rec); await queueAction("quiz", rec);
+    const rec = { quiz: `topic_${topic}`, score, total: qs.length, at: new Date().toISOString() };
+    await setKV(`quiz_topic_${topic}`, rec); await queueAction("quiz", rec);
   };
   return (
     <Shell title={t("home_learn")}>
       <Card>
         <h2 className="mb-2 text-lg font-bold">🎧 {t("lessons")}</h2>
+        <label className="mb-3 block text-sm font-medium">
+          {t("lesson_topic")}
+          <select value={topic} onChange={(e) => pickTopic(e.target.value)}
+            className="mt-1 block w-full rounded-lg bg-[var(--bg)] px-3 py-2 text-base ring-1 ring-black/10">
+            {mine.length > 0 && <option value={FOR_YOU}>⭐ {t("lesson_for_you")} ({mine.length})</option>}
+            {topics.map((tp: any) => <option key={tp.id} value={tp.id}>{tp.name} ({all.filter((l) => l.topic === tp.id).length})</option>)}
+          </select>
+        </label>
+        {topic === FOR_YOU && <p className="mb-3 text-xs text-[var(--muted)]">{t("lesson_for_you_note")}</p>}
         {voice ? (
           <button onClick={saveAll} disabled={saving || savedCount === ls.length}
             className="mb-3 w-full rounded-lg bg-[var(--brand-soft)] py-2 text-sm font-semibold text-[var(--brand-ink)] disabled:opacity-60">
