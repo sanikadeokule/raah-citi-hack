@@ -159,11 +159,6 @@ export default function Home() {
         </div>
         </>
       )}
-      {data && (
-        <p className="truncate text-center text-[11px] text-[var(--muted)]">
-          {t("live_data")}: {data.version.file} · {new Date(data.version.modified).toLocaleString()}
-        </p>
-      )}
     </Shell>
   );
 }
