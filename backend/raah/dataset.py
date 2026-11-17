@@ -470,6 +470,44 @@ def load(path: Path = DATASET_PATH) -> dict:
                         "mode": r.get("How they meet"), "available": r.get("Available"), "note": r.get("Note")})
         mentor_contacts[r.get("ID")] = {"phone": r.get("Phone")}
 
+    # audio lessons: topics for the Learn dropdown, then one row per lesson in three languages
+    lesson_topics = []
+    for r in _rows(wb, "Lesson_Topics"):
+        if not r.get("Topic ID"):
+            continue
+        en_name = r.get("English") or r.get("Topic ID")
+        lesson_topics.append({"id": r.get("Topic ID"), "order": num_or_none(r.get("Order")) or 999,
+                              "name": {"en": en_name, "hi": r.get("Hindi") or en_name, "mr": r.get("Marathi") or en_name}})
+    lesson_topics.sort(key=lambda t: t["order"])
+    topic_ids = {t["id"] for t in lesson_topics}
+    lessons = []
+    for r in _rows(wb, "Lessons"):
+        lid = r.get("Lesson ID")
+        if not lid:
+            continue
+        if r.get("Topic ID") not in topic_ids:
+            warnings.append(f"Lessons {lid}: topic '{r.get('Topic ID')}' is not in Lesson_Topics")
+        cids = split_list(r.get("Career IDs (use ;)"))
+        for cid in cids:
+            if cid not in by_career:
+                warnings.append(f"Lessons {lid}: career '{cid}' not found in Careers_Income")
+        text = {}
+        for code_, lang in (("en", "English"), ("hi", "Hindi"), ("mr", "Marathi")):
+            wrong = split_list(r.get(f"Wrong answers ({lang}, use ;)"))
+            item = {"title": r.get(f"Title ({lang})"), "text": r.get(f"Lesson ({lang})"),
+                    "q": r.get(f"Quiz question ({lang})"), "right": r.get(f"Right answer ({lang})"), "wrong": wrong}
+            if not (item["title"] and item["text"]):
+                if code_ == "en":
+                    warnings.append(f"Lessons {lid}: English title or lesson is empty")
+                continue
+            if not (item["q"] and item["right"] and wrong):
+                item["q"] = None
+            text[code_] = item
+        if "en" not in text:
+            continue
+        lessons.append({"id": lid, "topic": r.get("Topic ID"), "career_ids": cids,
+                        "tags": split_list(r.get("Interest tags (use ;)")), "text": text})
+
     # apprenticeships + stipends
     naps = [{"id": r.get("ID"), "trade": r.get("Course / trade"), "trade_type": r.get("Trade type"),
              "employer": r.get("Establishment"), "location": r.get("Location"), "district": r.get("District"),
@@ -513,6 +551,7 @@ def load(path: Path = DATASET_PATH) -> dict:
                     "loaded_at": datetime.now(timezone.utc).isoformat(), "size": st.st_size},
         "readme": readme, "assumptions": assumptions, "scholarships": schemes, "careers": careers,
         "baseline": baseline, "earnings_groups": earnings_groups, "plans": plans, "courses": courses, "exams": exams, "mentors": mentors,
+        "lessons": lessons, "lesson_topics": lesson_topics,
         "_private": {"mentor_contacts": mentor_contacts}, "centres": centres, "naps": naps,
         "railway": railway, "stipends": stipends, "students": students, "warnings": warnings,
         "talukas": taluka_list,
