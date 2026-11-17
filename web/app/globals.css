@@ -11,8 +11,10 @@
   --accent: #f28c28;
   --good: #138808;
   --bad: #c62828;
+  /* indigo-navy app bar with saffron and India green, as on government portals (india.gov.in, MyGov) */
   --header-bg: #1b3a6b;
-  --header-line: transparent;
+  --saffron: #ff9933;
+  --india-green: #138808;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
@@ -26,16 +28,18 @@
     --accent: #f5a04f;
     --good: #4cc36a;
     --bad: #ff7b72;
-    /* a quiet header in dark mode, so the page content (not the app bar) carries the colour */
-    --header-bg: #131a24;
-    --header-line: rgba(255,255,255,.08);
+    /* the same indigo-navy bar in dark mode: deep enough not to glare on the dark page */
+    --header-bg: #1b3a6b;
   }
 }
 :root[data-theme="dark"] {
   --bg: #0f141c; --card: #18202b; --ink: #e8edf5; --muted: #9aa5b5;
   --brand: #3d6bb3; --brand-ink: #bfd3f2; --brand-soft: #1c2a40; --accent: #f5a04f; --good: #4cc36a; --bad: #ff7b72;
-  --header-bg: #131a24; --header-line: rgba(255,255,255,.08);
+  --header-bg: #1b3a6b;
 }
+
+/* thin tricolour strip under the app bar */
+.tricolour { height: 3px; background: linear-gradient(90deg, var(--saffron) 0 33.34%, #ffffff 33.34% 66.67%, var(--india-green) 66.67% 100%); }
 
 html, body { background: var(--bg); color: var(--ink); overflow-x: hidden; }
 select { max-width: 100%; }

@@ -24,12 +24,13 @@ export function Shell({ title, back = "/", role = "any", publicPage = false, fit
   const locked = !publicPage && !!auth && !hasRoadmap(profile, auth.user.role) && !openBeforeRoadmap(path);
   return (
     <div className={`mx-auto max-w-md bg-[var(--bg)] ${fit ? "flex min-h-[100dvh] flex-col" : "min-h-screen pb-24"}`}>
-      <header className="sticky top-0 z-20 flex items-center gap-2 border-b border-[var(--header-line)] bg-[var(--header-bg)] px-4 py-3 text-white shadow">
+      <div className="sticky top-0 z-20 shadow">
+      <header className="flex items-center gap-2 bg-[var(--header-bg)] px-4 py-3 text-white">
         {back !== null && (
           <Link href={back} aria-label={t("back")} className="rounded-full px-2 text-2xl leading-none">‹</Link>
         )}
         <h1 className="flex flex-1 items-center gap-2 truncate text-lg font-semibold">
-          <span aria-hidden className="h-2 w-2 shrink-0 rounded-full bg-[var(--accent)]" />
+          <span aria-hidden className="h-2 w-2 shrink-0 rounded-full bg-[var(--saffron)]" />
           <span className="truncate">{title ?? t("app_name")}</span>
         </h1>
         <select aria-label="language" value={lang} onChange={(e) => setLang(e.target.value)}
@@ -43,6 +44,8 @@ export function Shell({ title, back = "/", role = "any", publicPage = false, fit
           </button>
         )}
       </header>
+      <div aria-hidden className="tricolour" />
+      </div>
       {!online && <div className="bg-amber-500 px-4 py-2 text-center text-sm font-medium text-black">📴 {t("offline_banner")}</div>}
       <main className={fit ? "flex flex-1 flex-col gap-3 p-3" : "space-y-4 p-4"}>
         {!ready ? <Loading /> : wrongRole ? (
