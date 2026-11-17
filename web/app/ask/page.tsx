@@ -5,6 +5,7 @@
 // fact carries a numbered citation back to the sheet row and its official source.
 import { useEffect, useRef, useState } from "react";
 import { Card, MicButton, Shell, SpeakButton } from "@/components/ui";
+import { ChatInput } from "@/components/chatinput";
 import { postAi } from "@/lib/ai";
 import { useApp } from "@/lib/store";
 
@@ -83,10 +84,10 @@ export default function AskPage() {
       </div>
       <Card className="sticky bottom-2">
         {!online && <p className="mb-2 text-xs text-amber-700">{t("ask_offline")}</p>}
-        <div className="flex items-center gap-2">
+        <div className="flex items-end gap-2">
           <MicButton onText={(s) => ask(s)} />
-          <input value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => e.key === "Enter" && ask(text)}
-            placeholder={t("ask_placeholder")} maxLength={500} className="min-w-0 flex-1 rounded-full bg-[var(--bg)] px-4 py-3" />
+          <ChatInput value={text} onChange={setText} onSend={() => { if (!busy && text.trim()) ask(text); }}
+            placeholder={t("ask_placeholder")} maxLength={500} />
           <button onClick={() => ask(text)} disabled={busy || !text.trim()} className="rounded-full bg-[var(--brand)] px-4 py-3 text-white disabled:opacity-40">{t("send")}</button>
         </div>
       </Card>
