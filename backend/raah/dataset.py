@@ -47,6 +47,9 @@ def money_values(text: Any) -> list[dict]:
     """All ₹ amounts in a text cell, each as {low, high}."""
     if text is None:
         return []
+    if isinstance(text, (int, float)) and not isinstance(text, bool):
+        # A ₹ figure typed into Excel as a plain number (1400, not "₹1,400").
+        return [{"low": float(text), "high": float(text)}]
     out = []
     for m in _MONEY.finditer(str(text)):
         low = _to_num(m.group(1), m.group(2))
