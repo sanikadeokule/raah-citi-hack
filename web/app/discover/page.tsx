@@ -116,9 +116,11 @@ export default function Discover() {
     setText("");
   };
 
-  const answer = (value: any, shown: string, learned?: Record<string, any>, extra: Record<string, any> = {}) => {
+  // tap: the answer came from a chip, so the next question is the app's own (same wording as the chips), not the model's.
+  // Letting the model reply to a tap could repeat the question just answered while the chips already show the next one.
+  const answer = (value: any, shown: string, learned?: Record<string, any>, extra: Record<string, any> = {}, tap = false) => {
     if (!q) return;
-    if (mode === "ai") { sendAi(shown, { [q.key]: value, ...extra }); return; }
+    if (mode === "ai" && !tap) { sendAi(shown, { [q.key]: value, ...extra }); return; }
     const next = { ...draft, [q.key]: value, ...extra };
     if (q.key === "taluka") {
       const tk = data.talukas.find((x: any) => x.name === value);
@@ -129,6 +131,10 @@ export default function Discover() {
     setText(""); setMulti([]);
     // always go to the first unanswered question: "fix my age" sends the student back to the age question
     const n = firstMissing(next);
+    if (mode === "ai") {
+      setAiMissing([]);
+      if (n < QUESTIONS.length) setMsgs((m) => [...m, askMsg(n, next)]);
+    }
     if (n < QUESTIONS.length) setStep(n);
     else finish(next);
   };
@@ -169,7 +175,7 @@ export default function Discover() {
   const send = () => {
     if (busy || !q) return;
     if (q.kind === "multi" && multi.length && !text.trim()) {
-      answer(multi, options.filter((o) => multi.includes(o.v)).map((o) => o.label).join(", "));
+      answer(multi, options.filter((o) => multi.includes(o.v)).map((o) => o.label).join(", "), undefined, {}, true);
     } else submitText(text);
   };
   const canSend = !busy && (text.trim().length > 0 || (q?.kind === "multi" && multi.length > 0));
@@ -227,14 +233,14 @@ export default function Discover() {
               {options.map((o) => {
                 const on = multi.includes(o.v);
                 return (
-                  <button key={o.label} onClick={() => (q.kind === "multi" ? setMulti(on ? multi.filter((x) => x !== o.v) : [...multi, o.v]) : answer(o.v, o.label, undefined, o.patch))}
+                  <button key={o.label} onClick={() => (q.kind === "multi" ? setMulti(on ? multi.filter((x) => x !== o.v) : [...multi, o.v]) : answer(o.v, o.label, undefined, o.patch, true))}
                     className={`rounded-full px-3 py-2 text-sm ring-1 ring-black/10 ${on ? "bg-[var(--brand)] text-white" : "bg-[var(--bg)]"}`}>
                     {o.icon} {o.label}
                   </button>
                 );
               })}
               {q.kind === "multi" && q.key === "documents" && multi.length === 0 && (
-                <button onClick={() => answer([], t("opt_none_of_these"), undefined, { documents_none: true })} className="rounded-full px-3 py-2 text-sm ring-1 ring-black/10 bg-[var(--bg)]">{t("opt_none_of_these")}</button>
+                <button onClick={() => answer([], t("opt_none_of_these"), undefined, { documents_none: true }, true)} className="rounded-full px-3 py-2 text-sm ring-1 ring-black/10 bg-[var(--bg)]">{t("opt_none_of_these")}</button>
               )}
             </div>
           )}
