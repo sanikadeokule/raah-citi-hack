@@ -358,6 +358,7 @@ def load(path: Path = DATASET_PATH) -> dict:
             "last_checked": str(r.get("Last checked") or ""), "flags": flags,
             "tags": split_list(cp.get("Interest tags (use ;)")), "min_class": num_or_none(cp.get("Min class")),
             "stream": cp.get("Stream needed") or "any", "demand": num_or_none(cp.get("Local demand (1-5)")),
+            "roadmap_path": str(cp.get("Roadmap path") or "").strip() or None,
         }
         if flags["baseline"]:
             daily = gendered(r.get("Income after training / entry pay"))
@@ -428,6 +429,38 @@ def load(path: Path = DATASET_PATH) -> dict:
         for x in split_list(r.get("Exams / admissions (IDs, use ;)")):
             if x not in exam_ids:
                 warnings.append(f"Plan_Inputs {pid}: exam '{x}' not found in Exams")
+
+    # career roadmap: one stage template per path type (Roadmap_Stages), picked by Career_Profile 'Roadmap path'
+    stipend_cats = {str(r.get("Apprentice category") or "").strip() for r in _rows(wb, "Stipend_Rates")}
+    roadmap: dict[str, list] = {}
+    for i, r in enumerate(_rows(wb, "Roadmap_Stages"), start=2):
+        path_type = str(r.get("Path type") or "").strip()
+        if not path_type:
+            continue
+        ids = split_list(r.get("Exam IDs (use ;)"))
+        for x in ids:
+            if x not in exam_ids:
+                warnings.append(f"Roadmap_Stages row {i}: exam '{x}' not found in Exams")
+        stip = str(r.get("Stipend category (Stipend_Rates)") or "").strip() or None
+        if stip and stip not in stipend_cats:
+            warnings.append(f"Roadmap_Stages row {i}: stipend category '{stip}' not found in Stipend_Rates")
+        fc, tc = num_or_none(r.get("From class")), num_or_none(r.get("To class"))
+        roadmap.setdefault(path_type, []).append({
+            "step": num_or_none(r.get("Step")) or len(roadmap.get(path_type, [])) + 1,
+            "kind": str(r.get("Kind") or "course").strip().lower(),
+            "name": r.get("Stage") or "", "name_hi": r.get("Stage (hi)"), "name_mr": r.get("Stage (mr)"),
+            "from_class": fc, "to_class": tc, "months": num_or_none(r.get("Months")) or 0,
+            "fee_low": num_or_none(r.get("Fee low (₹, whole stage)")), "fee_high": num_or_none(r.get("Fee high (₹, whole stage)")),
+            "use_plan": yes(r.get("Use ₹ plan fees")), "course_tags": split_list(r.get("Course tags")),
+            "exams": [x for x in ids if x in exam_ids], "stipend_category": stip,
+            "what": r.get("What to do") or "", "status": r.get("Fee source / status") or "",
+            "source": r.get("Source"), "last_checked": str(r.get("Last checked") or ""),
+        })
+    for stages in roadmap.values():
+        stages.sort(key=lambda s: s["step"])
+    for c in careers:
+        if c["roadmap_path"] and c["roadmap_path"] not in roadmap:
+            warnings.append(f"Career_Profile {c['id']}: roadmap path '{c['roadmap_path']}' has no rows in Roadmap_Stages")
 
     # centres
     talukas = {str(r.get("Taluka")).lower(): (num_or_none(r.get("Lat")), num_or_none(r.get("Lon")))
@@ -555,6 +588,7 @@ def load(path: Path = DATASET_PATH) -> dict:
         "lessons": lessons, "lesson_topics": lesson_topics,
         "_private": {"mentor_contacts": mentor_contacts}, "centres": centres, "naps": naps,
         "railway": railway, "stipends": stipends, "students": students, "warnings": warnings,
+        "roadmap": roadmap,
         "talukas": taluka_list,
     }
 

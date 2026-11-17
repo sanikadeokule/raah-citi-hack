@@ -1,9 +1,10 @@
 // Usage: tsx tests/parity.ts <input.json>  -> prints engine results as JSON (compared by backend/tests/test_parity.py)
 import { readFileSync } from "node:fs";
-import { computePlan, eligibility, eligibilityChanges, rankCareers } from "../lib/engine";
+import { buildRoadmap, computePlan, eligibility, eligibilityChanges, rankCareers } from "../lib/engine";
 
 const input = JSON.parse(readFileSync(process.argv[2], "utf8"));
 const { data, cases } = input;
+const roadmaps = (input.roadmap_cases || []).map((c: any) => buildRoadmap(data, c.profile, c.career_id, c.start_class));
 const out = cases.map((c: any) => {
   const r = computePlan(data, c.profile, c.plan_id, c.options);
   return {
@@ -17,4 +18,4 @@ const out = cases.map((c: any) => {
     changes: eligibilityChanges(data, c.profile, data.plans.find((p: any) => p.id === c.plan_id), c.options.hostel),
   };
 });
-process.stdout.write(JSON.stringify(out));
+process.stdout.write(JSON.stringify({ plans: out, roadmaps }));

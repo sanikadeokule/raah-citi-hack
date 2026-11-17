@@ -2,6 +2,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Badge, Card, Shell } from "@/components/ui";
 import { computePlan, inr, rankCareers } from "@/lib/engine";
 import { useApp } from "@/lib/store";
@@ -39,6 +40,14 @@ export default function CareersPage() {
   const { data, profile, t, lang } = useApp();
   const [q, setQ] = useState("");
   const [tab, setTab] = useState<"top" | "all">("top");
+  const router = useRouter();
+  // the whole career card opens its roadmap; links inside it (₹ plan) keep their own target
+  const openRoadmap = (id: string) => router.push(`/roadmap/?career=${id}`);
+  const cardProps = (id: string) => ({
+    role: "link", tabIndex: 0,
+    onClick: (e: React.MouseEvent) => { if (!(e.target as HTMLElement).closest("a")) openRoadmap(id); },
+    onKeyDown: (e: React.KeyboardEvent) => { if (e.key === "Enter") openRoadmap(id); },
+  });
   const top = useMemo(() => (data && profile ? rankCareers(data, profile, 5) : []), [data, profile]);
   const plans = useMemo(() => Object.fromEntries((data?.plans || []).map((p: any) => [p.career_id, p])), [data]);
   const quick = (planId: string) => computePlan(data, profile, planId);
@@ -59,11 +68,13 @@ export default function CareersPage() {
           <Link href="/profile/" className="text-sm underline">{t("edit_profile")}</Link>
         </div>
         <p className="text-xs text-[var(--muted)]">{(profile?.interests || []).join(", ")}</p>
+        <p className="mt-1 text-xs font-medium text-[var(--brand-ink)]">🗺️ {t("rm_tap_hint")}</p>
         <ul className="mt-2 space-y-2">
           {top.map((s: any, i: number) => {
             const r = s.plan_id ? quick(s.plan_id) : null;
             return (
-              <li key={s.career.id} className="rounded-xl bg-[var(--bg)] p-3">
+              <li key={s.career.id} {...cardProps(s.career.id)}
+                className="cursor-pointer rounded-xl bg-[var(--bg)] p-3 ring-1 ring-transparent transition hover:ring-[var(--brand)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)] active:scale-[0.99]">
                 <div className="flex items-start justify-between gap-2">
                   <div><span className="mr-1 text-[var(--muted)]">{i + 1}.</span><b>{s.career.name}</b></div>
                   <span className="text-xs text-[var(--muted)]">{Math.round(s.score * 100)}%</span>
@@ -80,8 +91,11 @@ export default function CareersPage() {
                     <span>{t("net_cost")}: <b>{inr(Math.max(0, r.net_cost))}</b> · {paybackText(t, r.payback.median, data)}</span><span>›</span>
                   </Link>
                 ) : (
-                  <p className="mt-1 text-xs text-[var(--muted)]">{t("no_plan_yet")} · {s.career.income_text}</p>
+                  <p className="mt-1 text-xs text-[var(--muted)]">{s.career.income_text}</p>
                 )}
+                <div className="mt-2 flex items-center justify-between rounded-lg bg-[var(--brand-soft)] px-3 py-2 text-sm font-semibold text-[var(--brand-ink)]">
+                  <span>🗺️ {t("rm_see")}</span><span>›</span>
+                </div>
               </li>
             );
           })}
@@ -98,14 +112,17 @@ export default function CareersPage() {
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search" className="mt-2 w-full rounded-lg bg-[var(--bg)] p-2" />
         <ul className="mt-2 divide-y divide-black/5">
           {all.map((c: any) => (
-            <li key={c.id} className="py-2">
+            <li key={c.id} {...cardProps(c.id)} className="cursor-pointer py-2 hover:bg-[var(--bg)]">
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <div className="font-medium">{c.name}</div>
                   <div className="text-xs text-[var(--muted)]">{c.entry_path}</div>
                   <div className="text-xs text-[var(--muted)]">{c.income_estimate && <Badge tone="amber">{t("estimate")}</Badge>} {c.income_text}</div>
                 </div>
+                <span className="flex shrink-0 flex-col items-end gap-1">
+                <span className="rounded-full bg-[var(--brand)] px-3 py-1 text-xs font-semibold text-white">🗺️</span>
                 {plans[c.id] && <Link href={`/plan/?id=${plans[c.id].id}`} className="shrink-0 rounded-full bg-[var(--brand-soft)] px-3 py-1 text-xs font-semibold text-[var(--brand-ink)]">₹ plan</Link>}
+                </span>
               </div>
             </li>
           ))}

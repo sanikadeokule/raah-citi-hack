@@ -435,3 +435,131 @@ export function inr(v: number | null | undefined) {
   }
   return (n < 0 ? "-₹" : "₹") + out;
 }
+
+// ------------------------------------------------------------------ career roadmap
+// Mirrors build_roadmap in backend/raah/engine.py (see the docstring there).
+
+function examFee(exam: any, category: any): number | null {
+  const reserved = !["", "open", "general"].includes(String(category ?? "").trim().toLowerCase());
+  if (reserved && exam.fee_reserved !== null && exam.fee_reserved !== undefined) return exam.fee_reserved;
+  return exam.fee_open ?? null;
+}
+
+function bestScholarship(data: Data, elig: any[], gender: string, years: number, fees: number) {
+  const byId: Record<string, any> = Object.fromEntries(data.scholarships.map((s: any) => [s.id, s]));
+  const vals: [any, number][] = [];
+  for (const e of elig) {
+    if (e.status !== "eligible" && e.status !== "eligible_missing_docs") continue;
+    const v = benefitValue(byId[e.id], gender, years, fees);
+    if (v.low > 0) vals.push([e, v.low]);
+  }
+  if (!vals.length) return null;
+  if (A(data, "stack_scholarships", 0)) {
+    return { ids: vals.map(([e]) => e.id), names: vals.map(([e]) => e.name), value: vals.reduce((a, [, v]) => a + v, 0),
+      missing_docs: vals.flatMap(([e]) => e.missing_docs) };
+  }
+  let [e, v] = vals[0];
+  for (const [cand, cv] of vals.slice(1)) if (cv > v) { e = cand; v = cv; }
+  return { ids: [e.id], names: [e.name], value: v, missing_docs: e.missing_docs };
+}
+
+export function buildRoadmap(data: Data, profile: Profile, careerId: string, startClass?: number | null) {
+  const career = data.careers.find((c: any) => c.id === careerId);
+  if (!career) return null;
+  const gender = profile.gender || "F";
+  const cls = Math.trunc(Number(startClass ?? (profile.class || 10)));
+  const plan = data.plans.find((p: any) => p.career_id === careerId) || null;
+  const template: any[] = (data.roadmap || {})[career.roadmap_path || ""] || [];
+  const exams: Record<string, any> = Object.fromEntries((data.exams || []).map((e: any) => [e.id, e]));
+  const stipends: Record<string, any> = Object.fromEntries((data.stipends || []).map((s: any) => [s.category, s]));
+  const income = planIncome(data, plan || { income_override: null }, career, gender);
+  const isEst = (s: any) => String(s ?? "").trim().toLowerCase().startsWith("estimate");
+
+  const stages: any[] = [];
+  let month = 0;
+  for (const t of template) {
+    let frac = 1;
+    if (t.kind === "school" && t.from_class !== null && t.from_class !== undefined && t.to_class !== null && t.to_class !== undefined) {
+      if (cls > t.to_class) continue; // already finished
+      const span = t.to_class - t.from_class;
+      frac = span > 0 ? Math.min(span, t.to_class - cls + 1) / span : 1;
+    }
+    const months = t.months * frac;
+    let status = t.status, source = t.source, feeFrom = "Roadmap_Stages";
+    let estimate = isEst(status);
+    const examRows = t.exams.map((x: string) => exams[x]);
+    let low: number, high: number;
+    if (t.use_plan && plan) {
+      low = high = plan.fees + plan.materials;
+      feeFrom = `Plan_Inputs ${plan.id}`; status = plan.status || "";
+      estimate = isEst(status);
+    } else if (examRows.length) {
+      const fees = examRows.map((e: any) => examFee(e, profile.category));
+      low = high = fees.reduce((a: number, f: number | null) => a + (f ?? 0), 0);
+      feeFrom = "Exams"; source = examRows[0].source;
+      estimate = fees.some((f: number | null) => f === null);
+    } else {
+      let l = t.fee_low, h = t.fee_high;
+      if ((l === null || l === undefined) && (h === null || h === undefined)) { l = h = 0; estimate = true; }
+      else if (l === null || l === undefined) l = h;
+      else if (h === null || h === undefined) h = l;
+      low = l; high = h;
+    }
+    low = pyRound(low * frac); high = pyRound(high * frac);
+
+    let stipMonth = 0, stipText: string | null = null, stipSource: string | null = null;
+    if (t.kind === "earn") {
+      const tr = career.training_income;
+      const st = stipends[t.stipend_category || ""];
+      if (tr && tr.low) { stipMonth = tr.low; stipText = career.training_income_text; stipSource = (career.sources || [null])[0]; }
+      else if (st && st.current) { stipMonth = st.current; stipText = `DGT minimum stipend, ${st.category}`; stipSource = st.source; }
+    }
+    const stipend = pyRound(stipMonth * months);
+
+    let schLow: any = null, schHigh: any = null;
+    if ((t.kind === "school" || t.kind === "course") && months > 0 && high > 0) {
+      const ctx: Profile = { ...profile };
+      if (t.kind === "school") ctx.class = Math.max(cls, Math.trunc(t.from_class) + 1);
+      const elig = eligibility(data, ctx, t.course_tags.length ? { course_tags: t.course_tags } : undefined);
+      schLow = bestScholarship(data, elig, gender, months / 12, low);
+      schHigh = bestScholarship(data, elig, gender, months / 12, high);
+    }
+
+    stages.push({
+      step: t.step, kind: t.kind, name: t.name, name_hi: t.name_hi, name_mr: t.name_mr,
+      now: false, start_month: pyRound(month), months: pyRound(months), fee_low: low, fee_high: high,
+      fee_from: feeFrom, estimate, status, source, what: t.what,
+      plan_id: t.use_plan && plan ? plan.id : null,
+      exams: examRows.map((e: any) => ({ id: e.id, name: e.name, timing: e.timing, site: e.site, fee: examFee(e, profile.category) })),
+      stipend_per_month: stipMonth, stipend_total: stipend, stipend_text: stipText, stipend_source: stipSource,
+      scholarship: schHigh ? { ...schHigh, value_low_fees: schLow ? schLow.value : 0 } : null,
+      income: t.kind === "job" ? income : null,
+    });
+    month += months;
+  }
+  if (stages.length) stages[0].now = true;
+
+  const sum = (f: (s: any) => number) => stages.reduce((a, s) => a + f(s), 0);
+  const costLow = sum((s) => s.fee_low), costHigh = sum((s) => s.fee_high);
+  const schL = sum((s) => s.scholarship?.value_low_fees ?? 0), schH = sum((s) => s.scholarship?.value ?? 0);
+  const stip = sum((s) => s.stipend_total);
+  const netLow = Math.max(0, costLow - schL - stip), netHigh = Math.max(0, costHigh - schH - stip);
+  const monthsToJob = pyRound(month);
+  const horizon = Math.trunc(A(data, "payback_horizon_months", 120));
+  const payback = income ? {
+    low_cost: paybackAfter(netLow, income, "median", 0, horizon),
+    high_cost: paybackAfter(netHigh, income, "median", 0, horizon),
+  } : null;
+  return {
+    career, path: career.roadmap_path, start_class: cls, plan_id: plan ? plan.id : null,
+    available: stages.length > 0, stages,
+    totals: {
+      cost_low: costLow, cost_high: costHigh, scholarship_low: schL, scholarship_high: schH, stipend: stip,
+      net_low: netLow, net_high: netHigh, months_to_job: monthsToJob,
+      per_month_low: monthsToJob ? pyRound(netLow / monthsToJob) : netLow,
+      per_month_high: monthsToJob ? pyRound(netHigh / monthsToJob) : netHigh,
+      estimated_stages: stages.filter((s) => s.estimate && (s.fee_high || s.kind !== "job")).length,
+    },
+    income, payback,
+  };
+}
