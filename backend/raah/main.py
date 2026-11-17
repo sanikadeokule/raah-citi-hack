@@ -130,6 +130,15 @@ def careers(profile: Profile, n: int = 5):
     return engine.rank_careers(data(), profile.as_dict(), n)
 
 
+@app.post("/api/roadmap", tags=["student"])
+def roadmap(profile: Profile, career_id: str, start_class: int | None = None):
+    """Every step from the student's class to the first job, with fees, scholarships, stipends and pay."""
+    r = engine.build_roadmap(data(), profile.as_dict(), career_id, start_class)
+    if r is None:
+        raise HTTPException(404, f"career {career_id} not in Careers_Income")
+    return r
+
+
 @app.post("/api/centres", tags=["student"])
 def centres(profile: Profile, centre_type: str | None = None, n: int = 3):
     return engine.nearest_centres(data(), profile.as_dict(), centre_type, n)

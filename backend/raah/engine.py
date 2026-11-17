@@ -463,3 +463,145 @@ def why_line(s: dict) -> str:
         # never call an unrelated career a fit: say plainly why it is on the list
         return "A different kind of path, not linked to your interests" + ((": " + "; ".join(parts)) if parts else "")
     return ("Fits you: " + "; ".join(parts)) if parts else "A different option worth knowing about"
+
+
+# ------------------------------------------------------------------ career roadmap
+
+def _exam_fee(exam: dict, category) -> float | None:
+    reserved = str(category or "").strip().lower() not in ("", "open", "general")
+    if reserved and exam.get("fee_reserved") is not None:
+        return exam["fee_reserved"]
+    return exam.get("fee_open")
+
+
+def _best_scholarship(data: dict, elig: list[dict], gender: str, years: float, fees: float) -> dict | None:
+    """The scholarship money for one stage: the single best eligible scheme (or all of them when the
+    Assumptions sheet allows stacking), valued with the same benefit_value the ₹ plan uses."""
+    by_id = {s["id"]: s for s in data["scholarships"]}
+    vals = []
+    for e in elig:
+        if e["status"] not in ("eligible", "eligible_missing_docs"):
+            continue
+        v = benefit_value(by_id[e["id"]], gender, years, fees)
+        if v["low"] > 0:
+            vals.append((e, v["low"]))
+    if not vals:
+        return None
+    if A(data, "stack_scholarships", 0):
+        return {"ids": [e["id"] for e, _ in vals], "names": [e["name"] for e, _ in vals], "value": sum(v for _, v in vals),
+                "missing_docs": [d for e, _ in vals for d in e["missing_docs"]]}
+    e, v = vals[0]
+    for cand, cv in vals[1:]:
+        if cv > v:
+            e, v = cand, cv
+    return {"ids": [e["id"]], "names": [e["name"]], "value": v, "missing_docs": e["missing_docs"]}
+
+
+def build_roadmap(data: dict, profile: dict, career_id: str, start_class=None) -> dict | None:
+    """Every step from the student's current class to the first job, with fees, scholarships, stipends and pay.
+
+    Stages come from Roadmap_Stages (the template named in Career_Profile 'Roadmap path'). School stages the
+    student has already finished are dropped and the one they are in now is counted only for the years left.
+    Fees: the career's Plan_Inputs fees when the stage says so, the Exams sheet for exam stages, otherwise the
+    stage's own low/high figures. Stipends: the career's live listing, else the Stipend_Rates minimum.
+    """
+    career = next((c for c in data["careers"] if c["id"] == career_id), None)
+    if not career:
+        return None
+    gender = profile.get("gender") or "F"
+    cls = int(float(start_class if start_class is not None else (profile.get("class") or 10)))
+    plan = next((p for p in data["plans"] if p["career_id"] == career_id), None)
+    template = (data.get("roadmap") or {}).get(career.get("roadmap_path") or "") or []
+    exams = {e["id"]: e for e in data.get("exams", [])}
+    stipends = {s["category"]: s for s in data.get("stipends", [])}
+    income = plan_income(data, plan or {"income_override": None}, career, gender)
+
+    stages, month = [], 0.0
+    for t in template:
+        frac = 1.0
+        if t["kind"] == "school" and t["from_class"] is not None and t["to_class"] is not None:
+            if cls > t["to_class"]:
+                continue  # already finished
+            span = t["to_class"] - t["from_class"]
+            frac = min(span, t["to_class"] - cls + 1) / span if span > 0 else 1.0
+        months = t["months"] * frac
+        status, source, fee_from = t["status"], t["source"], "Roadmap_Stages"
+        estimate = str(status).strip().lower().startswith("estimate")
+        exam_rows = [exams[x] for x in t["exams"]]
+        if t["use_plan"] and plan:
+            low = high = plan["fees"] + plan["materials"]
+            fee_from, status = f"Plan_Inputs {plan['id']}", plan.get("status") or ""
+            estimate = str(status).strip().lower().startswith("estimate")
+        elif exam_rows:
+            fees = [_exam_fee(e, profile.get("category")) for e in exam_rows]
+            low = high = sum(f for f in fees if f is not None)
+            fee_from, source = "Exams", exam_rows[0].get("source")
+            estimate = any(f is None for f in fees)
+        else:
+            low, high = t["fee_low"], t["fee_high"]
+            if low is None and high is None:
+                low = high = 0
+                estimate = True
+            elif low is None:
+                low = high
+            elif high is None:
+                high = low
+        low, high = round(low * frac), round(high * frac)
+
+        stip_month, stip_text, stip_source = 0, None, None
+        if t["kind"] == "earn":
+            tr = career.get("training_income")
+            st = stipends.get(t["stipend_category"] or "")
+            if tr and tr.get("low"):
+                stip_month, stip_text = tr["low"], career.get("training_income_text")
+                stip_source = (career.get("sources") or [None])[0]
+            elif st and st.get("current"):
+                stip_month, stip_text, stip_source = st["current"], f"DGT minimum stipend, {st['category']}", st.get("source")
+        stipend = round(stip_month * months)
+
+        sch_low = sch_high = None
+        if t["kind"] in ("school", "course") and months > 0 and high > 0:
+            ctx = dict(profile)
+            if t["kind"] == "school":
+                ctx["class"] = max(cls, int(t["from_class"]) + 1)
+            elig = eligibility(data, ctx, {"course_tags": t["course_tags"]} if t["course_tags"] else None)
+            sch_low = _best_scholarship(data, elig, gender, months / 12, low)
+            sch_high = _best_scholarship(data, elig, gender, months / 12, high)
+
+        stages.append({
+            "step": t["step"], "kind": t["kind"], "name": t["name"], "name_hi": t.get("name_hi"), "name_mr": t.get("name_mr"),
+            "now": False, "start_month": round(month), "months": round(months), "fee_low": low, "fee_high": high,
+            "fee_from": fee_from, "estimate": estimate, "status": status, "source": source, "what": t["what"],
+            "plan_id": plan["id"] if (t["use_plan"] and plan) else None,
+            "exams": [{"id": e["id"], "name": e["name"], "timing": e.get("timing"), "site": e.get("site"),
+                       "fee": _exam_fee(e, profile.get("category"))} for e in exam_rows],
+            "stipend_per_month": stip_month, "stipend_total": stipend, "stipend_text": stip_text, "stipend_source": stip_source,
+            "scholarship": None if not sch_high else {**sch_high, "value_low_fees": sch_low["value"] if sch_low else 0},
+            "income": income if t["kind"] == "job" else None,
+        })
+        month += months
+    if stages:
+        stages[0]["now"] = True
+
+    cost_low = sum(s["fee_low"] for s in stages)
+    cost_high = sum(s["fee_high"] for s in stages)
+    sch_l = sum((s["scholarship"] or {}).get("value_low_fees", 0) for s in stages)
+    sch_h = sum((s["scholarship"] or {}).get("value", 0) for s in stages)
+    stip = sum(s["stipend_total"] for s in stages)
+    net_low, net_high = max(0, cost_low - sch_l - stip), max(0, cost_high - sch_h - stip)
+    months_to_job = round(month)
+    horizon = int(A(data, "payback_horizon_months", 120))
+    payback = None
+    if income:
+        payback = {"low_cost": payback_after(net_low, income, "median", 0, horizon),
+                   "high_cost": payback_after(net_high, income, "median", 0, horizon)}
+    return {
+        "career": career, "path": career.get("roadmap_path"), "start_class": cls, "plan_id": plan["id"] if plan else None,
+        "available": bool(stages), "stages": stages,
+        "totals": {"cost_low": cost_low, "cost_high": cost_high, "scholarship_low": sch_l, "scholarship_high": sch_h,
+                   "stipend": stip, "net_low": net_low, "net_high": net_high, "months_to_job": months_to_job,
+                   "per_month_low": round(net_low / months_to_job) if months_to_job else net_low,
+                   "per_month_high": round(net_high / months_to_job) if months_to_job else net_high,
+                   "estimated_stages": sum(1 for s in stages if s["estimate"] and (s["fee_high"] or s["kind"] != "job"))},
+        "income": income, "payback": payback,
+    }
