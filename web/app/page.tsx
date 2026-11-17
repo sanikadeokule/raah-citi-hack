@@ -1,8 +1,10 @@
 "use client";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { Card, Shell } from "@/components/ui";
 import { TeacherInbox } from "@/components/inbox";
+import { getKV, setKV } from "@/lib/db";
 import { useApp } from "@/lib/store";
 import { BUILD_ROADMAP_HREF, ROADMAP_HREF, hasRoadmap } from "@/lib/roadmap";
 
@@ -20,6 +22,49 @@ const STAFF = [
   { href: "/money/", icon: "🏦", key: "home_money" },
   { href: "/data/", icon: "📊", key: "home_data" },
 ];
+
+// A teacher's main job is the class: one big card to the class dashboard with the headline numbers.
+function ClassDashboardCard() {
+  const { t, auth, authFetch, online, data } = useApp();
+  const [cls, setCls] = useState<any>(null);
+  useEffect(() => {
+    if (auth?.user.role !== "teacher") return;
+    // same cache key as the dashboard page, so the numbers show offline and match it
+    getKV("teacher_class").then((c) => c && setCls(c));
+    if (!online) return;
+    authFetch("/api/teacher/class").then((r) => (r.ok ? r.json() : null)).then((c) => {
+      if (c) { setCls(c); setKV("teacher_class", c); }
+    }).catch(() => {});
+  }, [auth, authFetch, online, data?.version?.modified]);
+  const st: any[] = cls?.students ?? [];
+  const stats = [
+    { label: t("students"), value: st.length, tone: "text-white" },
+    { label: t("risk"), value: st.filter((s) => s.risk_level === "high").length, tone: "text-red-200" },
+    { label: t("talent"), value: st.filter((s) => s.talent).length, tone: "text-green-200" },
+  ];
+  return (
+    <Link href="/teacher/" className="flex flex-1 flex-col justify-center rounded-3xl border-b-4 border-[var(--accent)] bg-[var(--brand)] px-5 py-5 text-white shadow-sm active:scale-95">
+      <span className="flex items-center gap-3">
+        <span className="text-4xl leading-none">👩‍🏫</span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-xl font-bold leading-tight">{t("teacher_dashboard")}</span>
+          <span className="block text-xs leading-snug text-white/85">{t("home_class_dash_sub")}</span>
+        </span>
+        <span aria-hidden className="text-2xl">›</span>
+      </span>
+      {cls && (
+        <span className="mt-4 grid grid-cols-3 gap-2 text-center">
+          {stats.map((s) => (
+            <span key={s.label} className="rounded-xl bg-white/10 px-1 py-2">
+              <span className={`block text-2xl font-bold ${s.tone}`}>{s.value}</span>
+              <span className="block truncate text-[11px] text-white/80">{s.label}</span>
+            </span>
+          ))}
+        </span>
+      )}
+    </Link>
+  );
+}
 
 export default function Home() {
   const { t, profile, setProfile, data, auth } = useApp();
@@ -66,7 +111,31 @@ export default function Home() {
       )}
       <p className="-mt-1 px-1 text-xs leading-snug text-[var(--muted)]">{t("tagline")}</p>
 
-      {!unlocked ? (
+      {isTeacher ? (
+        <>
+        <ClassDashboardCard />
+
+        {/* the student screens stay one tap away, smaller, for previewing what a student sees */}
+        <div className="space-y-1">
+          <div className="px-1 text-xs font-semibold text-[var(--muted)]">{t("home_student_tools")}</div>
+          <div className="grid grid-cols-3 gap-2">
+            {[{ href: "/ask/", icon: "💬", key: "home_ask" }, ...TILES].map((x) => (
+              <Link key={x.href} href={x.href} className="flex flex-col items-center rounded-xl bg-[var(--card)] px-1 py-2 text-center text-xs leading-tight text-[var(--brand-ink)] ring-1 ring-black/5 active:scale-95">
+                <span className="text-2xl">{x.icon}</span>{t(x.key)}
+              </Link>
+            ))}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-3 gap-2">
+          {STAFF.filter((x) => x.href !== "/teacher/").map((x) => (
+            <Link key={x.href} href={x.href} className="flex flex-col items-center rounded-xl bg-[var(--card)] px-1 py-2 text-center text-xs leading-tight ring-1 ring-black/5">
+              <span className="text-xl">{x.icon}</span>{t(x.key)}
+            </Link>
+          ))}
+        </div>
+        </>
+      ) : !unlocked ? (
         /* before a roadmap exists there is one thing to do: talk to the AI and build it */
         <Link href={BUILD_ROADMAP_HREF} className="flex flex-1 flex-col items-center justify-center rounded-3xl border-b-4 border-[var(--accent)] bg-[var(--brand)] px-6 py-8 text-center text-white shadow-sm active:scale-95">
           <span className="text-6xl leading-none">🗺️</span>

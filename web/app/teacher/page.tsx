@@ -38,6 +38,15 @@ export default function Teacher() {
   const [planId, setPlanId] = useState("PLN01");
   const [eligible, setEligible] = useState<any>(null);
   const [filter, setFilter] = useState<"all" | "risk" | "talent">("all");
+  const [tab, setTabState] = useState<"students" | "modules">("students");
+  // remember the open tab when the teacher goes to another screen and comes back
+  useEffect(() => {
+    try { if (sessionStorage.getItem("teacher_tab") === "modules") setTabState("modules"); } catch {}
+  }, []);
+  const setTab = (v: "students" | "modules") => {
+    setTabState(v);
+    try { sessionStorage.setItem("teacher_tab", v); } catch {}
+  };
 
   useEffect(() => {
     if (auth?.user.role !== "teacher") return;
@@ -64,6 +73,15 @@ export default function Teacher() {
         <Stat label={t("risk")} value={String(st.filter((s: any) => s.risk_level === "high").length)} tone="text-[var(--bad)]" />
         <Stat label={t("talent")} value={String(st.filter((s: any) => s.talent).length)} tone="text-[var(--good)]" />
       </div>
+      <div role="tablist" className="grid grid-cols-2 gap-1 rounded-xl bg-[var(--card)] p-1 ring-1 ring-black/5">
+        {([["students", `👥 ${t("students")}`], ["modules", `🧩 ${t("module_builder")}`]] as const).map(([k, label]) => (
+          <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)}
+            className={`rounded-lg py-2 text-sm font-semibold ${tab === k ? "bg-[var(--brand)] text-white" : "text-[var(--muted)]"}`}>
+            {label}
+          </button>
+        ))}
+      </div>
+      {tab === "modules" ? <TeacherModules /> : (<>
       <Card>
         <h2 className="font-bold">📣 {t("recommend_all")}</h2>
         <div className="mt-2 grid gap-2">
@@ -110,8 +128,8 @@ export default function Teacher() {
         <p className="mt-2 text-xs text-[var(--muted)]">{cls.model_note} Class roster is synthetic.</p>
       </Card>
       <MentorRequests />
-      <TeacherModules />
       <ResetStudentPin />
+      </>)}
     </Shell>
   );
 }
