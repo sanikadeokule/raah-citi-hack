@@ -39,7 +39,8 @@ export default function Discover() {
   const finished = step >= QUESTIONS.length;
   // in AI mode the quick-answer chips follow the first field the model still needs
   const q = !ready || finished ? undefined : mode === "ai" ? (QUESTIONS.find((x) => x.key === aiMissing[0]) ?? QUESTIONS[firstMissing(draft)]) : mode === "script" ? QUESTIONS[step] : undefined;
-  const options: Opt[] = useMemo(() => (q?.options && data ? q.options(data, t, draft) : []), [q, data, t, draft]);
+  // no chips while the model is thinking: they would belong to the question just answered, not the one coming next
+  const options: Opt[] = useMemo(() => (q?.options && data && !busy ? q.options(data, t, draft) : []), [q, data, t, draft, busy]);
   const askMsg = (i: number, p: any): Msg => {
     const { text: body, hint } = QUESTIONS[i].ask(t, p);
     const hello = knownName && msgs.length === 0 ? `${t("hello")}, ${knownName}! ` : "";
@@ -156,6 +157,15 @@ export default function Discover() {
     } else answer(raw.trim(), raw);
   };
 
+  /** The one button: sends the chips ticked on a multi-choice question (plus anything typed), otherwise the typed answer. */
+  const send = () => {
+    if (busy || !q) return;
+    if (q.kind === "multi" && multi.length && !text.trim()) {
+      answer(multi, options.filter((o) => multi.includes(o.v)).map((o) => o.label).join(", "));
+    } else submitText(text);
+  };
+  const canSend = !busy && (text.trim().length > 0 || (q?.kind === "multi" && multi.length > 0));
+
   const save = async (p: any) => {
     const prof = { ...p, id: undefined };
     setProfile(prof);
@@ -215,16 +225,16 @@ export default function Discover() {
                   </button>
                 );
               })}
-              {q.kind === "multi" && q.key === "documents" && multi.length === 0
-                ? <button onClick={() => answer([], t("opt_none_of_these"), undefined, { documents_none: true })} className="rounded-full bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white">{t("opt_none_of_these")}</button>
-                : q.kind === "multi" && <button disabled={!multi.length} onClick={() => answer(multi, options.filter((o) => multi.includes(o.v)).map((o) => o.label).join(", "))} className="rounded-full bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-40">✓ {t("continue")}</button>}
+              {q.kind === "multi" && q.key === "documents" && multi.length === 0 && (
+                <button onClick={() => answer([], t("opt_none_of_these"), undefined, { documents_none: true })} className="rounded-full px-3 py-2 text-sm ring-1 ring-black/10 bg-[var(--bg)]">{t("opt_none_of_these")}</button>
+              )}
             </div>
           )}
           <div className="flex items-center gap-2">
             <MicButton onText={(s) => submitText(s)} />
-            <input value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => e.key === "Enter" && submitText(text)}
-              placeholder={t("type_answer")} className="min-w-0 flex-1 rounded-full bg-[var(--bg)] px-4 py-3" inputMode={q.kind === "number" ? "numeric" : "text"} />
-            <button onClick={() => submitText(text)} disabled={busy} className="rounded-full bg-[var(--brand)] px-4 py-3 text-white disabled:opacity-40">{t("send")}</button>
+            <input value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => e.key === "Enter" && send()}
+              placeholder={t("type_answer")} className="min-w-0 flex-1 rounded-full bg-[var(--bg)] px-4 py-3" inputMode={q.kind === "number" || q.key === "max_commute_km" ? "numeric" : "text"} />
+            <button onClick={send} disabled={!canSend} className="rounded-full bg-[var(--brand)] px-4 py-3 text-white disabled:opacity-40">{t("send")}</button>
           </div>
         </Card>
       )}

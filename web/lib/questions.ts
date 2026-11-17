@@ -37,6 +37,13 @@ export function parseAge(raw: string): Parsed {
   return { ok: true, value: Math.round(n) };
 }
 
+/** Distance in km, typed as "42", "42km", "42 km" or "४२ किमी". Chips are shortcuts; any number up to 200 is accepted. */
+export function parseKm(raw: string): Parsed {
+  const n = numbers(raw)[0];
+  if (n === undefined || n < 0 || n > 200) return { ok: false, error: "q_km_err" };
+  return { ok: true, value: Math.round(n) };
+}
+
 /** Full-year exams a student may have results for, oldest first. `grade` is the class the exam ends. */
 export const EXAMS = [
   { id: "class7_final", grade: 7 },
@@ -141,7 +148,7 @@ export const QUESTIONS: Q[] = [
     options: (_d, t) => CATEGORIES.map((c) => ({ v: c, label: c === "General" ? t("opt_general") : c })) },
   { key: "family_income_annual", kind: "choice", ask: ask("income"),
     options: (_d, t) => INCOME.map(([v, k]) => ({ v, label: t(k) })) },
-  { key: "max_commute_km", kind: "choice", ask: ask("commute"),
+  { key: "max_commute_km", kind: "choice", ask: ask("commute"), parse: parseKm,
     options: (_d, t) => [5, 10, 20, 35, 50].map((k) => ({ v: k, label: t("opt_km", { n: k }), icon: "🚌" })) },
   { key: "can_stay_hostel", kind: "choice", ask: ask("hostel"),
     options: (_d, t) => [{ v: true, label: t("opt_yes"), icon: "🏠" }, { v: false, label: t("opt_no"), icon: "🚫" }] },
