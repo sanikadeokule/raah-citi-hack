@@ -212,6 +212,53 @@ Reply with JSON only:
 Profile so far: {json.dumps(profile, ensure_ascii=False)}"""
 
 
+_DEV = str.maketrans("०१२३४५६७८९", "0123456789")
+
+
+def _nums(text: str) -> list[float]:
+    t = text.translate(_DEV)
+    return [float(x) for x in re.findall(r"\d+(?:\.\d+)?", re.sub(r"(\d),(\d)", r"\1\2", t))]
+
+
+def exam_from_question(text: str) -> str | None:
+    """The exam Raah just asked about ('your Class 10 Board exam', 'Class 9 final') as a dataset exam id."""
+    m = re.findall(r"class\s*(\d+)\s*(board|final)", (text or "").lower())
+    if not m:
+        return None
+    n, kind = m[-1]
+    eid = f"class{n}_board" if kind == "board" else f"class{n}_final"
+    return eid if eid in EXAMS else None
+
+
+def pre_extract(profile: dict, user_text: str, last_question: str) -> dict:
+    """Plain answers (a class, marks, a percentage, km, age) are read here before the model sees them, so a small
+    model that forgets to fill a field cannot make the student repeat themselves. Anything unclear is left to the model."""
+    p = dict(profile)
+    missing = missing_fields(p)
+    if not missing:
+        return p
+    nxt, ns, low = missing[0], _nums(user_text), user_text.lower()
+    if nxt == "age" and ns and 8 <= ns[0] <= 30:
+        p["age"] = int(ns[0])
+    elif nxt == "class" and ns and 1 <= ns[0] <= 12:
+        p["class"] = int(ns[0])  # "I am in class 10, I will go to 11": the class now comes first
+    elif nxt == "max_commute_km" and ns and 0 <= ns[0] <= 200:
+        p["max_commute_km"] = int(ns[0])
+    elif nxt in ("marks_exam", "marks_pct") and ns:
+        pct = bool(re.search(r"%|percent|per cent|टक्के|प्रतिशत", low))
+        exam = p.get("marks_exam") if p.get("marks_exam") in EXAMS else exam_from_question(last_question)
+        if len(ns) >= 2 and not pct:
+            got, total = min(ns[0], ns[1]), max(ns[0], ns[1])
+            if MIN_EXAM_TOTAL <= total <= 1500 and exam:
+                p.update(marks_exam=exam, marks_obtained=got, marks_total=total, marks_pct=round(got / total * 100, 1))
+        elif pct and exam:
+            m = re.search(r"(\d+(?:\.\d+)?)\s*(?:%|percent|per cent)", user_text.translate(_DEV), re.I)
+            v = float(m.group(1)) if m else ns[-1]  # "class 10 i got 68%": the number next to the % sign
+            if 0 <= v <= 100:
+                p.update(marks_exam=exam, marks_pct=round(v, 1))
+    return p
+
+
 @router.get("/status")
 def chat_status():
     return llm.status()
@@ -220,6 +267,9 @@ def chat_status():
 @router.post("/turn")
 def turn(body: Turn):
     d = dataset.get()
+    last_user = next((str(m["content"]) for m in reversed(body.messages) if m.get("role") == "user"), "")
+    last_ask = next((str(m["content"]) for m in reversed(body.messages) if m.get("role") == "assistant"), "")
+    body.profile = pre_extract(body.profile, last_user, last_ask)
     msgs = [{"role": "system", "content": _system_turn(d, body.lang, body.profile)}]
     msgs += [{"role": m["role"], "content": str(m["content"])[:1000]} for m in body.messages[-12:]
              if m.get("role") in ("user", "assistant")]

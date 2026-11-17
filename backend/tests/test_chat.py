@@ -129,3 +129,16 @@ def test_age_that_does_not_fit_class_is_questioned():
     assert chat.missing_fields(p)[0] == "age_class_ok"
     assert "age_class_ok" not in chat.missing_fields({**p, "age_class_ok": True})
     assert "age_class_ok" not in chat.missing_fields({**p, "class": 11})
+
+
+def test_plain_answers_are_read_before_the_model():
+    from raah import chat
+    base = {"name": "S", "age": 15, "gender": "F"}
+    assert chat.pre_extract(base, "im in ckass 10, ill go to 11", "")["class"] == 10
+    p = {**base, "class": 10, "interests": ["computers"]}
+    q = "Now, tell me about your Class 10 Board exam. How many marks out of 400?"
+    r = chat.pre_extract(p, "in hsc class 10 i got 68%", q)
+    assert (r["marks_exam"], r["marks_pct"]) == ("class10_board", 68.0)
+    r = chat.pre_extract(p, "340 out of 400", q)
+    assert r["marks_pct"] == 85.0 and r["marks_total"] == 400
+    assert "marks_pct" not in chat.pre_extract(p, "25 out of 25", q)
