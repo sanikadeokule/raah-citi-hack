@@ -9,6 +9,9 @@ import { useApp } from "@/lib/store";
 import { paybackText } from "@/components/plan";
 import { aiAvailable, postAi } from "@/lib/ai";
 
+// National Career Service, Ministry of Labour & Employment, Government of India
+const NCS_URL = "https://www.ncs.gov.in/";
+
 /** Match reason: the template sentence first, replaced by the model's wording only if the server accepts it as grounded. */
 function WhyLine({ s, profile, lang }: { s: any; profile: any; lang: string }) {
   const [ai, setAi] = useState<string | null>(null);
@@ -101,12 +104,17 @@ export default function CareersPage() {
           })}
         </ul>
       </Card>}
-      {tab === "top" && (
-        <details className="rounded-xl bg-[var(--card)] p-3 text-sm ring-1 ring-black/5">
-          <summary className="cursor-pointer font-semibold">ℹ️ {t("careers_source_title")}</summary>
-          <p className="mt-2 text-[var(--muted)]">{t("careers_source")}</p>
-        </details>
-      )}
+      {/* the Government of India's own career portal, for careers beyond this list */}
+      <a href={NCS_URL} target="_blank" rel="noreferrer"
+        className="flex items-center gap-3 rounded-xl bg-[var(--card)] p-3 text-sm ring-1 ring-black/5 active:scale-[.98]">
+        <span className="text-2xl">🏛️</span>
+        <span className="min-w-0 flex-1">
+          <span className="block font-semibold">{t("careers_gov_title")}</span>
+          <span className="block text-xs text-[var(--muted)]">{t("careers_gov_sub")}</span>
+          <span className="block truncate text-xs font-semibold text-[var(--brand-ink)] underline">ncs.gov.in</span>
+        </span>
+        <span aria-hidden className="text-lg text-[var(--muted)]">↗</span>
+      </a>
       {tab === "all" && <Card>
         <h2 className="text-lg font-bold">{t("all_careers", { n: all.length })}</h2>
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search" className="mt-2 w-full rounded-lg bg-[var(--bg)] p-2" />
