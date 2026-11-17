@@ -432,5 +432,19 @@
  "story_cta": "मेरा रोडमैप बनाएँ",
  "story_cta_sub": "कुछ आसान सवाल · बोलें या लिखें · मुफ़्त",
  "rm_tab_this": "यह रोडमैप",
- "rm_see_this_road": "यह रोडमैप देखें"
+ "rm_see_this_road": "यह रोडमैप देखें",
+ "pg_nav": "पेज",
+ "pg_prev": "पिछला",
+ "pg_next": "अगला",
+ "pg_page": "पेज {p} / {n}",
+ "pg_showing": "{n} में से {a}–{b}",
+ "st_eligible": "पात्र",
+ "st_eligible_missing_docs": "दस्तावेज़ चाहिए",
+ "st_need_info": "जानकारी चाहिए",
+ "st_not_eligible": "पात्र नहीं",
+ "st_none": "इस समूह में कोई छात्रवृत्ति नहीं। दूसरा टैब देखें, या साफ़ जवाब के लिए अपनी प्रोफ़ाइल भरें।",
+ "opp_tab_naps": "NAPS",
+ "opp_tab_rail": "रेलवे",
+ "opp_tab_mentors": "मार्गदर्शक",
+ "elig_changed_short": "यह योजना {n} नतीजे बदलती है"
 }

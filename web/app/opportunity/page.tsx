@@ -7,6 +7,10 @@ import { pickForCareers, tradeMatches, type CareerChoice } from "@/lib/listings"
 import { useApp } from "@/lib/store";
 import { Mentors } from "@/components/mentors";
 import { CareerFilter, RelatedNote } from "@/components/careerfilter";
+import { Pager, usePaged } from "@/components/pager";
+import { Tabs } from "@/components/tabs";
+
+const PAGE = 10;
 
 export default function Opportunity() {
   const { data, profile, t } = useApp();
@@ -19,16 +23,26 @@ export default function Opportunity() {
   const searched = (p: { items: any[]; related: any[] | null }, keep: (n: any) => boolean) => ({ ...p, items: p.items.filter(keep) });
   const naps = searched(pickForCareers(data, data?.naps || [], career, top, tradeMatches), (n) => match(n.trade) || match(n.employer) || match(n.location));
   const rail = searched(pickForCareers(data, data?.railway || [], career, top, tradeMatches), (n) => match(n.trade) || match(n.employer));
+  const reset = `${career}|${q}`;
+  const napsPg = usePaged(naps.items, PAGE, reset);
+  const railPg = usePaged(rail.items, PAGE, reset);
+  const [tab, setTab] = useState<"naps" | "rail" | "mentors">("naps");
   return (
     <Shell title={t("opportunities")}>
       <CareerFilter value={career} onChange={setCareer} />
       <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Electrician, Fitter, Chakan…" className="w-full rounded-xl bg-[var(--card)] p-3 ring-1 ring-black/10" />
-      <Mentors career={career} top={top} />
-      <Card>
+      <Tabs value={tab} onChange={setTab} tabs={[
+        { key: "naps", label: `🏭 ${t("opp_tab_naps")}`, count: naps.items.length },
+        { key: "rail", label: `🚆 ${t("opp_tab_rail")}`, count: rail.items.length },
+        { key: "mentors", label: `🤝 ${t("opp_tab_mentors")}` },
+      ]} />
+      {tab === "mentors" && <Mentors career={career} top={top} />}
+      {tab === "naps" && <Card>
+        <div ref={napsPg.top} />
         <h2 className="mb-2 font-bold">🏭 NAPS apprenticeships · Pune <Badge>{naps.items.length}</Badge></h2>
         {!q && <RelatedNote picked={naps} />}
         <ul className="divide-y divide-black/5">
-          {naps.items.map((n: any) => (
+          {napsPg.pageItems.map((n: any) => (
             <li key={n.id} className="py-2 text-sm">
               <div className="flex justify-between gap-2"><b>{n.trade}</b><span className="whitespace-nowrap">{n.stipend ? `${inr(n.stipend.low)}–${inr(n.stipend.high)}` : n.stipend_text}</span></div>
               <div className="text-xs text-[var(--muted)]">{n.employer} · {n.location} · {n.duration}</div>
@@ -37,12 +51,14 @@ export default function Opportunity() {
             </li>
           ))}
         </ul>
-      </Card>
-      <Card>
+        <Pager {...napsPg} shown={napsPg.pageItems.length} />
+      </Card>}
+      {tab === "rail" && <Card>
+        <div ref={railPg.top} />
         <h2 className="mb-2 font-bold">🚆 Central Railway (Pune cluster) <Badge>{rail.items.length}</Badge></h2>
         {!q && <RelatedNote picked={rail} />}
         <ul className="divide-y divide-black/5">
-          {rail.items.map((n: any) => (
+          {railPg.pageItems.map((n: any) => (
             <li key={n.id} className="py-2 text-sm">
               <div className="flex justify-between gap-2"><b>{n.trade}</b><span>{n.seats} seats · {inr(n.stipend)}{t("per_month")}</span></div>
               <div className="text-xs text-[var(--muted)]">{n.employer} · {n.notice}</div>
@@ -50,7 +66,8 @@ export default function Opportunity() {
             </li>
           ))}
         </ul>
-      </Card>
+        <Pager {...railPg} shown={railPg.pageItems.length} />
+      </Card>}
     </Shell>
   );
 }

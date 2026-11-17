@@ -171,19 +171,28 @@ export function CashChart({ results, height = 240 }: { results: any[]; height?: 
   );
 }
 
-export function SchemeResult({ e, open = false, tag }: { e: any; open?: boolean; tag?: string }) {
+export function SchemeResult({ e, open = false, tag, hideStatus = false, onPage = false }: {
+  e: any; open?: boolean; tag?: string; hideStatus?: boolean;
+  /** listed straight on the page (not inside a card): give it its own card surface */
+  onPage?: boolean;
+}) {
   const { t, data } = useApp();
   const scheme = data.scholarships.find((s: any) => s.id === e.id);
   const icon: Record<string, string> = { pass: "✅", fail: "❌", unknown: "❔", missing_doc: "📄" };
   return (
-    <details className="rounded-xl bg-[var(--bg)] p-3" open={open}>
+    <details className={`group rounded-xl p-3 ${onPage ? "bg-[var(--card)] shadow-sm ring-1 ring-black/5" : "bg-[var(--bg)]"}`} open={open}>
       <summary className="cursor-pointer list-none">
         <div className="flex items-start justify-between gap-2">
-          <div className="font-semibold">{e.name}</div>
-          <Badge tone={STATUS_TONE[e.status]}>{t(e.status)}</Badge>
+          <div className="font-semibold leading-snug">{e.name}</div>
+          {!hideStatus && <Badge tone={STATUS_TONE[e.status]}>{t(e.status)}</Badge>}
+          <span aria-hidden className="shrink-0 text-[var(--muted)] transition-transform group-open:rotate-90">›</span>
         </div>
-        <div className="mt-1 text-xs text-[var(--muted)]">{t("rules_met", { p: e.passed, t: e.total })} · {e.amount_text}</div>
-        {tag && <div className="mt-1"><Badge tone="blue">{tag}</Badge></div>}
+        <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-[var(--muted)]">
+          <span>{t("rules_met", { p: e.passed, t: e.total })}</span>
+          {tag && <Badge tone="blue">{tag}</Badge>}
+        </div>
+        {/* the amount can run long: one line while closed, all of it once opened */}
+        <div className="mt-0.5 line-clamp-1 text-xs text-[var(--muted)] group-open:line-clamp-none">💰 {e.amount_text}</div>
       </summary>
       <ul className="mt-2 space-y-1 text-sm">
         {e.rules.map((r: any, i: number) => (
