@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Card, Shell } from "@/components/ui";
 import { TeacherInbox } from "@/components/inbox";
+import { HomeStory } from "@/components/story";
 import { getKV, setKV } from "@/lib/db";
 import { useApp } from "@/lib/store";
 import { BUILD_ROADMAP_HREF, ROADMAP_HREF, hasRoadmap } from "@/lib/roadmap";
@@ -136,13 +137,8 @@ export default function Home() {
         </div>
         </>
       ) : !unlocked ? (
-        /* before a roadmap exists there is one thing to do: talk to the AI and build it */
-        <Link href={BUILD_ROADMAP_HREF} className="flex flex-1 flex-col items-center justify-center rounded-3xl border-b-4 border-[var(--accent)] bg-[var(--brand)] px-6 py-8 text-center text-white shadow-sm active:scale-95">
-          <span className="text-6xl leading-none">🗺️</span>
-          <span className="mt-4 text-2xl font-bold leading-tight">{t("home_build_roadmap")}</span>
-          <span className="mt-2 text-sm leading-snug text-white/85">{t("home_build_roadmap_sub")}</span>
-          <span className="mt-6 rounded-full bg-white px-6 py-3 text-base font-semibold text-[var(--brand-ink)]">{t("home_build_roadmap_go")} →</span>
-        </Link>
+        /* before a roadmap exists there is one thing to do: build it. A short story shows why. */
+        <HomeStory href={BUILD_ROADMAP_HREF} />
       ) : (
         <>
         <TeacherInbox />

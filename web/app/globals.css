@@ -11,6 +11,8 @@
   --accent: #f28c28;
   --good: #138808;
   --bad: #c62828;
+  --header-bg: #1b3a6b;
+  --header-line: transparent;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
@@ -24,11 +26,15 @@
     --accent: #f5a04f;
     --good: #4cc36a;
     --bad: #ff7b72;
+    /* a quiet header in dark mode, so the page content (not the app bar) carries the colour */
+    --header-bg: #131a24;
+    --header-line: rgba(255,255,255,.08);
   }
 }
 :root[data-theme="dark"] {
   --bg: #0f141c; --card: #18202b; --ink: #e8edf5; --muted: #9aa5b5;
   --brand: #3d6bb3; --brand-ink: #bfd3f2; --brand-soft: #1c2a40; --accent: #f5a04f; --good: #4cc36a; --bad: #ff7b72;
+  --header-bg: #131a24; --header-line: rgba(255,255,255,.08);
 }
 
 html, body { background: var(--bg); color: var(--ink); overflow-x: hidden; }
@@ -36,6 +42,26 @@ select { max-width: 100%; }
 body { font-family: "Noto Sans", "Noto Sans Devanagari", system-ui, sans-serif; -webkit-tap-highlight-color: transparent; }
 input[type="range"] { accent-color: var(--brand); }
 button { cursor: pointer; }
+
+/* home story (components/story.tsx). Motion only when the person has not asked for less of it. */
+.story-fill { width: 0; }
+@keyframes story-fill { from { width: 0; } to { width: 100%; } }
+@keyframes story-in { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes story-float { 0%, 100% { transform: translateY(0) rotate(-3deg); } 50% { transform: translateY(-8px) rotate(3deg); } }
+@keyframes story-pop { from { opacity: 0; transform: scale(.6); } 70% { transform: scale(1.08); } to { opacity: 1; transform: none; } }
+@keyframes story-grow { from { width: 4%; } to { width: 100%; } }
+@keyframes story-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(255,255,255,.6); } 50% { box-shadow: 0 0 0 10px rgba(255,255,255,0); } }
+@media (prefers-reduced-motion: no-preference) {
+  .story-fill { animation: story-fill linear forwards; }
+  .story-in { animation: story-in .5s ease-out both; }
+  .story-float { animation: story-float 3.2s ease-in-out infinite; display: inline-block; }
+  .story-pop { animation: story-pop .45s ease-out both; }
+  .story-grow { animation: story-grow 2.6s cubic-bezier(.3,.7,.3,1) .4s both; }
+  .story-pulse { animation: story-pulse 1.8s ease-in-out infinite; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .story-grow, .story-fill { width: 100%; }
+}
 
 /* numbered centre markers on the Leaflet map */
 .leaflet-tooltip.centre-num { background: transparent; border: 0; box-shadow: none; color: #fff; font-weight: 700; font-size: 11px; padding: 0; }
