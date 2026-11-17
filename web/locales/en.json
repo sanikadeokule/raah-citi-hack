@@ -295,6 +295,7 @@
  "careers_source_title": "Where do these careers come from?",
  "careers_source": "Every career is a row in this app's Excel dataset (sheet Careers_Income, with interest tags in Career_Profile). Pay comes from live NAPS apprenticeship listings, DGT stipend rates, 7th Pay Commission and Agnipath tables, and PLFS 2025 earnings (MoSPI); each row lists its source links. Ranking: interest match counts most (60%), then your class, what it costs your family and local demand; careers that match your interest always come before ones that do not.",
  "tab_top": "Top 5",
+ "ai_fallback_note": "The AI chat could not answer, so I switched to quick questions.",
  "opt_km": "{n} km",
  "q_hostel": "If the college is far away, can you stay in a hostel there?",
  "q_hostel_hint": "Say yes only if your family agrees.",

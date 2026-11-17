@@ -91,7 +91,14 @@ export default function Discover() {
       messages: history.map((m) => ({ role: m.from === "me" ? "user" : "assistant", content: m.text })),
     });
     setBusy(false);
-    if (!j || j.fallback) { resetAiStatus(); toScript(base); return; }
+    if (!j || j.fallback) {
+      resetAiStatus();
+      // say why the AI chat stopped, so it is clear whether the server, the model name or a timeout is the cause
+      const why = !j ? "the Raah server did not answer" : j.reason || "no model answered";
+      setMsgs((m) => [...m, { from: "raah", text: `${t("ai_fallback_note")} (${why})`, error: true }]);
+      toScript(base);
+      return;
+    }
     const next = { ...base, ...j.profile };
     setDraft(next);
     setAiMissing(j.missing || []);
