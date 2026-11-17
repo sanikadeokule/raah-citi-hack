@@ -432,5 +432,19 @@
  "story_cta": "Build my roadmap",
  "story_cta_sub": "A few easy questions · speak or type · free",
  "rm_tab_this": "This roadmap",
- "rm_see_this_road": "See this roadmap"
+ "rm_see_this_road": "See this roadmap",
+ "pg_nav": "Pages",
+ "pg_prev": "Previous",
+ "pg_next": "Next",
+ "pg_page": "Page {p} of {n}",
+ "pg_showing": "{a}–{b} of {n}",
+ "st_eligible": "Eligible",
+ "st_eligible_missing_docs": "Need a document",
+ "st_need_info": "Need info",
+ "st_not_eligible": "Not eligible",
+ "st_none": "No scholarships in this group. Try another tab, or fill in your profile to get clearer answers.",
+ "opp_tab_naps": "NAPS",
+ "opp_tab_rail": "Railway",
+ "opp_tab_mentors": "Mentors",
+ "elig_changed_short": "This plan changes {n} results"
 }

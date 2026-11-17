@@ -5,6 +5,13 @@ import { Card, Shell } from "@/components/ui";
 import { SchemeResult } from "@/components/plan";
 import { eligibility, eligibilityChanges, inr } from "@/lib/engine";
 import { useApp } from "@/lib/store";
+import { Pager, usePaged } from "@/components/pager";
+import { Tabs } from "@/components/tabs";
+
+const PAGE = 5;
+const STATUSES = ["eligible", "eligible_missing_docs", "need_info", "not_eligible"] as const;
+type Status = (typeof STATUSES)[number];
+const STATUS_ICON: Record<Status, string> = { eligible: "✅", eligible_missing_docs: "📄", need_info: "❔", not_eligible: "❌" };
 
 export default function EligibilityPage() {
   const { data, profile, t } = useApp();
@@ -29,6 +36,12 @@ export default function EligibilityPage() {
   const exams = (plan?.exams || []).map((id: string) => data?.exams?.find((x: any) => x.id === id)?.name).filter(Boolean);
   const changedIds = new Set((changes?.changed || []).map((c: any) => c.id));
   const forCourse = new Set(changes?.for_this_course || []);
+  // one status group at a time; open on the recommended scheme's group, else the best non-empty one
+  const [picked, setPicked] = useState<Status | null>(null);
+  const focusStatus = focus ? list.find((e: any) => e.id === focus)?.status : undefined;
+  const status: Status = picked ?? focusStatus ?? STATUSES.find((s) => counts[s]) ?? "eligible";
+  const shown = useMemo(() => list.filter((e: any) => e.status === status), [list, status]);
+  const pg = usePaged(shown, PAGE, `${planId}|${hostel}|${focus}|${status}`);
   return (
     <Shell title={t("eligibility")}>
       <Card>
@@ -48,18 +61,24 @@ export default function EligibilityPage() {
             </label>
           </div>
         )}
-        <div className="mt-2 flex flex-wrap gap-3 text-sm">
-          {["eligible", "eligible_missing_docs", "need_info", "not_eligible"].map((s) => <span key={s}>{t(s)}: <b>{counts[s] || 0}</b></span>)}
-        </div>
         {changes && (
           <div className="mt-2 text-sm" aria-live="polite">
             {changes.changed.length > 0 ? (
-              <>
-                <b>{t("elig_changed", { n: changes.changed.length })}</b>
-                <ul className="mt-1 space-y-0.5">
-                  {changes.changed.map((c: any) => <li key={c.id}>• {c.name}: {t(c.before)} → <b>{t(c.after)}</b></li>)}
+              /* one line until tapped: the full list is long and pushes the scholarships off screen */
+              <details className="group rounded-lg bg-[var(--bg)] px-3 py-2">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-2 font-semibold">
+                  <span>🔄 {t("elig_changed_short", { n: changes.changed.length })}</span>
+                  <span aria-hidden className="text-[var(--muted)] transition-transform group-open:rotate-90">›</span>
+                </summary>
+                <ul className="mt-2 space-y-1.5">
+                  {changes.changed.map((c: any) => (
+                    <li key={c.id} className="leading-snug">
+                      {c.name}
+                      <span className="block text-xs text-[var(--muted)]">{t(c.before)} → <b className="text-[var(--ink)]">{t(c.after)}</b></span>
+                    </li>
+                  ))}
                 </ul>
-              </>
+              </details>
             ) : (
               <p className="text-[var(--muted)]">{t("elig_same_as_now")}</p>
             )}
@@ -67,12 +86,17 @@ export default function EligibilityPage() {
           </div>
         )}
       </Card>
+      <div ref={pg.top} />
+      <Tabs cols={2} value={status} onChange={setPicked}
+        tabs={STATUSES.map((s) => ({ key: s, label: `${STATUS_ICON[s]} ${t(`st_${s}`)}`, count: counts[s] || 0 }))} />
+      {shown.length === 0 && <Card><p className="text-sm text-[var(--muted)]">{t("st_none")}</p></Card>}
       <div className="space-y-2">
-        {list.map((e: any, i: number) => (
-          <SchemeResult key={`${e.id}-${focus}-${planId}`} e={e} open={i === 0}
+        {pg.pageItems.map((e: any) => (
+          <SchemeResult key={`${e.id}-${focus}-${planId}`} e={e} hideStatus onPage open={e.id === focus}
             tag={changedIds.has(e.id) ? t("elig_tag_changed") : forCourse.has(e.id) ? t("elig_tag_course") : undefined} />
         ))}
       </div>
+      <Pager {...pg} shown={pg.pageItems.length} />
     </Shell>
   );
 }
