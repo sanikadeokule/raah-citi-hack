@@ -3,6 +3,7 @@
 // Prices are set by the teacher; the teacher's share and per-completion payout come from
 // the Assumptions sheet on the server. Payments are simulated (sandbox).
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { Badge, Card, SpeakButton, Stat } from "./ui";
 import { inr } from "@/lib/engine";
@@ -189,7 +190,32 @@ export function TeacherModules() {
 
   return (
     <>
-      <ModuleBuilder onSaved={load} />
+      <Link href="/teacher/builder/" className="flex items-center gap-3 rounded-2xl border-b-4 border-[var(--accent)] bg-[var(--brand)] px-4 py-3 text-white shadow-sm active:scale-95">
+        <span className="text-3xl">🧩</span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-base font-semibold">{t("new_module")}</span>
+          <span className="block truncate text-xs text-white/80">{t("new_module_sub")}</span>
+        </span>
+        <span aria-hidden className="text-2xl">›</span>
+      </Link>
+      <Card>
+        <h2 className="font-bold">📚 {t("my_modules")}</h2>
+        {mods.length === 0 ? <p className="mt-2 text-sm text-[var(--muted)]">{t("no_modules_yet")}</p> : (
+          <ul className="mt-2 divide-y divide-black/5">
+            {mods.map((m) => (
+              <li key={m.id}>
+                <Link href={`/teacher/module/?id=${m.id}`} className="flex items-center gap-2 py-2 text-sm active:opacity-60">
+                  <span className="min-w-0 flex-1">
+                    <span className="flex justify-between gap-2"><b className="truncate">{m.title}</b><Badge tone={m.price_model === "free" ? "green" : "blue"}>{priceText(m, t)}</Badge></span>
+                    <span className="block text-xs text-[var(--muted)]">{t("module_stats", { e: m.enrolled, c: m.completed, s: inr(m.sales) })}</span>
+                  </span>
+                  <span aria-hidden className="text-lg text-[var(--muted)]">›</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
       {earn && (
         <Card>
           <h2 className="font-bold">💰 {t("earnings")}</h2>
@@ -203,19 +229,59 @@ export function TeacherModules() {
           {payout && <p className="mt-2 text-xs">pain.001 {payout.msg_id} · {payout.validation.valid ? "✅" : "❌"} {payout.validation.method}</p>}
         </Card>
       )}
-      {mods.length > 0 && (
-        <Card>
-          <h2 className="font-bold">📚 {t("my_modules")}</h2>
-          <ul className="mt-2 divide-y divide-black/5">
-            {mods.map((m) => (
-              <li key={m.id} className="py-2 text-sm">
-                <div className="flex justify-between gap-2"><b>{m.title}</b><Badge tone={m.price_model === "free" ? "green" : "blue"}>{priceText(m, t)}</Badge></div>
-                <div className="text-xs text-[var(--muted)]">{t("module_stats", { e: m.enrolled, c: m.completed, s: inr(m.sales) })}</div>
-              </li>
-            ))}
-          </ul>
-        </Card>
-      )}
+    </>
+  );
+}
+
+/** One of the teacher's own modules, as published: stats, lesson and quiz with the correct answers marked. */
+export function TeacherModuleDetail({ id }: { id: number }) {
+  const { t, authFetch } = useApp();
+  const [mods, setMods] = useState<any[] | null>(null);
+  useEffect(() => {
+    authFetch("/api/modules/mine").then((r) => (r.ok ? r.json() : [])).then(setMods).catch(() => setMods([]));
+  }, [authFetch]);
+  if (mods === null) return <Card>…</Card>;
+  const m = mods.find((x) => x.id === id);
+  if (!m) return <Card>{t("module_not_found")}</Card>;
+  const langName: Record<string, string> = { mr: "मराठी", hi: "हिन्दी", en: "English" };
+  return (
+    <>
+      <Card className="space-y-2">
+        <div className="flex items-start justify-between gap-2">
+          <h2 className="text-lg font-bold leading-snug">{m.title}</h2>
+          <Badge tone={m.price_model === "free" ? "green" : "blue"}>{priceText(m, t)}</Badge>
+        </div>
+        <div className="text-xs text-[var(--muted)]">
+          {langName[m.lang] ?? m.lang} · {t("module_published_on", { d: new Date(m.created_at * 1000).toLocaleDateString() })}
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          <Stat label={t("enrolled")} value={String(m.enrolled)} />
+          <Stat label={t("completed")} value={String(m.completed)} />
+          <Stat label={t("sales")} value={inr(m.sales)} />
+        </div>
+      </Card>
+      <Card className="space-y-2">
+        <h3 className="font-bold">📖 {t("lesson")}</h3>
+        <p className="whitespace-pre-line text-sm leading-relaxed">{m.lesson}</p>
+        <SpeakButton text={m.lesson} />
+      </Card>
+      <Card>
+        <h3 className="font-bold">❓ {t("quiz_with_answers", { n: m.quiz.length })}</h3>
+        <ol className="mt-2 space-y-3 text-sm">
+          {m.quiz.map((q: any, i: number) => (
+            <li key={i}>
+              <div className="font-medium">{i + 1}. {q.q}</div>
+              <ul className="mt-1 space-y-1">
+                {q.options.map((o: string, j: number) => (
+                  <li key={j} className={`rounded-lg px-3 py-1.5 ${j === q.answer ? "bg-emerald-200 font-semibold text-black" : "bg-[var(--bg)]"}`}>
+                    {j === q.answer ? "✅ " : ""}{o}
+                  </li>
+                ))}
+              </ul>
+            </li>
+          ))}
+        </ol>
+      </Card>
     </>
   );
 }

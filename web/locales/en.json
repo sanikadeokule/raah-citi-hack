@@ -387,5 +387,16 @@
  "rm_other_roads": "Other roads for you",
  "rm_not_added": "Roadmap not added for this career yet.",
  "rm_footer": "Stages and fees from the Roadmap_Stages sheet in {file}",
- "rm_tap_hint": "Tap a career to see its roadmap"
+ "rm_tap_hint": "Tap a career to see its roadmap",
+ "new_module": "Create a new module",
+ "new_module_sub": "Lesson, quiz and price on its own page",
+ "no_modules_yet": "No modules yet. Create one to share with your students.",
+ "module_details": "Module details",
+ "module_not_found": "Module not found. It may belong to another teacher.",
+ "module_published_on": "Published {d}",
+ "enrolled": "Enrolled",
+ "completed": "Completed",
+ "sales": "Sales",
+ "lesson": "Lesson",
+ "quiz_with_answers": "Quiz ({n} questions, correct answers marked)"
 }
