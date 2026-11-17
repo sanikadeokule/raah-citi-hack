@@ -321,5 +321,12 @@
  "elig_tag_changed": "Changed by this plan",
  "elig_tag_course": "For this course",
  "fit_related": "Close to your interests",
- "fit_none": "Not linked to your interests"
+ "fit_none": "Not linked to your interests",
+ "home_build_roadmap": "Talk to AI and build your roadmap",
+ "home_build_roadmap_sub": "Answer a few easy questions. Raah finds the right career for you, what it costs, which scholarships fit and when it pays back.",
+ "home_build_roadmap_go": "Start",
+ "my_roadmap": "My roadmap",
+ "see_my_roadmap": "See my roadmap",
+ "roadmap_first_title": "Build your roadmap first",
+ "roadmap_first_text": "Talk to Raah's AI and build your roadmap. Mentors, scholarships, lessons and everything else open after that."
 }
