@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Card, MicButton, Shell, SpeakButton } from "@/components/ui";
+import { ChatInput } from "@/components/chatinput";
 import { useApp } from "@/lib/store";
 import { setKV } from "@/lib/db";
 import { aiAvailable, postAi, resetAiStatus } from "@/lib/ai";
@@ -249,10 +250,10 @@ export default function Discover() {
               )}
             </div>
           )}
-          <div className="flex items-center gap-2">
+          <div className="flex items-end gap-2">
             <MicButton onText={(s) => submitText(s)} />
-            <input value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => e.key === "Enter" && send()}
-              placeholder={t("type_answer")} className="min-w-0 flex-1 rounded-full bg-[var(--bg)] px-4 py-3" inputMode={q.kind === "number" || q.key === "max_commute_km" ? "numeric" : "text"} />
+            <ChatInput value={text} onChange={setText} onSend={() => { if (canSend) send(); }}
+              placeholder={t("type_answer")} inputMode={q.kind === "number" || q.key === "max_commute_km" ? "numeric" : "text"} />
             <button onClick={send} disabled={!canSend} className="rounded-full bg-[var(--brand)] px-4 py-3 text-white disabled:opacity-40">{t("send")}</button>
           </div>
         </Card>
