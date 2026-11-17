@@ -43,7 +43,7 @@ _DUMMY_HASH = _hasher.hash("000000-not-a-real-pin")
 
 
 def teacher_phones() -> set[str]:
-    return {p.strip() for p in os.environ.get("RAAH_TEACHER_PHONES", "9000000001").split(",") if p.strip()}
+    return {p.strip() for p in os.environ.get("RAAH_TEACHER_PHONES", "9000000001,9876543232").split(",") if p.strip()}
 
 
 def weak_pin(pin: str) -> bool:
