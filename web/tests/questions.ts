@@ -1,6 +1,6 @@
 // Usage: npx tsx tests/questions.ts  -> exits non-zero if a Discover answer check is wrong (also run by backend/tests/test_questions.py)
 import assert from "node:assert/strict";
-import { ageFitsClass, cleanPlace, examsFor, firstMissing, parseAge, parseMarks, QUESTIONS } from "../lib/questions";
+import { ageFitsClass, cleanPlace, examsFor, firstMissing, parseAge, parseKm, parseMarks, QUESTIONS } from "../lib/questions";
 
 const ok = (r: any) => (assert.ok(r.ok, JSON.stringify(r)), r);
 const err = (r: any, e: string) => (assert.ok(!r.ok && r.error === e, JSON.stringify(r)), r);
@@ -19,6 +19,11 @@ err(parseMarks("I don't know"), "q_marks_err_unclear");
 
 assert.equal(ok(parseAge("मी १५ वर्षांची आहे")).value, 15);
 err(parseAge("150"), "q_age_err");
+assert.equal(ok(parseKm("42km")).value, 42);
+assert.equal(ok(parseKm("42")).value, 42);
+assert.equal(ok(parseKm("४२ किमी")).value, 42);
+err(parseKm("far"), "q_km_err");
+err(parseKm("500"), "q_km_err");
 
 assert.deepEqual(examsFor(10).map((e) => e.id), ["class9_final", "class8_final"]);
 assert.deepEqual(examsFor(11).map((e) => e.id), ["class10_board", "class9_final"]);

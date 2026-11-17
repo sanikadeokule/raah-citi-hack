@@ -30,10 +30,25 @@ export const asciiDigits = (s: string) => s.replace(/[०-९]/g, (c) => String(
 
 const numbers = (s: string) => (asciiDigits(s).replace(/(\d),(\d)/g, "$1$2").match(/\d+(?:\.\d+)?/g) || []).map(Number);
 
+/** Gender mentioned in passing ("I am a 15 year old girl"), so the next question need not ask again. */
+export function sayGender(raw: string): "F" | "M" | undefined {
+  const s = raw.toLowerCase();
+  if (/\b(girl|female|woman|daughter)\b|मुलगी|लड़की/.test(s)) return "F";
+  if (/\b(boy|male|man|son)\b|मुलगा|लड़का/.test(s)) return "M";
+  return undefined;
+}
+
 export function parseAge(raw: string): Parsed {
   const n = numbers(raw)[0];
   if (n === undefined) return { ok: false, error: "q_age_err" };
   if (n < 10 || n > 30) return { ok: false, error: "q_age_err" };
+  return { ok: true, value: Math.round(n) };
+}
+
+/** Distance in km, typed as "42", "42km", "42 km" or "४२ किमी". Chips are shortcuts; any number up to 200 is accepted. */
+export function parseKm(raw: string): Parsed {
+  const n = numbers(raw)[0];
+  if (n === undefined || n < 0 || n > 200) return { ok: false, error: "q_km_err" };
   return { ok: true, value: Math.round(n) };
 }
 
@@ -141,7 +156,7 @@ export const QUESTIONS: Q[] = [
     options: (_d, t) => CATEGORIES.map((c) => ({ v: c, label: c === "General" ? t("opt_general") : c })) },
   { key: "family_income_annual", kind: "choice", ask: ask("income"),
     options: (_d, t) => INCOME.map(([v, k]) => ({ v, label: t(k) })) },
-  { key: "max_commute_km", kind: "choice", ask: ask("commute"),
+  { key: "max_commute_km", kind: "choice", ask: ask("commute"), parse: parseKm,
     options: (_d, t) => [5, 10, 20, 35, 50].map((k) => ({ v: k, label: t("opt_km", { n: k }), icon: "🚌" })) },
   { key: "can_stay_hostel", kind: "choice", ask: ask("hostel"),
     options: (_d, t) => [{ v: true, label: t("opt_yes"), icon: "🏠" }, { v: false, label: t("opt_no"), icon: "🚫" }] },

@@ -366,6 +366,11 @@ def _tokens(items) -> set[str]:
 RELATED_WEIGHT = 0.5  # a career that only shares tags with the direct matches counts at most half a direct match
 
 
+# Top-5 scoring: interest match is 60% of the score, and careers are also grouped by how well they match the interest
+# (direct, then related, then none) BEFORE the score is compared, so a better interest match always ranks first.
+W_INTEREST, W_ELIG, W_AFFORD, W_DEMAND = 0.6, 0.15, 0.15, 0.1
+
+
 def rank_careers(data: dict, profile: dict, n: int = 5) -> list[dict]:
     said = {_phrase(i): str(i).strip().lower() for i in profile.get("interests") or [] if str(i).strip()}
     phrases = set(said)
@@ -410,7 +415,7 @@ def rank_careers(data: dict, profile: dict, n: int = 5) -> list[dict]:
         interest = s["direct"] or (RELATED_WEIGHT * len(rel) / len(s["by_phrase"]) if rel else 0)
         s["related"] = rel
         s["fit"] = "direct" if s["direct"] > 0 else ("related" if rel else "none")
-        raw = 0.5 * interest + 0.2 * s["elig"] + 0.2 * s["afford"] + 0.1 * s["demand"]
+        raw = W_INTEREST * interest + W_ELIG * s["elig"] + W_AFFORD * s["afford"] + W_DEMAND * s["demand"]
         s["raw"] = raw
         s["score"] = math.floor(raw * 1000 + 0.5) / 1000  # same half-up rounding as Math.round in engine.ts
         s["breakdown"] = {"interest": round(interest, 2), "eligibility": s["elig"], "affordability": s["afford"],
@@ -423,12 +428,12 @@ def rank_careers(data: dict, profile: dict, n: int = 5) -> list[dict]:
     key = lambda s: (tier[s["fit"]], -s["raw"])
     scored.sort(key=key)
     top = scored[:n]
-    # diversity: show at least one vocational and one non-STEM / self-employment option, but only one that
+    # diversity: show at least one vocational, one non-STEM and one degree path / self-employment option, but only one that
     # links to the student's interests, or in place of another career that does not
-    for flag in ("vocational", "non_stem"):
-        if top and not any(s["career"]["flags"][flag] for s in top):
-            extra = next((s for s in scored[n:] if s["career"]["flags"][flag]
-                          and (s["fit"] != "none" or top[-1]["fit"] == "none" or not phrases)), None)
+    for flag in ("vocational", "non_stem", "degree"):
+        if top and not any(s["career"]["flags"].get(flag) for s in top):
+            extra = next((s for s in scored[n:] if s["career"]["flags"].get(flag)
+                          and (s["fit"] != "none" or not phrases)), None)
             if extra:
                 extra["diversity"] = True
                 top[-1] = extra

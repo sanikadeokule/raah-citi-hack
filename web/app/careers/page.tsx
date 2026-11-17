@@ -38,13 +38,22 @@ function flagBadges(c: any) {
 export default function CareersPage() {
   const { data, profile, t, lang } = useApp();
   const [q, setQ] = useState("");
+  const [tab, setTab] = useState<"top" | "all">("top");
   const top = useMemo(() => (data && profile ? rankCareers(data, profile, 5) : []), [data, profile]);
   const plans = useMemo(() => Object.fromEntries((data?.plans || []).map((p: any) => [p.career_id, p])), [data]);
   const quick = (planId: string) => computePlan(data, profile, planId);
   const all = (data?.careers || []).filter((c: any) => c.name.toLowerCase().includes(q.toLowerCase()));
+  const tabBtn = (id: "top" | "all", label: string) => (
+    <button key={id} onClick={() => setTab(id)} aria-pressed={tab === id}
+      className={`flex-1 rounded-full px-3 py-2 text-sm font-semibold ${tab === id ? "bg-[var(--brand)] text-white" : "bg-[var(--bg)] ring-1 ring-black/10"}`}>{label}</button>
+  );
   return (
     <Shell title={t("home_careers")}>
-      <Card>
+      <div className="flex gap-2">
+        {tabBtn("top", `⭐ ${t("shortlist")}`)}
+        {tabBtn("all", t("all_careers", { n: data?.careers?.length ?? 0 }))}
+      </div>
+      {tab === "top" && <Card>
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-bold">⭐ {t("shortlist")}</h2>
           <Link href="/profile/" className="text-sm underline">{t("edit_profile")}</Link>
@@ -77,9 +86,15 @@ export default function CareersPage() {
             );
           })}
         </ul>
-      </Card>
-      <Card>
-        <h2 className="text-lg font-bold">{t("all_careers")}</h2>
+      </Card>}
+      {tab === "top" && (
+        <details className="rounded-xl bg-[var(--card)] p-3 text-sm ring-1 ring-black/5">
+          <summary className="cursor-pointer font-semibold">ℹ️ {t("careers_source_title")}</summary>
+          <p className="mt-2 text-[var(--muted)]">{t("careers_source")}</p>
+        </details>
+      )}
+      {tab === "all" && <Card>
+        <h2 className="text-lg font-bold">{t("all_careers", { n: all.length })}</h2>
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search" className="mt-2 w-full rounded-lg bg-[var(--bg)] p-2" />
         <ul className="mt-2 divide-y divide-black/5">
           {all.map((c: any) => (
@@ -95,7 +110,7 @@ export default function CareersPage() {
             </li>
           ))}
         </ul>
-      </Card>
+      </Card>}
     </Shell>
   );
 }

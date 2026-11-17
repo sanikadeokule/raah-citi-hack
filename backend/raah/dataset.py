@@ -233,6 +233,7 @@ def _career_flags(category: str) -> dict:
         "stem": "stem" in c and "non-stem" not in c,
         "health": "health" in c,
         "baseline": "baseline" in c,
+        "degree": "degree" in c,
     }
 
 
