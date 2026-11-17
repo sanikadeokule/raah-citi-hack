@@ -30,6 +30,14 @@ export const asciiDigits = (s: string) => s.replace(/[०-९]/g, (c) => String(
 
 const numbers = (s: string) => (asciiDigits(s).replace(/(\d),(\d)/g, "$1$2").match(/\d+(?:\.\d+)?/g) || []).map(Number);
 
+/** Gender mentioned in passing ("I am a 15 year old girl"), so the next question need not ask again. */
+export function sayGender(raw: string): "F" | "M" | undefined {
+  const s = raw.toLowerCase();
+  if (/\b(girl|female|woman|daughter)\b|मुलगी|लड़की/.test(s)) return "F";
+  if (/\b(boy|male|man|son)\b|मुलगा|लड़का/.test(s)) return "M";
+  return undefined;
+}
+
 export function parseAge(raw: string): Parsed {
   const n = numbers(raw)[0];
   if (n === undefined) return { ok: false, error: "q_age_err" };

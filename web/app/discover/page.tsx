@@ -6,7 +6,7 @@ import { Card, MicButton, Shell, SpeakButton } from "@/components/ui";
 import { useApp } from "@/lib/store";
 import { setKV } from "@/lib/db";
 import { aiAvailable, postAi, resetAiStatus } from "@/lib/ai";
-import { QUESTIONS, cleanPlace, firstMissing, type Opt } from "@/lib/questions";
+import { QUESTIONS, cleanPlace, firstMissing, sayGender, type Opt } from "@/lib/questions";
 
 // Two modes fill the same profile fields:
 // - AI chat: an open-source LLM (see backend/raah/llm.py) asks questions and returns the fields it understood;
@@ -132,7 +132,8 @@ export default function Discover() {
     if (q.parse) {
       const r = q.parse(raw);
       if (!r.ok) { retry(raw, r.error, r.vars); return; }
-      answer(r.value, raw, { [q.key]: r.value }, r.extra);
+      const g = q.key === "age" && !draft.gender ? sayGender(raw) : undefined;
+      answer(r.value, raw, { [q.key]: r.value, ...(g ? { gender: g } : {}) }, { ...r.extra, ...(g ? { gender: g } : {}) });
       return;
     }
     if (mode === "ai") { sendAi(raw); return; }
