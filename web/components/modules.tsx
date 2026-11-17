@@ -14,7 +14,7 @@ const priceText = (m: any, t: any) =>
 
 // ------------------------------------------------------------------ student
 
-export function StudentModules() {
+export function StudentModules({ emptyText }: { emptyText?: string } = {}) {
   const { t, authFetch, online, auth, queueAction } = useApp();
   const [mods, setMods] = useState<any[]>([]);
   const [open, setOpen] = useState<number | null>(null);
@@ -26,7 +26,7 @@ export function StudentModules() {
   }, [authFetch]);
   useEffect(() => { if (online && auth) load(); }, [online, auth, load]);
 
-  if (!mods.length) return null;
+  if (!mods.length) return emptyText ? <Card><p className="text-sm text-[var(--muted)]">{emptyText}</p></Card> : null;
   const enrol = async (m: any) => {
     const r = await authFetch(`/api/modules/${m.id}/enrol`, { method: "POST" });
     if (r.ok) { load(); setOpen(m.id); setAns({}); }

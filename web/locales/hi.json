@@ -446,5 +446,8 @@
  "opp_tab_naps": "NAPS",
  "opp_tab_rail": "रेलवे",
  "opp_tab_mentors": "मार्गदर्शक",
- "elig_changed_short": "यह योजना {n} नतीजे बदलती है"
+ "elig_changed_short": "यह योजना {n} नतीजे बदलती है",
+ "learn_tab_lessons": "पाठ",
+ "learn_tab_modules": "शिक्षक",
+ "learn_no_modules": "अभी शिक्षकों का कोई मॉड्यूल नहीं है। जब कोई शिक्षक प्रकाशित करेगा, वह यहाँ दिखेगा।"
 }

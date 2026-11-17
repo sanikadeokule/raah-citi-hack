@@ -446,5 +446,8 @@
  "opp_tab_naps": "NAPS",
  "opp_tab_rail": "Railway",
  "opp_tab_mentors": "Mentors",
- "elig_changed_short": "This plan changes {n} results"
+ "elig_changed_short": "This plan changes {n} results",
+ "learn_tab_lessons": "Lessons",
+ "learn_tab_modules": "Teachers",
+ "learn_no_modules": "No modules from teachers yet. When a teacher publishes one, it will appear here."
 }

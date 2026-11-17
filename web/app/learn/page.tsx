@@ -5,6 +5,7 @@ import { Card, Shell, SpeakButton } from "@/components/ui";
 import { FOR_YOU, forYou, lessonTopics, lessons, quiz } from "@/lib/lessons";
 import { useApp } from "@/lib/store";
 import { StudentModules } from "@/components/modules";
+import { Tabs } from "@/components/tabs";
 import { getKV, setKV } from "@/lib/db";
 import { cachedAudio, fetchAudio, voiceAvailable } from "@/lib/audio";
 
@@ -22,6 +23,7 @@ export default function Learn() {
   const [ans, setAns] = useState<Record<number, number>>({});
   const [checked, setChecked] = useState(false);
   const pickTopic = (id: string) => { setPicked(id); setAns({}); setChecked(false); };
+  const [tab, setTab] = useState<"lessons" | "modules" | "quiz">("lessons");
   useEffect(() => { getKV<string[]>("lessons_done").then((v) => v && setDone(v)); }, []);
   // audio files for offline lessons: which lessons already have one saved for the current text
   const [voice, setVoice] = useState(false);
@@ -51,17 +53,28 @@ export default function Learn() {
   };
   return (
     <Shell title={t("home_learn")}>
-      <Card>
-        <h2 className="mb-2 text-lg font-bold">🎧 {t("lessons")}</h2>
-        <label className="mb-3 block text-sm font-medium">
+      <Tabs value={tab} onChange={setTab} tabs={[
+        { key: "lessons", label: `🎧 ${t("learn_tab_lessons")}`, count: ls.length },
+        { key: "modules", label: `👩‍🏫 ${t("learn_tab_modules")}` },
+        { key: "quiz", label: `📝 ${t("quiz")}`, count: qs.length },
+      ]} />
+
+      {/* one topic drives both the lessons and the quiz built from them */}
+      {tab !== "modules" && (
+        <label className="block text-sm font-medium">
           {t("lesson_topic")}
           <select value={topic} onChange={(e) => pickTopic(e.target.value)}
-            className="mt-1 block w-full rounded-lg bg-[var(--bg)] px-3 py-2 text-base ring-1 ring-black/10">
+            className="mt-1 block w-full rounded-lg bg-[var(--card)] px-3 py-2 text-base ring-1 ring-black/10">
             {mine.length > 0 && <option value={FOR_YOU}>⭐ {t("lesson_for_you")} ({mine.length})</option>}
             {topics.map((tp: any) => <option key={tp.id} value={tp.id}>{tp.name} ({all.filter((l) => l.topic === tp.id).length})</option>)}
           </select>
+          {topic === FOR_YOU && <span className="mt-1 block text-xs font-normal text-[var(--muted)]">{t("lesson_for_you_note")}</span>}
         </label>
-        {topic === FOR_YOU && <p className="mb-3 text-xs text-[var(--muted)]">{t("lesson_for_you_note")}</p>}
+      )}
+
+      {tab === "modules" && <StudentModules emptyText={t("learn_no_modules")} />}
+
+      {tab === "lessons" && <Card>
         {voice ? (
           <button onClick={saveAll} disabled={saving || savedCount === ls.length}
             className="mb-3 w-full rounded-lg bg-[var(--brand-soft)] py-2 text-sm font-semibold text-[var(--brand-ink)] disabled:opacity-60">
@@ -70,21 +83,26 @@ export default function Learn() {
         ) : (
           <p className="mb-3 text-xs text-[var(--muted)]">{t("device_voice_note")}</p>
         )}
-        <ul className="space-y-3">
+        {/* titles only; tap one to read or play it */}
+        <ul className="space-y-2">
           {ls.map((l) => (
-            <li key={l.id} className="rounded-xl bg-[var(--bg)] p-3">
-              <div className="flex items-center justify-between gap-2">
-                <b>{done.includes(l.id) ? "✅ " : ""}{l.title}{saved[l.id] ? " 💾" : ""}</b>
-                <span onClick={() => markDone(l.id)}><SpeakButton text={l.text} cache /></span>
-              </div>
-              <p className="mt-1 text-sm text-[var(--muted)]">{l.text}</p>
+            <li key={l.id}>
+              <details className="group rounded-xl bg-[var(--bg)]">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-2 p-3">
+                  <b className="leading-snug">{done.includes(l.id) ? "✅ " : ""}{l.title}{saved[l.id] ? " 💾" : ""}</b>
+                  <span aria-hidden className="shrink-0 text-lg text-[var(--muted)] transition-transform group-open:rotate-90">›</span>
+                </summary>
+                <div className="space-y-2 px-3 pb-3">
+                  <span onClick={() => markDone(l.id)} className="inline-block"><SpeakButton text={l.text} cache /></span>
+                  <p className="text-sm leading-relaxed text-[var(--muted)]">{l.text}</p>
+                </div>
+              </details>
             </li>
           ))}
         </ul>
-      </Card>
-      <StudentModules />
-      <Card>
-        <h2 className="mb-2 text-lg font-bold">📝 {t("quiz")}</h2>
+      </Card>}
+
+      {tab === "quiz" && <Card>
         <ol className="space-y-3">
           {qs.map((q, i) => (
             <li key={i}>
@@ -105,7 +123,7 @@ export default function Learn() {
           <div className="mt-3 rounded-xl bg-[var(--brand-soft)] p-3 text-center text-lg font-bold">{t("score")}: {score} / {qs.length}</div>
         )}
         <p className="mt-2 text-xs text-[var(--muted)]">Answers are saved on the phone and sync when you are back online.</p>
-      </Card>
+      </Card>}
     </Shell>
   );
 }
