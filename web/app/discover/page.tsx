@@ -34,6 +34,9 @@ export default function Discover() {
   const [mode, setMode] = useState<Mode>("checking");
   const [aiMissing, setAiMissing] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
+  // what the student actually tapped ("₹4.5 to 8 lakh"), shown in "Understood" instead of the single number stored for a band
+  const [labels, setLabels] = useState<Record<string, string>>({});
+  const dropLabels = (keys: string[]) => setLabels((l) => { const n = { ...l }; keys.forEach((k) => delete n[k]); return n; });
   const [ready, setReady] = useState(false);
   const end = useRef<HTMLDivElement>(null);
   const finished = step >= QUESTIONS.length;
@@ -100,6 +103,7 @@ export default function Discover() {
       return;
     }
     const next = { ...base, ...j.profile };
+    dropLabels(Object.keys(j.learned || {}));
     setDraft(next);
     setAiMissing(j.missing || []);
     if (j.done || !(j.missing || []).length) {
@@ -120,6 +124,7 @@ export default function Discover() {
   // Letting the model reply to a tap could repeat the question just answered while the chips already show the next one.
   const answer = (value: any, shown: string, learned?: Record<string, any>, extra: Record<string, any> = {}, tap = false) => {
     if (!q) return;
+    if (tap) setLabels((l) => ({ ...l, [q.key]: shown })); else dropLabels([q.key]);
     if (mode === "ai" && !tap) { sendAi(shown, { [q.key]: value, ...extra }); return; }
     const next = { ...draft, [q.key]: value, ...extra };
     if (q.key === "taluka") {
@@ -127,7 +132,7 @@ export default function Discover() {
       if (tk) { next.lat = tk.lat; next.lon = tk.lon; }
     }
     setDraft(next);
-    setMsgs((m) => [...m, { from: "me", text: shown, learned }]);
+    setMsgs((m) => [...m, { from: "me", text: shown, learned: tap && !learned ? { [q.key]: value } : learned }]);
     setText(""); setMulti([]);
     // always go to the first unanswered question: "fix my age" sends the student back to the age question
     const n = firstMissing(next);
@@ -214,7 +219,7 @@ export default function Discover() {
                 <div className="mt-2 flex flex-wrap gap-1">
                   <span className={`text-xs ${m.from === "me" ? "text-white/80" : "text-[var(--muted)]"}`}>{t("ai_understood")}:</span>
                   {Object.entries(m.learned).map(([k, v]) => (
-                    <span key={k} className="rounded-full bg-[var(--brand-soft)] px-2 py-0.5 text-xs text-[var(--brand-ink)]">{k.replaceAll("_", " ")}: {showValue(v)}{k === "marks_pct" ? "%" : ""}</span>
+                    <span key={k} className="rounded-full bg-[var(--brand-soft)] px-2 py-0.5 text-xs text-[var(--brand-ink)]">{k.replaceAll("_", " ")}: {labels[k] ?? showValue(v)}{k === "marks_pct" ? "%" : ""}</span>
                   ))}
                 </div>
               )}
