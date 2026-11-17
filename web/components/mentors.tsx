@@ -1,16 +1,16 @@
 "use client";
-// Mentors from the spreadsheet, filtered by career and distance. A mentor's phone number
+// Mentors from the spreadsheet, filtered by the career picked on the page and by distance. A mentor's phone number
 // comes from the server only after the student agrees to share their first name, class and taluka.
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useMemo, useState } from "react";
 import { Badge, Card } from "./ui";
-import { haversine, rankCareers } from "@/lib/engine";
+import { haversine } from "@/lib/engine";
+import { mentorMatches, pickForCareers, type CareerChoice } from "@/lib/listings";
 import { useApp } from "@/lib/store";
+import { RelatedNote } from "./careerfilter";
 
-export function Mentors() {
+export function Mentors({ career, top }: { career: CareerChoice; top: string[] }) {
   const { data, profile, t, authFetch, online, auth } = useApp();
-  const top = useMemo(() => (data && profile ? rankCareers(data, profile, 5).map((s: any) => s.career.id) : []), [data, profile]);
-  const [career, setCareer] = useState<string>("top");
   const [maxKm, setMaxKm] = useState(60);
   const [asking, setAsking] = useState<string | null>(null);
   const [contacts, setContacts] = useState<Record<string, string>>({});
@@ -22,12 +22,12 @@ export function Mentors() {
       setContacts(Object.fromEntries(rows.map((m) => [m.mentor_id, m.contact?.phone])))).catch(() => {});
   }, [auth, authFetch, online]);
 
-  const careers = data?.careers || [];
-  const list = (data?.mentors || [])
+  const nearby = useMemo(() => (data?.mentors || [])
     .map((m: any) => ({ ...m, km: profile?.lat && m.lat ? haversine(profile.lat, profile.lon, m.lat, m.lon) : null }))
-    .filter((m: any) => (career === "all" ? true : career === "top" ? m.career_ids.some((c: string) => top.includes(c)) : m.career_ids.includes(career)))
     .filter((m: any) => m.km === null || m.km <= maxKm)
-    .sort((a: any, b: any) => (a.km ?? 999) - (b.km ?? 999));
+    .sort((a: any, b: any) => (a.km ?? 999) - (b.km ?? 999)), [data, profile, maxKm]);
+  const picked = pickForCareers(data, nearby, career, top, mentorMatches);
+  const list = picked.items;
 
   const accept = async (id: string) => {
     setError(null);
@@ -42,15 +42,11 @@ export function Mentors() {
     <Card>
       <h2 className="mb-2 font-bold">🤝 {t("mentors")} <Badge>{list.length}</Badge></h2>
       <div className="grid gap-2 text-sm">
-        <select value={career} onChange={(e) => setCareer(e.target.value)} className="w-full min-w-0 rounded-lg bg-[var(--bg)] p-2">
-          <option value="top">{t("mentors_top_careers")}</option>
-          <option value="all">{t("mentors_all")}</option>
-          {careers.filter((c: any) => (data?.mentors || []).some((m: any) => m.career_ids.includes(c.id))).map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
-        </select>
         <label className="flex items-center gap-2">{t("within_km", { km: maxKm })}
           <input type="range" min={5} max={100} step={5} value={maxKm} onChange={(e) => setMaxKm(Number(e.target.value))} className="flex-1" />
         </label>
       </div>
+      <RelatedNote picked={picked} />
       <ul className="mt-2 space-y-2">
         {list.map((m: any) => (
           <li key={m.id} className="rounded-xl bg-[var(--bg)] p-3 text-sm">
