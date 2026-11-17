@@ -74,7 +74,7 @@ export default function Teacher() {
         <Stat label={t("talent")} value={String(st.filter((s: any) => s.talent).length)} tone="text-[var(--good)]" />
       </div>
       <div role="tablist" className="grid grid-cols-2 gap-1 rounded-xl bg-[var(--card)] p-1 ring-1 ring-black/5">
-        {([["students", `👥 ${t("students")}`], ["modules", `🧩 ${t("module_builder")}`]] as const).map(([k, label]) => (
+        {([["students", `👥 ${t("students")}`], ["modules", `📚 ${t("my_modules")}`]] as const).map(([k, label]) => (
           <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)}
             className={`rounded-lg py-2 text-sm font-semibold ${tab === k ? "bg-[var(--brand)] text-white" : "text-[var(--muted)]"}`}>
             {label}
