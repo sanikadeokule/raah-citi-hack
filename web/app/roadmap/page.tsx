@@ -36,6 +36,7 @@ function RoadmapView() {
   const careerId = qs.get("career") || profile?.roadmap_career || top[0]?.career.id;
   const profileClass = Math.min(13, Math.max(9, Math.trunc(Number(profile?.class) || 10)));
   const [cls, setCls] = useState<number | null>(null);
+  const [tab, setTab] = useState<"road" | "other">("road");
   const startClass = cls ?? profileClass;
   const r = useMemo(() => (data && profile && careerId ? buildRoadmap(data, profile, careerId, startClass) : null),
     [data, profile, careerId, startClass]);
@@ -45,6 +46,7 @@ function RoadmapView() {
   const tot = r.totals;
   const classLabel = (c: number) => (c >= 13 ? t("rm_12_pass") : t("rm_class_n", { n: c }));
   const journey = r.stages.filter((s: any) => s.months > 0);
+  const others = top.filter((s: any) => s.career.id !== careerId);
 
   return (
     <>
@@ -66,7 +68,41 @@ function RoadmapView() {
         </div>
       </section>
 
-      {!r.available ? <Card>{t("rm_not_added")}</Card> : (<>
+      {/* this road, or the other careers that fit: side by side as tabs */}
+      {others.length > 0 && (
+        <div role="tablist" className="grid grid-cols-2 gap-1 rounded-xl bg-[var(--card)] p-1 ring-1 ring-black/5">
+          {([["road", `🗺️ ${t("rm_tab_this")}`], ["other", `🛣️ ${t("rm_other_roads")} (${others.length})`]] as const).map(([k, label]) => (
+            <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)}
+              className={`rounded-lg px-1 py-2 text-sm font-semibold leading-tight ${tab === k ? "bg-[var(--brand)] text-white" : "text-[var(--muted)]"}`}>
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {tab === "other" && others.length > 0 ? (
+        <ul className="space-y-2">
+          {others.map((s: any) => {
+            const mine = profile?.roadmap_career === s.career.id;
+            return (
+              <li key={s.career.id}>
+                <Link href={`/roadmap/?career=${s.career.id}`} onClick={() => { setTab("road"); setCls(null); window.scrollTo(0, 0); }}
+                  className="block rounded-2xl bg-[var(--card)] p-3 shadow-sm ring-1 ring-black/5 active:scale-[.98]">
+                  <span className="flex items-start justify-between gap-2">
+                    <b className="leading-snug">{s.career.name}</b>
+                    <span className="shrink-0 text-xs text-[var(--muted)]">{Math.round(s.score * 100)}%</span>
+                  </span>
+                  {mine && <span className="mt-1 inline-block"><Badge tone="green">⭐ {t("rm_saved")}</Badge></span>}
+                  {s.why && <span className="mt-1 block text-sm">{s.why}</span>}
+                  <span className="mt-2 flex items-center justify-between rounded-lg bg-[var(--bg)] px-3 py-2 text-sm font-semibold text-[var(--brand-ink)]">
+                    🗺️ {t("rm_see_this_road")} <span aria-hidden>›</span>
+                  </span>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      ) : !r.available ? <Card>{t("rm_not_added")}</Card> : (<>
         {/* the whole journey as one bar, each stage as wide as it is long */}
         {journey.length > 0 && (
           <Card>
@@ -183,18 +219,8 @@ function RoadmapView() {
           {isMine ? `✓ ${t("rm_saved")}` : `⭐ ${t("rm_make_mine")}`}
         </button>
 
-        {top.length > 1 && (
-          <Card>
-            <h2 className="mb-2 font-bold">{t("rm_other_roads")}</h2>
-            <div className="flex flex-wrap gap-2">
-              {top.filter((s: any) => s.career.id !== careerId).map((s: any) => (
-                <Link key={s.career.id} href={`/roadmap/?career=${s.career.id}`} className="rounded-full bg-[var(--bg)] px-3 py-1.5 text-sm ring-1 ring-black/10">{s.career.name}</Link>
-              ))}
-            </div>
-          </Card>
-        )}
-        <p className="text-center text-xs text-[var(--muted)]">{t("rm_footer", { file: data.version.file })}</p>
       </>)}
+      <p className="text-center text-xs text-[var(--muted)]">{t("rm_footer", { file: data.version.file })}</p>
     </>
   );
 }
