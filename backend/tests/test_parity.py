@@ -50,11 +50,22 @@ def norm(x):
 def test_parity():
     d = dataset.load()
     cs = cases(d)
+    rcs = roadmap_cases(d)
     with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as f:
-        json.dump({"data": d, "cases": cs}, f)
-    ts = json.loads(subprocess.check_output(["npx", "tsx", "tests/parity.ts", f.name], cwd=WEB))
+        json.dump({"data": d, "cases": cs, "roadmap_cases": rcs}, f)
+    out = json.loads(subprocess.check_output(["npx", "tsx", "tests/parity.ts", f.name], cwd=WEB))
+    ts = out["plans"]
     os.unlink(f.name)
     py = [py_result(d, c) for c in cs]
     for i, (a, b) in enumerate(zip(norm(py), norm(ts))):
         for k in a:
             assert a[k] == b[k] or (isinstance(a[k], (int, float)) and abs(a[k] - b[k]) < 1), (i, cs[i]["plan_id"], cs[i]["options"], k, a[k], b[k])
+    # career roadmap: every career, from every class a student can be in
+    py_rm = [engine.build_roadmap(d, c["profile"], c["career_id"], c["start_class"]) for c in rcs]
+    for i, (a, b) in enumerate(zip(norm(py_rm), norm(out["roadmaps"]))):
+        assert a == b, (rcs[i]["career_id"], rcs[i]["start_class"], rcs[i]["profile"].get("category"))
+
+
+def roadmap_cases(d):
+    return [{"profile": s, "career_id": c["id"], "start_class": k}
+            for s in d["students"] for c in d["careers"] for k in (9, 10, 11, 12, 13)]
