@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { LANGS, useApp } from "@/lib/store";
-import { BUILD_ROADMAP_HREF, hasRoadmap, openBeforeRoadmap } from "@/lib/roadmap";
+import { BUILD_ROADMAP_HREF, ROADMAP_HREF, hasRoadmap, openBeforeRoadmap } from "@/lib/roadmap";
 import { cachedAudio, fetchAudio, micErrorKind, micProblem, pickVoice, startRecording, transcribe, voiceStatus, type Recording, type VoiceProblem } from "@/lib/audio";
 
 /** `fit`: lay the page out to fill one screen (no bottom padding, main is a flex column) so it needs no scrolling. */
@@ -22,6 +22,7 @@ export function Shell({ title, back = "/", role = "any", publicPage = false, fit
   const ready = publicPage || (authReady && auth);
   // students build a roadmap first; the other features open after that
   const locked = !publicPage && !!auth && !hasRoadmap(profile, auth.user.role) && !openBeforeRoadmap(path);
+  const onRoadmap = (path.endsWith("/") ? path : `${path}/`) === ROADMAP_HREF;
   return (
     <div className={`mx-auto max-w-md bg-[var(--bg)] ${fit ? "flex min-h-[100dvh] flex-col" : "min-h-screen pb-24"}`}>
       <div className="sticky top-0 z-20 shadow">
@@ -33,9 +34,17 @@ export function Shell({ title, back = "/", role = "any", publicPage = false, fit
           <span aria-hidden className="h-2 w-2 shrink-0 rounded-full bg-[var(--saffron)]" />
           <span className="truncate">{title ?? t("app_name")}</span>
         </h1>
+        {/* a student's own roadmap, one tap from every screen once they have built it */}
+        {auth?.user.role === "student" && profile?.roadmap_at && (
+          <Link href={ROADMAP_HREF} title={t("my_roadmap")} aria-label={t("my_roadmap")}
+            aria-current={onRoadmap ? "page" : undefined}
+            className={`grid h-8 w-8 place-items-center rounded-full text-lg active:scale-90 ${onRoadmap ? "bg-white/30 ring-2 ring-[var(--saffron)]" : "bg-white/15"}`}>
+            🗺️
+          </Link>
+        )}
         <select aria-label="language" value={lang} onChange={(e) => setLang(e.target.value)}
           className="h-8 rounded-full bg-white/15 px-2 text-sm font-semibold">
-          {LANGS.map((l) => <option key={l.code} value={l.code} className="text-black">{l.label}</option>)}
+          {LANGS.map((l) => <option key={l.code} value={l.code} title={l.label} className="text-black">{l.short}</option>)}
         </select>
         {auth && (
           <button onClick={async () => { await signOut(); router.replace("/login/"); }} title={`${auth.user.name ?? ""} ${auth.user.phone} · ${t("logout")}`}

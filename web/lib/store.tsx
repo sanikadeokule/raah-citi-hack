@@ -12,9 +12,10 @@ import { db, enqueue, getKV, setKV } from "./db";
 export const API = process.env.NEXT_PUBLIC_API_BASE || "";
 const LOCALES: Record<string, Record<string, string>> = { en, mr, hi };
 export const LANGS = [
-  { code: "mr", label: "मराठी", speech: "mr-IN" },
-  { code: "hi", label: "हिन्दी", speech: "hi-IN" },
-  { code: "en", label: "English", speech: "en-IN" },
+  // short: what the header's language menu shows, to keep the bar uncluttered
+  { code: "mr", label: "मराठी", short: "मरा", speech: "mr-IN" },
+  { code: "hi", label: "हिन्दी", short: "हिं", speech: "hi-IN" },
+  { code: "en", label: "English", short: "Eng", speech: "en-IN" },
 ];
 
 export interface AuthUser { id: number; role: "student" | "teacher"; name: string | null; phone: string }
