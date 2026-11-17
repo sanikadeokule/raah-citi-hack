@@ -6,7 +6,7 @@ import { Card, MicButton, Shell, SpeakButton } from "@/components/ui";
 import { useApp } from "@/lib/store";
 import { setKV } from "@/lib/db";
 import { aiAvailable, postAi, resetAiStatus } from "@/lib/ai";
-import { QUESTIONS, cleanPlace, firstMissing, type Opt } from "@/lib/questions";
+import { QUESTIONS, cleanPlace, firstMissing, sayGender, type Opt } from "@/lib/questions";
 
 // Two modes fill the same profile fields:
 // - AI chat: an open-source LLM (see backend/raah/llm.py) asks questions and returns the fields it understood;
@@ -34,12 +34,16 @@ export default function Discover() {
   const [mode, setMode] = useState<Mode>("checking");
   const [aiMissing, setAiMissing] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
+  // what the student actually tapped ("₹4.5 to 8 lakh"), shown in "Understood" instead of the single number stored for a band
+  const [labels, setLabels] = useState<Record<string, string>>({});
+  const dropLabels = (keys: string[]) => setLabels((l) => { const n = { ...l }; keys.forEach((k) => delete n[k]); return n; });
   const [ready, setReady] = useState(false);
   const end = useRef<HTMLDivElement>(null);
   const finished = step >= QUESTIONS.length;
   // in AI mode the quick-answer chips follow the first field the model still needs
   const q = !ready || finished ? undefined : mode === "ai" ? (QUESTIONS.find((x) => x.key === aiMissing[0]) ?? QUESTIONS[firstMissing(draft)]) : mode === "script" ? QUESTIONS[step] : undefined;
-  const options: Opt[] = useMemo(() => (q?.options && data ? q.options(data, t, draft) : []), [q, data, t, draft]);
+  // no chips while the model is thinking: they would belong to the question just answered, not the one coming next
+  const options: Opt[] = useMemo(() => (q?.options && data && !busy ? q.options(data, t, draft) : []), [q, data, t, draft, busy]);
   const askMsg = (i: number, p: any): Msg => {
     const { text: body, hint } = QUESTIONS[i].ask(t, p);
     const hello = knownName && msgs.length === 0 ? `${t("hello")}, ${knownName}! ` : "";
@@ -90,8 +94,16 @@ export default function Discover() {
       messages: history.map((m) => ({ role: m.from === "me" ? "user" : "assistant", content: m.text })),
     });
     setBusy(false);
-    if (!j || j.fallback) { resetAiStatus(); toScript(base); return; }
+    if (!j || j.fallback) {
+      resetAiStatus();
+      // say why the AI chat stopped, so it is clear whether the server, the model name or a timeout is the cause
+      const why = !j ? "the Raah server did not answer" : j.reason || "no model answered";
+      setMsgs((m) => [...m, { from: "raah", text: `${t("ai_fallback_note")} (${why})`, error: true }]);
+      toScript(base);
+      return;
+    }
     const next = { ...base, ...j.profile };
+    dropLabels(Object.keys(j.learned || {}));
     setDraft(next);
     setAiMissing(j.missing || []);
     if (j.done || !(j.missing || []).length) {
@@ -108,19 +120,26 @@ export default function Discover() {
     setText("");
   };
 
-  const answer = (value: any, shown: string, learned?: Record<string, any>, extra: Record<string, any> = {}) => {
+  // tap: the answer came from a chip, so the next question is the app's own (same wording as the chips), not the model's.
+  // Letting the model reply to a tap could repeat the question just answered while the chips already show the next one.
+  const answer = (value: any, shown: string, learned?: Record<string, any>, extra: Record<string, any> = {}, tap = false) => {
     if (!q) return;
-    if (mode === "ai") { sendAi(shown, { [q.key]: value, ...extra }); return; }
+    if (tap) setLabels((l) => ({ ...l, [q.key]: shown })); else dropLabels([q.key]);
+    if (mode === "ai" && !tap) { sendAi(shown, { [q.key]: value, ...extra }); return; }
     const next = { ...draft, [q.key]: value, ...extra };
     if (q.key === "taluka") {
       const tk = data.talukas.find((x: any) => x.name === value);
       if (tk) { next.lat = tk.lat; next.lon = tk.lon; }
     }
     setDraft(next);
-    setMsgs((m) => [...m, { from: "me", text: shown, learned }]);
+    setMsgs((m) => [...m, { from: "me", text: shown, learned: tap && !learned ? { [q.key]: value } : learned }]);
     setText(""); setMulti([]);
     // always go to the first unanswered question: "fix my age" sends the student back to the age question
     const n = firstMissing(next);
+    if (mode === "ai") {
+      setAiMissing([]);
+      if (n < QUESTIONS.length) setMsgs((m) => [...m, askMsg(n, next)]);
+    }
     if (n < QUESTIONS.length) setStep(n);
     else finish(next);
   };
@@ -131,7 +150,8 @@ export default function Discover() {
     if (q.parse) {
       const r = q.parse(raw);
       if (!r.ok) { retry(raw, r.error, r.vars); return; }
-      answer(r.value, raw, { [q.key]: r.value }, r.extra);
+      const g = q.key === "age" && !draft.gender ? sayGender(raw) : undefined;
+      answer(r.value, raw, { [q.key]: r.value, ...(g ? { gender: g } : {}) }, { ...r.extra, ...(g ? { gender: g } : {}) });
       return;
     }
     if (mode === "ai") { sendAi(raw); return; }
@@ -155,6 +175,15 @@ export default function Discover() {
       answer(hits.length ? hits : raw.split(/,|और|आणि|and/).map((s) => s.trim()).filter(Boolean), raw);
     } else answer(raw.trim(), raw);
   };
+
+  /** The one button: sends the chips ticked on a multi-choice question (plus anything typed), otherwise the typed answer. */
+  const send = () => {
+    if (busy || !q) return;
+    if (q.kind === "multi" && multi.length && !text.trim()) {
+      answer(multi, options.filter((o) => multi.includes(o.v)).map((o) => o.label).join(", "), undefined, {}, true);
+    } else submitText(text);
+  };
+  const canSend = !busy && (text.trim().length > 0 || (q?.kind === "multi" && multi.length > 0));
 
   const save = async (p: any) => {
     const prof = { ...p, id: undefined };
@@ -190,7 +219,7 @@ export default function Discover() {
                 <div className="mt-2 flex flex-wrap gap-1">
                   <span className={`text-xs ${m.from === "me" ? "text-white/80" : "text-[var(--muted)]"}`}>{t("ai_understood")}:</span>
                   {Object.entries(m.learned).map(([k, v]) => (
-                    <span key={k} className="rounded-full bg-[var(--brand-soft)] px-2 py-0.5 text-xs text-[var(--brand-ink)]">{k.replaceAll("_", " ")}: {showValue(v)}{k === "marks_pct" ? "%" : ""}</span>
+                    <span key={k} className="rounded-full bg-[var(--brand-soft)] px-2 py-0.5 text-xs text-[var(--brand-ink)]">{k.replaceAll("_", " ")}: {labels[k] ?? showValue(v)}{k === "marks_pct" ? "%" : ""}</span>
                   ))}
                 </div>
               )}
@@ -209,22 +238,22 @@ export default function Discover() {
               {options.map((o) => {
                 const on = multi.includes(o.v);
                 return (
-                  <button key={o.label} onClick={() => (q.kind === "multi" ? setMulti(on ? multi.filter((x) => x !== o.v) : [...multi, o.v]) : answer(o.v, o.label, undefined, o.patch))}
+                  <button key={o.label} onClick={() => (q.kind === "multi" ? setMulti(on ? multi.filter((x) => x !== o.v) : [...multi, o.v]) : answer(o.v, o.label, undefined, o.patch, true))}
                     className={`rounded-full px-3 py-2 text-sm ring-1 ring-black/10 ${on ? "bg-[var(--brand)] text-white" : "bg-[var(--bg)]"}`}>
                     {o.icon} {o.label}
                   </button>
                 );
               })}
-              {q.kind === "multi" && q.key === "documents" && multi.length === 0
-                ? <button onClick={() => answer([], t("opt_none_of_these"), undefined, { documents_none: true })} className="rounded-full bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white">{t("opt_none_of_these")}</button>
-                : q.kind === "multi" && <button disabled={!multi.length} onClick={() => answer(multi, options.filter((o) => multi.includes(o.v)).map((o) => o.label).join(", "))} className="rounded-full bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-40">✓ {t("continue")}</button>}
+              {q.kind === "multi" && q.key === "documents" && multi.length === 0 && (
+                <button onClick={() => answer([], t("opt_none_of_these"), undefined, { documents_none: true }, true)} className="rounded-full px-3 py-2 text-sm ring-1 ring-black/10 bg-[var(--bg)]">{t("opt_none_of_these")}</button>
+              )}
             </div>
           )}
           <div className="flex items-center gap-2">
             <MicButton onText={(s) => submitText(s)} />
-            <input value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => e.key === "Enter" && submitText(text)}
-              placeholder={t("type_answer")} className="min-w-0 flex-1 rounded-full bg-[var(--bg)] px-4 py-3" inputMode={q.kind === "number" ? "numeric" : "text"} />
-            <button onClick={() => submitText(text)} disabled={busy} className="rounded-full bg-[var(--brand)] px-4 py-3 text-white disabled:opacity-40">{t("send")}</button>
+            <input value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => e.key === "Enter" && send()}
+              placeholder={t("type_answer")} className="min-w-0 flex-1 rounded-full bg-[var(--bg)] px-4 py-3" inputMode={q.kind === "number" || q.key === "max_commute_km" ? "numeric" : "text"} />
+            <button onClick={send} disabled={!canSend} className="rounded-full bg-[var(--brand)] px-4 py-3 text-white disabled:opacity-40">{t("send")}</button>
           </div>
         </Card>
       )}

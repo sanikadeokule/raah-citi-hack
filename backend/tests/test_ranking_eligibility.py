@@ -14,9 +14,12 @@ def career_with_tag(d, tag):
 
 def test_computers_interest_ranks_only_linked_careers():
     d = dataset.load()
-    top = engine.rank_careers(d, {**BASE, "interests": ["computers"]})
     direct = career_with_tag(d, "computers")
-    # every career tagged 'computers' comes first, and nothing unlinked (e.g. Beautician) fills the list
+    # the dataset now has more than 5 'computers' careers, so the top 5 are all direct matches
+    top = engine.rank_careers(d, {**BASE, "interests": ["computers"]})
+    assert set(names(top)) <= set(direct) and all(s["fit"] == "direct" for s in top)
+    # asked for the whole list, every career tagged 'computers' comes first, and nothing unlinked fills it
+    top = engine.rank_careers(d, {**BASE, "interests": ["computers"]}, len(direct) + 3)
     assert set(names(top[:len(direct)])) == set(direct)
     assert all(s["fit"] in ("direct", "related") for s in top)
     assert "Beautician / salon" not in names(top)

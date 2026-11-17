@@ -343,6 +343,8 @@ const tokens = (items: any[]) => {
 
 // a career that only shares tags with the direct matches counts at most half a direct match
 const RELATED_WEIGHT = 0.5;
+// interest match is 60% of the score; careers are also grouped direct > related > none before the score is compared
+const W_INTEREST = 0.6, W_ELIG = 0.15, W_AFFORD = 0.15, W_DEMAND = 0.1;
 const TIER: Record<string, number> = { direct: 0, related: 1, none: 2 };
 
 export function rankCareers(data: Data, profile: Profile, n = 5) {
@@ -387,7 +389,7 @@ export function rankCareers(data: Data, profile: Profile, n = 5) {
     const keys = Object.keys(s.byPhrase);
     const related = s.direct === 0 ? keys.filter((k) => near.has(k)).map((k) => s.byPhrase[k]).sort() : [];
     const interest = s.direct || (related.length ? (RELATED_WEIGHT * related.length) / keys.length : 0);
-    const score = 0.5 * interest + 0.2 * s.elig + 0.2 * s.afford + 0.1 * s.demand;
+    const score = W_INTEREST * interest + W_ELIG * s.elig + W_AFFORD * s.afford + W_DEMAND * s.demand;
     return {
       career: s.career, plan_id: s.plan_id, matched: s.matched, related,
       fit: s.direct > 0 ? "direct" : related.length ? "related" : "none",
@@ -399,12 +401,11 @@ export function rankCareers(data: Data, profile: Profile, n = 5) {
   const cmp = (a: any, b: any) => TIER[a.fit] - TIER[b.fit] || b.raw - a.raw;
   ranked.sort(cmp);
   const top = ranked.slice(0, n);
-  // diversity: show at least one vocational and one non-STEM / self-employment option, but only one that
+  // diversity: show at least one vocational, one non-STEM and one degree path / self-employment option, but only one that
   // links to the student's interests, or in place of another career that does not
-  for (const flag of ["vocational", "non_stem"]) {
+  for (const flag of ["vocational", "non_stem", "degree"]) {
     if (top.length && !top.some((s: any) => s.career.flags[flag])) {
-      const last = top[top.length - 1];
-      const extra = ranked.slice(n).find((s: any) => s.career.flags[flag] && (s.fit !== "none" || last.fit === "none" || !phrases.size));
+      const extra = ranked.slice(n).find((s: any) => s.career.flags[flag] && (s.fit !== "none" || !phrases.size));
       if (extra) { extra.diversity = true; top[top.length - 1] = extra; top.sort(cmp); }
     }
   }

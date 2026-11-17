@@ -25,7 +25,7 @@ def _providers() -> list[dict]:
     for name in [p.strip() for p in os.environ.get("LLM_PROVIDERS", "ollama,groq").split(",") if p.strip()]:
         if name == "ollama":
             out.append({"name": "ollama", "url": os.environ.get("OLLAMA_URL", "http://localhost:11434").rstrip("/") + "/v1/chat/completions",
-                        "model": os.environ.get("OLLAMA_MODEL", "gemma4:12b"), "headers": {}, "timeout": 60})
+                        "model": os.environ.get("OLLAMA_MODEL", "gemma4:12b"), "headers": {}, "timeout": 120})
         elif name == "groq" and os.environ.get("GROQ_API_KEY"):
             out.append({"name": "groq", "url": "https://api.groq.com/openai/v1/chat/completions",
                         "model": os.environ.get("GROQ_MODEL", "llama-3.3-70b-versatile"),
@@ -55,15 +55,22 @@ def chat(messages: list[dict], json_mode: bool = False, temperature: float = 0.3
         if time.time() - _down.get(p["name"], 0) < DOWN_SECONDS:
             continue
         body = {"model": p["model"], "messages": messages, "temperature": temperature, "max_tokens": max_tokens}
+        if p["name"] == "ollama":
+            # gemma4 is a "thinking" model: its reasoning can use up the whole token budget and leave an empty answer
+            body["reasoning_effort"] = "none"
+            body["max_tokens"] = max(max_tokens, 2000)
         if json_mode:
             body["response_format"] = {"type": "json_object"}
         try:
             r = httpx.post(p["url"], json=body, headers=p["headers"], timeout=p["timeout"])
             r.raise_for_status()
-            return r.json()["choices"][0]["message"]["content"], p["name"]
+            text = re.sub(r"<think>.*?</think>", "", r.json()["choices"][0]["message"]["content"] or "", flags=re.S).strip()
+            if not text:
+                raise ValueError("empty answer (the model used its tokens thinking)")
+            return text, p["name"]
         except Exception as e:  # network down, model missing, rate limit...
             _down[p["name"]] = time.time()
-            errors.append(f"{p['name']}: {type(e).__name__}")
+            errors.append(f"{p['name']}: {type(e).__name__} {str(e)[:80]}".strip())
     raise LLMUnavailable("; ".join(errors) or "no LLM provider configured")
 
 
