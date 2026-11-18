@@ -16,7 +16,7 @@ const TILES = [
   { href: "/learn/", icon: "🎧", key: "home_learn" },
   { href: "/opportunity/", icon: "🛠️", key: "home_opportunity" },
   { href: "/eligibility/", icon: "📋", key: "home_eligibility" },
-  { href: "/compare/", icon: "⚖️", key: "home_compare", wide: true },
+  { href: "/compare/", icon: "⚖️", key: "home_compare" },
 ];
 const STAFF = [
   { href: "/exams/", icon: "📝", key: "home_exams" },
@@ -144,9 +144,9 @@ export default function Home() {
         {/* tiles grow to fill the free height on tall screens and shrink (never below a big tap target) on short ones */}
         <div className="grid max-h-[30rem] min-h-[14rem] flex-1 grid-cols-3 gap-2">
           {TILES.map((x) => (
-            <Link key={x.href} href={x.href} className={`flex items-center justify-center rounded-2xl border-b-4 border-[var(--accent)] bg-[var(--card)] px-1 text-center text-[var(--brand-ink)] shadow-sm ring-1 ring-black/5 active:scale-95 ${(x as any).wide ? "col-span-3 flex-row gap-3 py-3" : "flex-col py-2"}`}>
-              <span className={`leading-none ${(x as any).wide ? "text-2xl" : "text-4xl"}`}>{x.icon}</span>
-              <span className={`font-semibold leading-tight ${(x as any).wide ? "text-sm" : "mt-2 text-sm"}`}>{t(x.key)}</span>
+            <Link key={x.href} href={x.href} className="flex flex-col items-center justify-center rounded-2xl border-b-4 border-[var(--accent)] bg-[var(--card)] px-1 py-2 text-center text-[var(--brand-ink)] shadow-sm ring-1 ring-black/5 active:scale-95">
+              <span className="text-4xl leading-none">{x.icon}</span>
+              <span className="mt-2 font-semibold leading-tight text-sm">{t(x.key)}</span>
             </Link>
           ))}
         </div>

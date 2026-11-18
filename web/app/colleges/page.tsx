@@ -11,43 +11,115 @@ import { BUILD_ROADMAP_HREF } from "@/lib/roadmap";
 const PAGE_SIZE = 5;
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 
+function typeColor(type: string | undefined) {
+  if (!type) return { bg: "bg-[var(--brand-soft)]", text: "text-[var(--brand-ink)]" };
+  const t = type.toLowerCase();
+  if (t.includes("govt")) return { bg: "bg-teal-50 dark:bg-teal-900/30", text: "text-teal-700 dark:text-teal-300" };
+  if (t.includes("private")) return { bg: "bg-blue-50 dark:bg-blue-900/30", text: "text-blue-700 dark:text-blue-300" };
+  if (t.includes("poly")) return { bg: "bg-purple-50 dark:bg-purple-900/30", text: "text-purple-700 dark:text-purple-300" };
+  if (t.includes("gnm") || t.includes("anm") || t.includes("nurs")) return { bg: "bg-pink-50 dark:bg-pink-900/30", text: "text-pink-700 dark:text-pink-300" };
+  return { bg: "bg-[var(--brand-soft)]", text: "text-[var(--brand-ink)]" };
+}
+
+function cleanFees(fees: string | undefined): { label: string; isFree: boolean } | null {
+  if (!fees) return null;
+  if (fees.toLowerCase().startsWith("not in source")) return null;
+  const isFree = fees.toLowerCase().includes("free");
+  // strip trailing dataset annotations like "- trade list not in source"
+  const cleaned = fees.replace(/\s*[-–]\s*(trade list |info )?not in source.*$/i, "").trim();
+  return cleaned ? { label: cleaned, isFree } : null;
+}
+
+function cleanCourses(courses: string | undefined): string | null {
+  if (!courses) return null;
+  return courses.replace(/\s*[-–]\s*(trade list |info )?not in source.*$/i, "").trim() || null;
+}
+
 function CentreCard({ c, t }: { c: any; t: (k: string) => string }) {
   const [open, setOpen] = useState(false);
-  const isFree = c.fees_text?.toLowerCase().includes("free");
-  // Only show a fee badge when collapsed if it's short and meaningful
-  const showBadge = c.fees_text && (isFree || c.fees_text.length <= 20);
+  const color = typeColor(c.type);
+  const fees = cleanFees(c.fees_text);
+  const courses = cleanCourses(c.courses);
+  const distLabel = c.distance_km != null
+    ? `${c.approximate ? "~" : ""}${c.distance_km} ${t("colleges_km")}${c.approximate ? ` (${t("colleges_approx")})` : ""}`
+    : null;
+
   return (
-    <li className="rounded-xl bg-[var(--bg)] ring-1 ring-black/5 overflow-hidden">
+    <li className="rounded-2xl bg-[var(--card)] ring-1 ring-black/8 overflow-hidden shadow-sm">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center justify-between gap-2 px-3 py-3 text-left"
+        className="w-full flex items-start gap-3 px-4 py-3 text-left"
       >
+        {/* left color accent */}
+        <span className={`mt-1 h-8 w-1 shrink-0 rounded-full ${color.bg.replace("bg-", "bg-").replace("50", "400").replace("900/30", "500")}`} aria-hidden />
         <div className="min-w-0 flex-1">
-          <p className="font-semibold leading-snug truncate">{c.name}</p>
-          <p className="text-xs text-[var(--muted)] truncate">
-            {[c.type, c.taluka, c.district].filter(Boolean).join(" · ")}
-          </p>
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          {showBadge && (
-            <Badge tone={isFree ? "green" : undefined}>
-              {isFree ? t("colleges_free") : c.fees_text}
-            </Badge>
-          )}
-          <span className="text-[var(--muted)] text-xs">{open ? "▲" : "▼"}</span>
-        </div>
-      </button>
-      {open && (
-        <div className="px-3 pb-3 space-y-1 border-t border-black/5 pt-2">
-          <p className="text-xs text-[var(--muted)]">
-            {c.distance_km != null && (
-              <span>{c.approximate ? `~${c.distance_km}` : c.distance_km} {t("colleges_km")}{c.approximate ? ` (${t("colleges_approx")})` : ""}</span>
+          <p className="font-bold text-sm leading-snug">{c.name}</p>
+          <div className="mt-1 flex flex-wrap items-center gap-1.5">
+            {c.type && (
+              <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${color.bg} ${color.text}`}>
+                {c.type}
+              </span>
             )}
-          </p>
-          {c.fees_text && <p className="text-xs text-[var(--muted)]">💰 {c.fees_text}</p>}
-          {c.courses && <p className="text-xs text-[var(--muted)]">{c.courses}</p>}
-          {c.address && <p className="text-xs text-[var(--muted)]">{c.address}</p>}
-          {c.source && <Source url={c.source} date={c.last_checked} />}
+            {(c.taluka || c.district) && (
+              <span className="text-[11px] text-[var(--muted)]">
+                {[c.taluka, c.district].filter(Boolean).join(", ")}
+              </span>
+            )}
+          </div>
+          {!open && (
+            <div className="mt-1.5 flex flex-wrap gap-2">
+              {distLabel && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-[var(--bg)] px-2 py-0.5 text-[10px] text-[var(--muted)] ring-1 ring-black/8">
+                  📍 {distLabel}
+                </span>
+              )}
+              {fees && (
+                <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ring-1 ${fees.isFree ? "bg-green-50 text-green-700 ring-green-200 dark:bg-green-900/30 dark:text-green-300 dark:ring-green-800" : "bg-[var(--bg)] text-[var(--muted)] ring-black/8"}`}>
+                  💰 {fees.isFree ? t("colleges_free") : fees.label}
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+        <span className="mt-1 shrink-0 text-[var(--muted)] text-xs">{open ? "▲" : "▼"}</span>
+      </button>
+
+      {open && (
+        <div className="border-t border-black/6 px-4 py-3 space-y-2 bg-[var(--bg)]">
+          {distLabel && (
+            <div className="flex items-center gap-2 text-xs text-[var(--muted)]">
+              <span className="text-base">📍</span>
+              <span>{distLabel}</span>
+            </div>
+          )}
+          {fees ? (
+            <div className="flex items-center gap-2 text-xs">
+              <span className="text-base">💰</span>
+              <span className={fees.isFree ? "font-semibold text-green-700 dark:text-green-400" : "text-[var(--muted)]"}>{fees.label}</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 text-xs text-[var(--muted)]">
+              <span className="text-base">💰</span>
+              <span>Fees not listed on official site</span>
+            </div>
+          )}
+          {courses && (
+            <div className="flex items-start gap-2 text-xs text-[var(--muted)]">
+              <span className="text-base mt-0.5">🎓</span>
+              <span>{courses}</span>
+            </div>
+          )}
+          {c.address && (
+            <div className="flex items-start gap-2 text-xs text-[var(--muted)]">
+              <span className="text-base mt-0.5">🏛️</span>
+              <span>{c.address}</span>
+            </div>
+          )}
+          {c.source && (
+            <div className="pt-1">
+              <Source url={c.source} date={c.last_checked} />
+            </div>
+          )}
         </div>
       )}
     </li>
