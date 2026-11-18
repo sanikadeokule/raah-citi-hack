@@ -140,6 +140,43 @@ payment_webhook_events = Table(
 )
 
 
+exam_follows = Table(
+    "exam_follows", metadata,
+    Column("id", Integer, primary_key=True, autoincrement=True),
+    Column("user_id", Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False),
+    Column("exam_id", String(32), nullable=False),
+    Column("created_at", Integer, nullable=False),
+    UniqueConstraint("user_id", "exam_id", name="uq_exam_follows_user_exam"),
+)
+
+# one row per exam: the watcher's latest attempt at reading its official site
+exam_watch = Table(
+    "exam_watch", metadata,
+    Column("exam_id", String(32), primary_key=True, autoincrement=False),
+    Column("site", Text),
+    Column("status", String(24), nullable=False),
+    Column("detail", Text, nullable=False, server_default="''"),
+    Column("last_checked", Integer, nullable=False),
+    Column("last_success", Integer),
+    Column("baseline_at", Integer),
+    Column("last_new_at", Integer),
+)
+
+# every dated fact ever read from an official site, so each one alerts at most once
+exam_date_facts = Table(
+    "exam_date_facts", metadata,
+    Column("id", Integer, primary_key=True, autoincrement=True),
+    Column("exam_id", String(32), nullable=False),
+    Column("fact_key", String(64), nullable=False),
+    Column("kind", String(24), nullable=False),
+    Column("date", String(10), nullable=False),
+    Column("text", Text, nullable=False),
+    Column("source_url", Text),
+    Column("first_seen", Integer, nullable=False),
+    UniqueConstraint("exam_id", "fact_key", name="uq_exam_date_facts_exam_key"),
+)
+
+
 class DatabaseNotConfigured(RuntimeError):
     pass
 

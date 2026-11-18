@@ -501,5 +501,16 @@
  "notif_scheme_rec": "Your teacher recommends: {scheme}",
  "notif_enrolled": "Enrolled in {module}",
  "notif_payout": "Payout received {amount}",
- "notif_message": "Message from {from}"
+ "notif_message": "Message from {from}",
+ "notif_exam_dates": "New dates for {exam}",
+ "exam_follow": "Notify me about dates",
+ "exam_following": "Following dates",
+ "exam_follow_done": "We'll notify you when new dates are published.",
+ "exam_follow_failed": "Couldn't update that. Please try again.",
+ "exam_date_registration": "Registration",
+ "exam_date_exam": "Exam",
+ "exam_date_admit_card": "Admit card",
+ "exam_date_result": "Result",
+ "exam_date_counselling": "Counselling",
+ "exam_date_merit_list": "Merit list"
 }

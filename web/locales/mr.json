@@ -501,5 +501,16 @@
  "notif_scheme_rec": "तुमच्या शिक्षकाची शिफारस: {scheme}",
  "notif_enrolled": "{module} मध्ये नोंदणी झाली",
  "notif_payout": "पेमेंट मिळाले {amount}",
- "notif_message": "{from} कडून संदेश"
+ "notif_message": "{from} कडून संदेश",
+ "notif_exam_dates": "{exam} च्या नवीन तारखा",
+ "exam_follow": "तारखांची सूचना द्या",
+ "exam_following": "तारखा फॉलो करत आहात",
+ "exam_follow_done": "नवीन तारखा आल्यावर आम्ही तुम्हाला सूचना देऊ.",
+ "exam_follow_failed": "हे अपडेट झाले नाही. पुन्हा प्रयत्न करा.",
+ "exam_date_registration": "नोंदणी",
+ "exam_date_exam": "परीक्षा",
+ "exam_date_admit_card": "प्रवेशपत्र",
+ "exam_date_result": "निकाल",
+ "exam_date_counselling": "समुपदेशन",
+ "exam_date_merit_list": "गुणवत्ता यादी"
 }

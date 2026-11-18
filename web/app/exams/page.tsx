@@ -15,7 +15,7 @@ export default function ExamsPage() {
       <Card><p className="text-sm text-[var(--muted)]">{t("exams_intro")}</p></Card>
       <div className="space-y-2">
         {exams.map((e: any) => (
-          <div key={e.id}>
+          <div key={e.id} id={e.id} className="scroll-mt-20">
             <ExamCard e={e} />
             {usedBy(e.id).length > 0 && (
               <div className="mt-1 flex flex-wrap gap-1 px-1">

@@ -12,13 +12,23 @@ const KIND_META: Record<string, { icon: string; color: string }> = {
   payout:                { icon: "💰", color: "bg-yellow-50 border-yellow-300 dark:bg-yellow-900/20 dark:border-yellow-700" },
   mentor_message:        { icon: "💬", color: "bg-purple-50 border-purple-300 dark:bg-purple-900/20 dark:border-purple-700" },
   teacher_message:       { icon: "👩‍🏫", color: "bg-orange-50 border-orange-300 dark:bg-orange-900/20 dark:border-orange-700" },
+  exam_dates:            { icon: "📅", color: "bg-red-50 border-red-300 dark:bg-red-900/20 dark:border-red-700" },
 };
+
+// "Registration: 8 Mar 2027 · Exam: 2 May 2027"; the date is shown as written, whatever the phone's timezone
+function examDates(n: any, t: (k: string, p?: any) => string): string {
+  return (n.dates || []).map((d: any) => {
+    const when = new Date(`${d.date}T00:00:00Z`).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+    return `${t(`exam_date_${d.kind}`)}: ${when}`;
+  }).join(" · ");
+}
 
 function notifLink(n: any): string {
   if (n.kind === "scheme_recommendation") return `/eligibility/${n.scheme_id ? `?scheme=${n.scheme_id}` : ""}`;
   if (n.kind === "enrollment_confirmed") return "/learn/";
   if (n.kind === "payout") return "/money/";
   if (n.kind === "mentor_message" || n.kind === "teacher_message") return "/ask/";
+  if (n.kind === "exam_dates") return `/exams/#${n.exam_id}`;
   return "#";
 }
 
@@ -27,6 +37,7 @@ function notifTitle(n: any, t: (k: string, p?: any) => string): string {
   if (n.kind === "enrollment_confirmed") return t("notif_enrolled", { module: n.module_title || t("notif_a_module") });
   if (n.kind === "payout") return t("notif_payout", { amount: n.amount ? `₹${n.amount}` : "" });
   if (n.kind === "mentor_message" || n.kind === "teacher_message") return t("notif_message", { from: n.from || t("notif_your_teacher") });
+  if (n.kind === "exam_dates") return t("notif_exam_dates", { exam: n.exam_name || n.exam_id });
   return n.title || n.kind;
 }
 
@@ -35,6 +46,7 @@ function NotifCard({ n, onRead, t }: { n: any; onRead: (id: number) => void; t: 
   const date = new Date(n.created_at * 1000).toLocaleDateString(undefined, { day: "numeric", month: "short" });
   const href = notifLink(n);
   const title = notifTitle(n, t);
+  const body = n.kind === "exam_dates" ? examDates(n, t) : n.body;
 
   return (
     <li className={`rounded-2xl border-l-4 overflow-hidden shadow-sm ${meta.color} ${n.read ? "opacity-60" : ""}`}>
@@ -46,7 +58,7 @@ function NotifCard({ n, onRead, t }: { n: any; onRead: (id: number) => void; t: 
         <span className="mt-0.5 text-2xl shrink-0">{meta.icon}</span>
         <div className="min-w-0 flex-1">
           <p className={`text-sm leading-snug ${n.read ? "" : "font-semibold"}`}>{title}</p>
-          {n.body && <p className="mt-0.5 text-xs text-[var(--muted)] line-clamp-2">{n.body}</p>}
+          {body && <p className="mt-0.5 text-xs text-[var(--muted)] line-clamp-2">{body}</p>}
           <div className="mt-1 flex items-center gap-2">
             {n.from && <span className="text-[11px] text-[var(--muted)]">{n.from}</span>}
             <span className="text-[11px] text-[var(--muted)]">{date}</span>
