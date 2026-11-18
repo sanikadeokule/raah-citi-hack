@@ -36,6 +36,7 @@ MONTHS = {m: i for i, m in enumerate(["jan", "feb", "mar", "apr", "may", "jun", 
 _DMY_NUM = re.compile(r"\b(\d{1,2})[/.\-](\d{1,2})[/.\-](\d{4})\b")
 _DMY_TXT = re.compile(rf"\b(\d{{1,2}})(?:st|nd|rd|th)?[\s\-]+({_MONTH})\.?,?[\s\-]+(\d{{4}})\b", re.I)
 _MDY_TXT = re.compile(rf"\b({_MONTH})\.?\s+(\d{{1,2}})(?:st|nd|rd|th)?,?\s+(\d{{4}})\b", re.I)
+NOISE_RE = re.compile(r"last\s+(?:updated|modified|reviewed)|updated\s+on|visitor|copyright|©", re.I)
 MAX_LINES = 300
 KINDS = {"exam"}
 
@@ -51,13 +52,15 @@ def page_lines(markup: str) -> list[str]:
     tree = lxml_html.fromstring(markup)
     for bad in tree.xpath("//script|//style|//noscript"):
         bad.drop_tree()
-    for block in tree.iter("p", "li", "tr", "div", "br", "h1", "h2", "h3", "h4", "h5", "h6", "section", "article", "td", "th"):
+    for block in tree.iter("p", "li", "tr", "div", "br", "h1", "h2", "h3", "h4", "h5", "h6", "section", "article"):
         block.text = "\n" + (block.text or "")
         block.tail = "\n" + (block.tail or "")
+    for cell in tree.iter("td", "th"):  # cells of one row stay on one line
+        cell.tail = " " + (cell.tail or "")
     seen: dict[str, None] = {}
     for raw in tree.text_content().splitlines():
         line = re.sub(r"\s+", " ", raw).strip()
-        if 8 <= len(line) <= 300 and (DATE_RE.search(line) or KEYWORD_RE.search(line)):
+        if 8 <= len(line) <= 300 and not NOISE_RE.search(line) and (DATE_RE.search(line) or KEYWORD_RE.search(line)):
             seen.setdefault(line, None)
     return list(seen)[:MAX_LINES]
 
@@ -143,8 +146,10 @@ def _record(con, exam: dict, lines: list[str] | None, status: str, now: int, cha
     exists = con.execute("SELECT id FROM source_watch WHERE kind = 'exam' AND ref_id = ?", (exam["id"],)).fetchone()
     payload = json.dumps(lines, ensure_ascii=False) if lines is not None else None
     if exists is None:
+        if payload is None:  # a failed first read must not become an empty baseline
+            return
         con.execute("INSERT INTO source_watch (kind, ref_id, url, lines, status, last_checked, last_changed) VALUES ('exam', ?, ?, ?, ?, ?, NULL)",
-                    (exam["id"], exam["site"], payload or "[]", status, now))
+                    (exam["id"], exam["site"], payload, status, now))
     elif payload is None:
         con.execute("UPDATE source_watch SET status = ?, last_checked = ? WHERE id = ?", (status, now, exists["id"]))
     else:

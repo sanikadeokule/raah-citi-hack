@@ -101,3 +101,24 @@ def test_unrelated_notice_on_own_site_does_not_alert():
     _follow("9700000034", exam["id"])
     res = _run(exam, page("Admissions"), page("Admissions", "Drone challenge application till 20 March 2030"))
     assert res["notified"] == 0
+
+
+def test_changing_last_updated_line_is_ignored():
+    got = watcher.page_lines(page("Last updated on 18 November 2026", "Registration open"))
+    assert got == ["Registration open"]
+
+
+def test_table_row_keeps_label_and_date_together():
+    markup = "<table><tr><td>Last date to apply</td><td>28 February 2030</td></tr></table>"
+    assert watcher.page_lines(markup) == ["Last date to apply 28 February 2030"]
+
+
+def test_failed_first_read_is_not_a_baseline():
+    exam = next(e for e in dataset.get()["exams"] if e["id"] == "EX06")
+    _follow("9700000035", exam["id"])
+
+    def down(u):
+        raise RuntimeError("site down")
+    assert watcher.check_exam(exam, down)["status"] == "error"
+    res = watcher.check_exam(exam, lambda u: page("Registration last date 28 February 2030"))
+    assert res["status"] == "baseline" and res["notified"] == 0
