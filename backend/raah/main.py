@@ -28,6 +28,7 @@ from .rag import router as rag_router
 from .rag import warm as rag_warm
 from .teacher import router as teacher_router
 from .voice import router as voice_router
+from .watcher import router as watcher_router
 
 app = FastAPI(
     title="Raah API",
@@ -43,6 +44,8 @@ def _connect_database() -> None:
     """Fail at start with a clear message if PostgreSQL is not set up, instead of on the first sign-in."""
     from . import db
     db.engine()
+    from . import watcher
+    watcher.start_background()
 
 
 class Profile(BaseModel):
@@ -164,6 +167,7 @@ app.include_router(mentors_router)
 app.include_router(modules_router)
 app.include_router(partners_router)
 app.include_router(rag_router)
+app.include_router(watcher_router)
 
 if os.environ.get("RAG_WARM", "1") == "1":
     rag_warm()  # build and embed the Ask Raah index in the background

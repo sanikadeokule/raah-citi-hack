@@ -501,5 +501,9 @@
  "notif_scheme_rec": "Your teacher recommends: {scheme}",
  "notif_enrolled": "Enrolled in {module}",
  "notif_payout": "Payout received {amount}",
- "notif_message": "Message from {from}"
+ "notif_message": "Message from {from}",
+  "watch_off": "Notify me of new dates",
+  "watch_on": "You will be notified",
+  "notif_exam_update": "New dates for {exam}",
+  "notif_an_exam": "an exam"
 }
