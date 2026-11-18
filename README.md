@@ -60,7 +60,8 @@ Eligibility, costs, payback months, distances and career ranking are computed by
 | **Apprenticeships** | 31 live NAPS listings in Pune district and 17 Central Railway seat lines, searchable, with stipend and apply link. |
 | **Exams** | Every entrance test or admission round a path needs shows as a step on the plan screen, and the Exams screen lists them all with who can apply, how selection works, the fee for open and reserved categories, when to apply and the official site. All of it comes from the `Exams` sheet. |
 | **Mentors** | Mentors from the `Mentors` sheet, filtered by the student's top careers (or any career) and a distance slider. A mentor's phone number never leaves the server until the student agrees to share their first name, class and taluka with that mentor; the teacher sees who connected with whom. |
-| **Teacher modules** | Short lessons made by teachers, read aloud in the module's language, with a quiz. Free, per-module or monthly subscription; payments are simulated. |
+| **Teacher modules** | Short lessons made by teachers, read aloud in the module's language, with a quiz. Free, per-module or monthly subscription; paid enrolments use Razorpay Checkout when credentials are configured. |
+| **Student progress** | Signed-in students can see completed teacher modules, quiz scores and the published income estimate for their selected career. |
 | **Offline + sync** | Installable PWA. Dataset, profile, plan, lessons and quiz answers work offline; queued actions sync on reconnect with a "N changes synced" toast. |
 | **Delete my data** | One tap clears everything stored on the phone. |
 | **Teacher recommendations** | When a teacher recommends a scheme, the student sees it on the home screen with the plan it was for and any missing document. "Check" opens the scholarship screen with that scheme first. Cached on the phone so it still shows offline. |
@@ -92,7 +93,7 @@ Eligibility, costs, payback months, distances and career ranking are computed by
 | **Talent flags** | High quiz score with strong marks. |
 | **Recommend to all eligible** | Pick a scheme and a path, see how many students qualify (and how many still need a document), send to all in one tap. Students who signed up and saved a profile are checked with the same rules as the demo class and receive the recommendation in their app. |
 | **Module builder** | Title, language, lesson text (spoken to students), up to 10 quiz questions with the correct answer marked, and a price model: free, per module or monthly subscription. |
-| **Earnings** | The teacher's share of module sales and a fixed amount per completed enrolment, both set in the `Assumptions` sheet (`teacher_share_of_module_sales`, `payout_per_completed_enrolment`). "Pay out" sends everything unpaid as one ISO 20022 pain.001 teacher payout. |
+| **Earnings and payout history** | The teacher's share of captured module sales and a fixed amount per completed enrolment, both set in the `Assumptions` sheet (`teacher_share_of_module_sales`, `payout_per_completed_enrolment`). Payout history records each generated ISO 20022 pain.001 instruction and the enrolments it covers. |
 
 ### Money layer (sandbox)
 
@@ -340,6 +341,12 @@ NEXT_PUBLIC_API_BASE=http://localhost:8000 npm run dev    # http://localhost:300
 npm run build                                             # writes web/out, which the backend serves
 ```
 
+### Paid teacher modules (Razorpay)
+
+Copy `backend/.env.example` to `backend/.env` and set `RAZORPAY_KEY_ID` and `RAZORPAY_KEY_SECRET` from the Razorpay Dashboard's **Test Mode** first. Paid student enrolment creates an order on the server; the browser opens Razorpay Checkout; the backend validates the Checkout signature and fetches the payment to confirm the captured amount before unlocking the module. The API secret is server-only. Free modules still work without Razorpay credentials.
+
+For asynchronous confirmation, configure a Razorpay webhook at `/api/modules/razorpay/webhook`, subscribe to `payment.captured`, and set its webhook secret as `RAZORPAY_WEBHOOK_SECRET`. Use test keys and a reachable staging URL to exercise Checkout and webhooks before switching to live credentials. The teacher payout-history page persists each generated pain.001 instruction and its enrolment shares; those instructions are still sandbox records and do not themselves transfer money to a bank account.
+
 ### Voice
 
 Speech runs on the server when keys are set in `backend/.env`, so Marathi works even on phones that have no Marathi voice installed:
@@ -382,8 +389,9 @@ Interactive OpenAPI docs: <http://localhost:8000/docs>
 | `POST /api/ask` · `GET /api/ask/status` | Ask Raah: hybrid search over the spreadsheet rows and a cited, number-checked answer |
 | `POST /api/chat/explain` | Model-written match reason, checked against the dataset's numbers |
 | `POST /api/mentors/{id}/request` · `GET /api/mentors/mine` · `GET /api/mentors/requests` | Accept-to-reveal mentor contact; teacher view of connections |
-| `POST /api/modules` · `GET /api/modules/mine` · `GET /api/modules/earnings` · `POST /api/modules/earnings/payout` | Teacher module builder, earnings and pain.001 payout |
-| `GET /api/modules` · `POST /api/modules/{id}/enrol` · `POST /api/modules/{id}/complete` | Student enrolment and quiz completion |
+| `POST /api/modules`, `GET /api/modules/mine`, `GET /api/modules/earnings`, `GET /api/modules/payouts`, `POST /api/modules/earnings/payout` | Teacher module builder, earnings and payout history |
+| `GET /api/modules`, `GET /api/modules/progress`, `POST /api/modules/{id}/enrol`, `POST /api/modules/{id}/payment/verify`, `POST /api/modules/{id}/complete` | Student progress, Razorpay checkout and quiz completion |
+| `POST /api/modules/razorpay/webhook` | Captured payment webhook (signature verified) |
 | `POST /api/auth/register` · `POST /api/auth/login` | Register (name, mobile, PIN, role), then sign in with mobile + PIN to get a JWT |
 | `POST /api/auth/reset-pin` | Teacher clears a student's forgotten PIN so they can register again |
 | `GET /api/auth/notifications` · `POST /api/auth/notifications/{id}/read` | Recommendations sent to the signed-in student |

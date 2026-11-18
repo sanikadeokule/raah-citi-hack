@@ -112,8 +112,31 @@ enrolments = Table(
     Column("completed_at", Integer),
     Column("completion_payout", Float, nullable=False, server_default="0"),
     Column("payout_id", Text),
+    # Existing enrollments were only simulated; preserve access but never count them as captured revenue.
+    Column("payment_status", String(24), nullable=False, server_default="'legacy_sandbox'"),
+    Column("razorpay_order_id", String(80), unique=True),
+    Column("razorpay_payment_id", String(80), unique=True),
     Column("created_at", Integer, nullable=False),
     UniqueConstraint("module_id", "user_id", name="uq_enrolments_module_user"),
+)
+
+module_payouts = Table(
+    "module_payouts", metadata,
+    Column("id", Integer, primary_key=True, autoincrement=True),
+    Column("teacher_id", Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False),
+    Column("reference", Text, nullable=False, unique=True),
+    Column("amount", Float, nullable=False),
+    Column("status", String(24), nullable=False),
+    Column("provider", String(40), nullable=False),
+    Column("created_at", Integer, nullable=False),
+    Column("details", Text, nullable=False, server_default="{}"),
+)
+
+payment_webhook_events = Table(
+    "payment_webhook_events", metadata,
+    Column("event_id", String(100), primary_key=True),
+    Column("event", String(80), nullable=False),
+    Column("received_at", Integer, nullable=False),
 )
 
 

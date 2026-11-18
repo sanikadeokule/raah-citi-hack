@@ -8,6 +8,7 @@ import { StudentModules } from "@/components/modules";
 import { Tabs } from "@/components/tabs";
 import { getKV, setKV } from "@/lib/db";
 import { cachedAudio, fetchAudio, voiceAvailable } from "@/lib/audio";
+import Link from "next/link";
 
 export default function Learn() {
   const { data, profile, lang, t, queueAction } = useApp();
@@ -123,6 +124,7 @@ export default function Learn() {
           <div className="mt-3 rounded-xl bg-[var(--brand-soft)] p-3 text-center text-lg font-bold">{t("score")}: {score} / {qs.length}</div>
         )}
         <p className="mt-2 text-xs text-[var(--muted)]">Answers are saved on the phone and sync when you are back online.</p>
+        <Link href="/progress/" className="mt-3 inline-block text-sm font-semibold text-[var(--brand-ink)] underline">{t("progress_view_dashboard")}</Link>
       </Card>}
     </Shell>
   );

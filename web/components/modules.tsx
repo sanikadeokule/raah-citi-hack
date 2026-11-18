@@ -9,17 +9,39 @@ import { Badge, Card, SpeakButton, Stat } from "./ui";
 import { inr } from "@/lib/engine";
 import { useApp } from "@/lib/store";
 
+declare global {
+  interface Window { Razorpay?: new (options: any) => { open: () => void } }
+}
+
+function loadRazorpay(): Promise<boolean> {
+  if (window.Razorpay) return Promise.resolve(true);
+  return new Promise((resolve) => {
+    const existing = document.querySelector<HTMLScriptElement>('script[data-razorpay-checkout]');
+    const script = existing ?? document.createElement("script");
+    const done = () => resolve(Boolean(window.Razorpay));
+    script.addEventListener("load", done, { once: true });
+    script.addEventListener("error", done, { once: true });
+    if (!existing) {
+      script.src = "https://checkout.razorpay.com/v1/checkout.js";
+      script.async = true;
+      script.dataset.razorpayCheckout = "true";
+      document.body.appendChild(script);
+    }
+  });
+}
+
 const priceText = (m: any, t: any) =>
   m.price_model === "free" ? t("free") : m.price_model === "subscription" ? t("price_subscription", { p: inr(m.price) }) : t("price_module", { p: inr(m.price) });
 
 // ------------------------------------------------------------------ student
 
 export function StudentModules({ emptyText }: { emptyText?: string } = {}) {
-  const { t, authFetch, online, auth, queueAction } = useApp();
+  const { t, authFetch, online, auth, queueAction, showToast } = useApp();
   const [mods, setMods] = useState<any[]>([]);
   const [open, setOpen] = useState<number | null>(null);
   const [ans, setAns] = useState<Record<number, number>>({});
   const [result, setResult] = useState<Record<number, any>>({});
+  const [paying, setPaying] = useState<number | null>(null);
 
   const load = useCallback(() => {
     authFetch("/api/modules").then((r) => (r.ok ? r.json() : [])).then(setMods).catch(() => {});
@@ -28,8 +50,37 @@ export function StudentModules({ emptyText }: { emptyText?: string } = {}) {
 
   if (!mods.length) return emptyText ? <Card><p className="text-sm text-[var(--muted)]">{emptyText}</p></Card> : null;
   const enrol = async (m: any) => {
-    const r = await authFetch(`/api/modules/${m.id}/enrol`, { method: "POST" });
-    if (r.ok) { load(); setOpen(m.id); setAns({}); }
+    setPaying(m.id);
+    try {
+      const r = await authFetch(`/api/modules/${m.id}/enrol`, { method: "POST" });
+      const j = await r.json();
+      if (!r.ok) throw new Error(typeof j.detail === "string" ? j.detail : "Could not start enrolment");
+      if (j.enrolled) { load(); setOpen(m.id); setAns({}); return; }
+      if (!j.payment_required) throw new Error("Payment setup is incomplete");
+      if (!(await loadRazorpay()) || !window.Razorpay) throw new Error("Razorpay Checkout could not be loaded. Check your internet connection.");
+      const checkout = new window.Razorpay({
+        key: j.key_id, amount: j.order.amount, currency: j.order.currency,
+        name: j.name, description: j.description, order_id: j.order.id,
+        prefill: { name: auth?.user.name || "", contact: auth?.user.phone ? `+91${auth.user.phone}` : "" },
+        theme: { color: "#1b3a6b" },
+        handler: async (response: any) => {
+          try {
+            const verified = await authFetch(`/api/modules/${m.id}/payment/verify`, {
+              method: "POST", body: JSON.stringify({ order_id: response.razorpay_order_id,
+                payment_id: response.razorpay_payment_id, signature: response.razorpay_signature }),
+            });
+            const confirmation = await verified.json();
+            if (!verified.ok) throw new Error(typeof confirmation.detail === "string" ? confirmation.detail : "Payment verification failed");
+            showToast("Payment confirmed. Module unlocked.");
+            load(); setOpen(m.id); setAns({});
+          } catch (err) { showToast(err instanceof Error ? err.message : "Payment verification failed"); }
+        },
+        modal: { ondismiss: () => setPaying(null) },
+      });
+      checkout.open();
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Could not start enrolment");
+    } finally { setPaying(null); }
   };
   const finish = async (m: any) => {
     const answers = m.quiz.map((_: any, i: number) => ans[i] ?? -1);
@@ -56,13 +107,13 @@ export function StudentModules({ emptyText }: { emptyText?: string } = {}) {
                 <Badge tone={m.price_model === "free" ? "green" : "blue"}>{priceText(m, t)}</Badge>
               </div>
               {!m.enrolment ? (
-                <button onClick={() => enrol(m)} className="mt-2 w-full rounded-lg bg-[var(--brand)] py-2 font-semibold text-white">
-                  {m.price_model === "free" ? t("start") : `${t("enrol")} · ${priceText(m, t)}`}
+                <button onClick={() => enrol(m)} disabled={paying === m.id} className="mt-2 w-full rounded-lg bg-[var(--brand)] py-2 font-semibold text-white disabled:opacity-50">
+                  {paying === m.id ? "Connecting to Razorpay…" : m.price_model === "free" ? t("start") : `${t("enrol")} · ${priceText(m, t)}`}
                 </button>
               ) : (
                 <button onClick={() => setOpen(shown ? null : m.id)} className="mt-2 text-sm underline">{shown ? t("close") : t("open_module")}</button>
               )}
-              {m.enrolment && m.enrolment.paid > 0 && <div className="mt-1 text-xs text-[var(--muted)]">{t("paid_sandbox", { p: inr(m.enrolment.paid) })}</div>}
+              {m.enrolment && m.enrolment.paid > 0 && <div className="mt-1 text-xs text-[var(--muted)]">Paid via Razorpay · {inr(m.enrolment.paid)}</div>}
               {shown && m.enrolment && (
                 <div className="mt-2 space-y-2">
                   <p className="leading-relaxed">{m.lesson}</p>
@@ -226,6 +277,7 @@ export function TeacherModules() {
           </div>
           <p className="mt-2 text-xs text-[var(--muted)]">{t("earnings_rule", { pct: Math.round(earn.share_of_sales * 100), p: inr(earn.payout_per_completion) })}</p>
           <button onClick={payOut} disabled={earn.unpaid <= 0} className="mt-2 w-full rounded-xl bg-[var(--brand)] py-2 font-semibold text-white disabled:opacity-40">🏦 {t("pay_out")} {inr(earn.unpaid)}</button>
+          <Link href="/teacher/payouts/" className="mt-2 block text-center text-sm font-semibold text-[var(--brand-ink)] underline">View payout history →</Link>
           {payout && <p className="mt-2 text-xs">pain.001 {payout.msg_id} · {payout.validation.valid ? "✅" : "❌"} {payout.validation.method}</p>}
         </Card>
       )}
