@@ -364,6 +364,18 @@ def colleges_for_you(body: CollegesRequest):
     plans = [p for p in d["plans"] if p["career_id"] == body.career_id]
     centre_types = list({p["centre_type"] for p in plans if p.get("centre_type")})
 
+    # infer relevant centre types from career category/name when plans don't specify
+    _health_keywords = {"health", "nurs", "gnm", "anm", "medical", "hospital", "pharma", "ayurved"}
+    _career_text = (career.get("name", "") + " " + career.get("category", "") + " " + career.get("entry_path", "")).lower()
+    _is_health_career = any(k in _career_text for k in _health_keywords)
+    _health_type_keywords = {"nurs", "gnm", "anm", "hospital", "medical"}
+
+    def _relevant(c: dict) -> bool:
+        ctype = str(c.get("type", "")).lower()
+        if not _is_health_career and any(k in ctype for k in _health_type_keywords):
+            return False
+        return True
+
     # gather centres: match by any relevant centre_type, or return all if none specified
     if centre_types:
         all_centres = []
@@ -376,7 +388,8 @@ def colleges_for_you(body: CollegesRequest):
                 deduped.append(c)
         centres = deduped[:5]
     else:
-        centres = engine.nearest_centres(d, body.profile, None, 5)
+        all_near = engine.nearest_centres(d, body.profile, None, 20)
+        centres = [c for c in all_near if _relevant(c)][:5]
 
     # find online courses linked to this career
     cname_lower = career["name"].lower()
