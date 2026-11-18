@@ -1,4 +1,6 @@
 """Interested students are notified when an exam's official page gains a new dated line."""
+from datetime import date
+
 from fastapi.testclient import TestClient
 
 from raah import dataset, watcher
@@ -6,6 +8,7 @@ from raah.main import app
 
 c = TestClient(app)
 PIN = "4826"
+TODAY = date(2026, 11, 18)
 
 
 def login(phone, role="student"):
@@ -33,18 +36,18 @@ def test_new_dated_line_notifies_only_interested_students():
     assert c.put("/api/watch/interests/exam/NOPE", headers=hi).status_code == 404
 
     base = page("Registration open", "Exam date: 10 January 2027")
-    assert watcher.check_exam(exam, lambda u: base)["status"] == "baseline"
-    assert watcher.check_exam(exam, lambda u: base)["notified"] == 0
+    assert watcher.check_exam(exam, lambda u: base, today=TODAY)["status"] == "baseline"
+    assert watcher.check_exam(exam, lambda u: base, today=TODAY)["notified"] == 0
 
     fresh = page("Registration open", "Exam date: 10 January 2027", "Last date to apply: 28 February 2027")
-    res = watcher.check_exam(exam, lambda u: fresh)
+    res = watcher.check_exam(exam, lambda u: fresh, today=TODAY)
     assert res["status"] == "changed" and res["notified"] == 1
 
     inbox = c.get("/api/auth/notifications", headers=hi).json()
     assert inbox[0]["kind"] == "exam_update" and inbox[0]["exam_id"] == exam["id"] and "28 February 2027" in inbox[0]["body"]
     assert c.get("/api/auth/notifications", headers=hn).json() == []
 
-    assert watcher.check_exam(exam, lambda u: fresh)["notified"] == 0  # nothing new the second time
+    assert watcher.check_exam(exam, lambda u: fresh, today=TODAY)["notified"] == 0  # nothing new the second time
 
     def down(u):
         raise RuntimeError("site down")
