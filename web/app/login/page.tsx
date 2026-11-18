@@ -21,6 +21,28 @@ function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
+  // Handle Google OAuth callback: /login?token=...
+  useState(() => {
+    const token = sp.get("token");
+    const oauthError = sp.get("error");
+    if (oauthError) { setError(`Google sign-in failed: ${oauthError}`); return; }
+    if (token) {
+      (async () => {
+        try {
+          // fetch the user profile with the returned token
+          const r = await fetch(`${API}/api/auth/me`, { headers: { Authorization: `Bearer ${token}` } });
+          if (r.ok) {
+            const user = await r.json();
+            await signIn(token, user as AuthUser);
+            router.replace(next);
+          } else {
+            setError("Google sign-in failed, please try again");
+          }
+        } catch { setError("Google sign-in failed, please try again"); }
+      })();
+    }
+  });
+
   const switchMode = (m: Mode) => { setMode(m); setError(null); setNotice(null); setPin(""); setPin2(""); };
 
   const call = async (path: string, body: object) => {
@@ -109,6 +131,21 @@ function LoginForm() {
         className="w-full rounded-xl bg-[var(--brand)] py-3 text-lg font-semibold text-white disabled:opacity-40">
         {mode === "register" ? t("create_account") : t("sign_in")}
       </button>
+
+      <div className="flex items-center gap-2 text-xs text-[var(--muted)]">
+        <hr className="flex-1 border-[var(--muted)]/30" />or<hr className="flex-1 border-[var(--muted)]/30" />
+      </div>
+
+      <a href={`${API}/api/auth/google?role=${role}`}
+        className="flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--muted)]/30 bg-white py-3 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 active:bg-gray-100">
+        <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
+          <path fill="#4285F4" d="M44.5 20H24v8.5h11.8C34.7 33.9 29.9 37 24 37c-7.2 0-13-5.8-13-13s5.8-13 13-13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 4.1 29.6 2 24 2 11.8 2 2 11.8 2 24s9.8 22 22 22c11 0 21-8 21-22 0-1.3-.2-2.7-.5-4z"/>
+          <path fill="#34A853" d="M6.3 14.7l7 5.1C15 16.1 19.1 13 24 13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 4.1 29.6 2 24 2c-7.6 0-14.2 4.1-17.7 10.2z" transform="translate(0,1)"/>
+          <path fill="#FBBC05" d="M24 46c5.9 0 10.9-1.9 14.5-5.2l-6.7-5.5C29.7 37 27 38 24 38c-5.9 0-10.9-3.6-13.2-8.8l-7 5.4C7.9 41.7 15.3 46 24 46z" transform="translate(0,-1)"/>
+          <path fill="#EA4335" d="M44.5 20H24v8.5h11.8c-.8 2.5-2.4 4.6-4.5 6l6.7 5.5C42 36.5 45 31.1 45 24c0-1.3-.2-2.7-.5-4z" transform="translate(-0.5,0)"/>
+        </svg>
+        Sign in with Google
+      </a>
 
       {error && <p className="rounded-lg bg-rose-50 p-2 text-sm text-rose-800">{error}</p>}
 

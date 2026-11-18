@@ -44,7 +44,9 @@ users = Table(
     Column("locked_until", Integer, nullable=False, server_default="0"),
     Column("last_login_at", Integer),
     Column("created_at", Integer, nullable=False),
+    Column("google_sub", Text),
     UniqueConstraint("phone", "role", name="uq_users_phone_role"),
+    UniqueConstraint("google_sub", name="uq_users_google_sub"),
 )
 
 profiles = Table(

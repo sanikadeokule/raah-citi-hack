@@ -1,4 +1,4 @@
-"""Register and sign in with mobile number + PIN. JWT access tokens carry the role (student or teacher).
+"""Register and sign in with mobile number + PIN, or Google OAuth2.
 
 Why a PIN and not a password: most of our students and parents type on a phone
 keypad, often in Marathi or Hindi. A 4 to 6 digit PIN works the same in every
@@ -9,6 +9,9 @@ for LOCK_MINUTES after MAX_FAILED_LOGINS wrong tries, so guessing is not practic
 - Accounts live in the database from db.py (Postgres via DATABASE_URL, SQLite file otherwise).
 - Register: name + mobile + PIN (+ role). Teachers can register only from a number on RAAH_TEACHER_PHONES.
 - Sign in: mobile + PIN (+ role) returns an HS256 JWT signed with RAAH_SIGNING_KEY.
+- Google OAuth2: GET /api/auth/google → Google login page → GET /api/auth/google/callback → JWT.
+  First Google login asks the user to pick a role (student/teacher); subsequent logins are instant.
+  Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in backend/.env.
 - The token and /api/auth/me carry the registered name, so the app greets the real person.
 """
 from __future__ import annotations
@@ -18,10 +21,13 @@ import os
 import re
 import time
 
+import httpx
 import jwt
+import secrets
 from argon2 import PasswordHasher
 from argon2.exceptions import InvalidHashError, VerificationError
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.responses import RedirectResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, field_validator
 
@@ -31,6 +37,14 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 SIGNING_KEY = os.environ.get("RAAH_SIGNING_KEY", "dev-only-signing-key-change-me-in-env-file")
 TOKEN_TTL_SECONDS = int(os.environ.get("RAAH_TOKEN_TTL_DAYS", "30")) * 86400
+
+GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
+GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "")
+GOOGLE_REDIRECT_URI = os.environ.get("GOOGLE_REDIRECT_URI", "http://localhost:8000/api/auth/google/callback")
+FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:3000")
+
+# state → role mapping for Google OAuth (in-memory; fine for a single-process server)
+_oauth_states: dict[str, str] = {}
 MAX_FAILED_LOGINS = 5
 LOCK_MINUTES = 15
 ROLES = ("student", "teacher")
@@ -301,3 +315,92 @@ def delete_me(user: dict = Depends(current_user)):
             con.execute(f"DELETE FROM {t} WHERE user_id = ?", (user["id"],))
         con.execute("DELETE FROM users WHERE id = ?", (user["id"],))
     return {"deleted": True}
+
+
+# ------------------------------------------------------------------ Google OAuth2
+
+@router.get("/google")
+def google_login(role: str = Query(default="student")):
+    """Redirect the browser to Google's OAuth consent page.
+
+    The frontend links to /api/auth/google?role=student (or teacher).
+    After Google approves, it sends the browser to /api/auth/google/callback.
+    """
+    if not GOOGLE_CLIENT_ID:
+        raise HTTPException(503, "Google sign-in is not configured on this server")
+    if role not in ROLES:
+        raise HTTPException(400, "role must be student or teacher")
+    state = secrets.token_urlsafe(24)
+    _oauth_states[state] = role
+    params = {
+        "client_id": GOOGLE_CLIENT_ID,
+        "redirect_uri": GOOGLE_REDIRECT_URI,
+        "response_type": "code",
+        "scope": "openid email profile",
+        "state": state,
+        "access_type": "online",
+        "prompt": "select_account",
+    }
+    qs = "&".join(f"{k}={v}" for k, v in params.items())
+    return RedirectResponse(f"https://accounts.google.com/o/oauth2/v2/auth?{qs}")
+
+
+@router.get("/google/callback")
+def google_callback(code: str = Query(default=""), state: str = Query(default=""),
+                    error: str = Query(default="")):
+    """Google redirects here after the user signs in.
+
+    Exchanges the code for an id_token, extracts the Google subject ID, name,
+    and email, then upserts a user row and returns a JWT via a redirect to the
+    frontend so the Next.js app can store it.
+    """
+    if error:
+        return RedirectResponse(f"{FRONTEND_URL}/login?error={error}")
+    role = _oauth_states.pop(state, None)
+    if role is None:
+        return RedirectResponse(f"{FRONTEND_URL}/login?error=invalid_state")
+
+    # Exchange code for tokens
+    try:
+        resp = httpx.post("https://oauth2.googleapis.com/token", data={
+            "code": code,
+            "client_id": GOOGLE_CLIENT_ID,
+            "client_secret": GOOGLE_CLIENT_SECRET,
+            "redirect_uri": GOOGLE_REDIRECT_URI,
+            "grant_type": "authorization_code",
+        }, timeout=15)
+        resp.raise_for_status()
+        token_data = resp.json()
+    except Exception as e:
+        return RedirectResponse(f"{FRONTEND_URL}/login?error=token_exchange_failed")
+
+    # Decode the id_token (no signature check needed: we just fetched it from Google)
+    id_token = token_data.get("id_token", "")
+    try:
+        # JWT is base64url; skip verify since we obtained it directly from Google
+        claims = jwt.decode(id_token, options={"verify_signature": False})
+    except Exception:
+        return RedirectResponse(f"{FRONTEND_URL}/login?error=bad_id_token")
+
+    google_sub = claims.get("sub")
+    name = (claims.get("name") or claims.get("email", "").split("@")[0] or "Student").strip()[:60]
+    if not google_sub:
+        return RedirectResponse(f"{FRONTEND_URL}/login?error=missing_sub")
+
+    now = int(time.time())
+    with db.connect() as con:
+        row = con.execute("SELECT id, role, name FROM users WHERE google_sub = ?", (google_sub,)).fetchone()
+        if row is None:
+            # First Google login: create a new account with no phone/PIN
+            con.execute(
+                "INSERT INTO users (phone, role, name, google_sub, failed_logins, locked_until, created_at) "
+                "VALUES (?, ?, ?, ?, 0, 0, ?)",
+                ("", role, name, google_sub, now),
+            )
+            row = con.execute("SELECT id, role, name FROM users WHERE google_sub = ?", (google_sub,)).fetchone()
+        else:
+            con.execute("UPDATE users SET last_login_at = ? WHERE id = ?", (now, row["id"]))
+
+    u = {"id": row["id"], "phone": "", "role": row["role"], "name": row["name"]}
+    token = issue_token(u)
+    return RedirectResponse(f"{FRONTEND_URL}/login?token={token}&role={u['role']}")
