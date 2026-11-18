@@ -77,6 +77,29 @@ notifications = Table(
     Column("read_at", Integer),
 )
 
+interests = Table(
+    "interests", metadata,
+    Column("id", Integer, primary_key=True, autoincrement=True),
+    Column("user_id", Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False),
+    Column("kind", Text, nullable=False),
+    Column("ref_id", Text, nullable=False),
+    Column("created_at", Integer, nullable=False),
+    UniqueConstraint("user_id", "kind", "ref_id", name="uq_interests_user_kind_ref"),
+)
+
+source_watch = Table(
+    "source_watch", metadata,
+    Column("id", Integer, primary_key=True, autoincrement=True),
+    Column("kind", Text, nullable=False),
+    Column("ref_id", Text, nullable=False),
+    Column("url", Text, nullable=False),
+    Column("lines", Text, nullable=False, server_default="[]"),
+    Column("status", Text),
+    Column("last_checked", Integer),
+    Column("last_changed", Integer),
+    UniqueConstraint("kind", "ref_id", name="uq_source_watch_kind_ref"),
+)
+
 mentor_requests = Table(
     "mentor_requests", metadata,
     Column("id", Integer, primary_key=True, autoincrement=True),

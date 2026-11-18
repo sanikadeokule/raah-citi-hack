@@ -501,5 +501,9 @@
  "notif_scheme_rec": "आपके शिक्षक की सिफारिश: {scheme}",
  "notif_enrolled": "{module} में नामांकन हुआ",
  "notif_payout": "भुगतान मिला {amount}",
- "notif_message": "{from} से संदेश"
+ "notif_message": "{from} से संदेश",
+  "watch_off": "नई तारीखें बताएं",
+  "watch_on": "आपको सूचित किया जाएगा",
+  "notif_exam_update": "{exam} की नई तारीखें",
+  "notif_an_exam": "एक परीक्षा"
 }

@@ -501,5 +501,9 @@
  "notif_scheme_rec": "तुमच्या शिक्षकाची शिफारस: {scheme}",
  "notif_enrolled": "{module} मध्ये नोंदणी झाली",
  "notif_payout": "पेमेंट मिळाले {amount}",
- "notif_message": "{from} कडून संदेश"
+ "notif_message": "{from} कडून संदेश",
+  "watch_off": "नवीन तारखा कळवा",
+  "watch_on": "तुम्हाला कळवले जाईल",
+  "notif_exam_update": "{exam} साठी नवीन तारखा",
+  "notif_an_exam": "एक परीक्षा"
 }
