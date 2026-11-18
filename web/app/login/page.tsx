@@ -136,7 +136,7 @@ function LoginForm() {
         <hr className="flex-1 border-[var(--muted)]/30" />or<hr className="flex-1 border-[var(--muted)]/30" />
       </div>
 
-      <a href={`${API}/api/auth/google?role=${role}`}
+      <button type="button" onClick={() => { window.location.assign(`${API}/api/auth/google?role=${role}`); }}
         className="flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--muted)]/30 bg-white py-3 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 active:bg-gray-100">
         <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
           <path fill="#4285F4" d="M44.5 20H24v8.5h11.8C34.7 33.9 29.9 37 24 37c-7.2 0-13-5.8-13-13s5.8-13 13-13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 4.1 29.6 2 24 2 11.8 2 2 11.8 2 24s9.8 22 22 22c11 0 21-8 21-22 0-1.3-.2-2.7-.5-4z"/>
@@ -145,7 +145,7 @@ function LoginForm() {
           <path fill="#EA4335" d="M44.5 20H24v8.5h11.8c-.8 2.5-2.4 4.6-4.5 6l6.7 5.5C42 36.5 45 31.1 45 24c0-1.3-.2-2.7-.5-4z" transform="translate(-0.5,0)"/>
         </svg>
         Sign in with Google
-      </a>
+      </button>
 
       {error && <p className="rounded-lg bg-rose-50 p-2 text-sm text-rose-800">{error}</p>}
 
