@@ -12,6 +12,7 @@ import os
 import re
 import threading
 import time
+from datetime import date
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException
@@ -29,6 +30,12 @@ DATE_RE = re.compile(
 KEYWORD_RE = re.compile(
     r"registration|last date|exam date|date of exam|notification|admit card|hall ticket|result|schedule|"
     r"application|counselling|counseling|cut-?off|merit list", re.I)
+STRONG_RE = re.compile(
+    r"registration|last date|exam date|date of exam|admit card|hall ticket|counselling|counseling|cut-?off|merit list|result", re.I)
+MONTHS = {m: i for i, m in enumerate(["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"], 1)}
+_DMY_NUM = re.compile(r"\b(\d{1,2})[/.\-](\d{1,2})[/.\-](\d{4})\b")
+_DMY_TXT = re.compile(rf"\b(\d{{1,2}})(?:st|nd|rd|th)?[\s\-]+({_MONTH})\.?,?[\s\-]+(\d{{4}})\b", re.I)
+_MDY_TXT = re.compile(rf"\b({_MONTH})\.?\s+(\d{{1,2}})(?:st|nd|rd|th)?,?\s+(\d{{4}})\b", re.I)
 MAX_LINES = 300
 KINDS = {"exam"}
 
@@ -55,6 +62,50 @@ def page_lines(markup: str) -> list[str]:
     return list(seen)[:MAX_LINES]
 
 
+def dates_in(line: str) -> list[date]:
+    """Dates that name a year (day-first for numbers, as on Indian sites). Dates without a year are skipped."""
+    found = []
+    for d, m, y in _DMY_NUM.findall(line):
+        found.append((int(y), int(m), int(d)))
+    for d, m, y in _DMY_TXT.findall(line):
+        found.append((int(y), MONTHS[m[:3].lower()], int(d)))
+    for m, d, y in _MDY_TXT.findall(line):
+        found.append((int(y), MONTHS[m[:3].lower()], int(d)))
+    out = []
+    for y, m, d in found:
+        try:
+            out.append(date(y, m, d))
+        except ValueError:
+            pass
+    return out
+
+
+def is_upcoming(line: str, today: date | None = None) -> bool:
+    """False only when every date in the line that names a year is already past."""
+    ds = dates_in(line)
+    return not ds or max(ds) >= (today or date.today())
+
+
+def _tokens(text: str) -> set[str]:
+    return {t for t in re.split(r"[^a-z0-9]+", (text or "").lower()) if len(t) >= 2}
+
+
+def is_relevant(line: str, exam: dict) -> bool:
+    """A date line counts for this exam when it names the exam, or, on a site of its own, uses process words
+    such as registration or admit card. On a site shared with other exams only a line naming this exam counts."""
+    siblings = [e for e in dataset.get()["exams"] if e["id"] != exam["id"] and e.get("site") == exam.get("site")]
+    own = _tokens(exam["name"])
+    for e in siblings:
+        own -= _tokens(e["name"])
+    shared = bool(siblings)
+    line_tokens = _tokens(line)
+    if own and own & line_tokens:
+        return True
+    if shared:
+        return False
+    return bool(STRONG_RE.search(line) or (_tokens(exam["name"]) & line_tokens))
+
+
 def _watched_exams() -> list[dict]:
     """Exams at least one student asked about, with the site read from the dataset."""
     with db.connect() as con:
@@ -77,7 +128,7 @@ def check_exam(exam: dict, fetch=fetch_page) -> dict:
             _record(con, exam, lines, "baseline", now, changed=False)
             return {"exam": exam["id"], "status": "baseline", "notified": 0}
         before = set(json.loads(row["lines"]))
-        new_dated = [ln for ln in lines if ln not in before and DATE_RE.search(ln)]
+        new_dated = [ln for ln in lines if ln not in before and DATE_RE.search(ln) and is_relevant(ln, exam) and is_upcoming(ln)]
         _record(con, exam, lines, "changed" if new_dated else "unchanged", now, changed=bool(new_dated))
         users = [r["user_id"] for r in con.execute("SELECT user_id FROM interests WHERE kind = 'exam' AND ref_id = ?",
                                                     (exam["id"],)).fetchall()]
