@@ -1,8 +1,9 @@
 "use client";
 /* eslint-disable @typescript-eslint/no-explicit-any */
-// Ask Raah: free questions answered from raah-dataset.xlsx (backend/raah/rag.py).
-// Hybrid search finds the matching sheet rows, the LLM answers only from them, and every
-// fact carries a numbered citation back to the sheet row and its official source.
+// Ask Raah: free questions answered from raah-dataset.xlsx by an agent (backend/raah/agent.py).
+// The agent calls tools on the raah-data MCP server (rank careers, check eligibility, colleges, exams...),
+// and each tool call streams in as a small grey bubble while it works. Every figure in the answer must
+// come from a tool result; otherwise, or if streaming fails, the one-shot RAG answer (/api/ask) is shown.
 import { useEffect, useRef, useState } from "react";
 import { Card, MicButton, Shell, SpeakButton } from "@/components/ui";
 import { ChatInput } from "@/components/chatinput";
@@ -10,7 +11,8 @@ import { postAi } from "@/lib/ai";
 import { useApp } from "@/lib/store";
 
 type Cite = { n: number; sheet: string; row_id: string; title: string; excel_rows: number[]; source: string; summary: string };
-type Msg = { from: "me" | "raah"; text: string; cites?: Cite[]; note?: string };
+type Step = { n: number; tool: string; label: string; summary?: string; done?: boolean };
+type Msg = { from: "me" | "raah"; text: string; cites?: Cite[]; note?: string; steps?: Step[] };
 
 const EXAMPLES = ["ask_ex1", "ask_ex2", "ask_ex3"];
 
@@ -22,13 +24,56 @@ function withCites(text: string, id: number) {
   });
 }
 
+/** One tool call by the agent: a small grey bubble, "Checking eligibility…" then "✓ Checking eligibility · 3 schemes". */
+function StepBubble({ s, label }: { s: Step; label: string }) {
+  return (
+    <div className="max-w-[88%] rounded-2xl bg-black/5 px-3 py-1 text-xs text-[var(--muted)]">
+      {s.done ? "✓" : <span className="inline-block animate-pulse">⋯</span>} {label}{s.done ? "" : "…"}
+      {s.summary && <span className="opacity-80"> · {s.summary}</span>}
+    </div>
+  );
+}
+
 export default function AskPage() {
-  const { t, lang, profile, online } = useApp();
+  const { t, lang, profile, online, authFetch } = useApp();
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
+  const [live, setLive] = useState<Step[]>([]);
   const end = useRef<HTMLDivElement>(null);
-  useEffect(() => { end.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs, busy]);
+  useEffect(() => { end.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs, busy, live]);
+
+  /** Runs the agent over Server-Sent Events, showing each tool step as it happens. Null if the stream fails. */
+  const askAgent = async (body: unknown): Promise<any | null> => {
+    try {
+      const r = await authFetch("/api/agent/ask", { method: "POST", body: JSON.stringify(body), headers: { Accept: "text/event-stream" } });
+      if (!r.ok || !r.body) return null;
+      const reader = r.body.getReader();
+      const dec = new TextDecoder();
+      let buf = "", answer: any = null;
+      for (;;) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+        const parts = buf.split("\n\n");
+        buf = parts.pop() ?? "";
+        for (const part of parts) {
+          const line = part.split("\n").find((l) => l.startsWith("data: "));
+          if (!line) continue;
+          const ev = JSON.parse(line.slice(6));
+          if (ev.type === "step") setLive((s) => [...s, { n: ev.n, tool: ev.tool, label: ev.label }]);
+          else if (ev.type === "step_done") setLive((s) => s.map((x) => (x.n === ev.n ? { ...x, summary: ev.summary, done: true } : x)));
+          else if (ev.type === "answer") answer = ev;
+          else if (ev.type === "error") return null;
+        }
+      }
+      return answer;
+    } catch {
+      return null;
+    }
+  };
+
+  const stepLabel = (s: Step) => { const k = `agent_${s.tool}`; const v = t(k); return v === k ? s.label : v; };
 
   const ask = async (q: string) => {
     q = q.trim();
@@ -37,11 +82,16 @@ export default function AskPage() {
     const history = msgs.slice(-4).map((m) => ({ role: m.from === "me" ? "user" : "assistant", content: m.text }));
     setMsgs((m) => [...m, { from: "me", text: q }]);
     setBusy(true);
-    const j = await postAi("/api/ask", { question: q, lang, history, profile });
+    setLive([]);
+    const body = { question: q, lang, history, profile };
+    const j = (await askAgent(body)) ?? (await postAi("/api/ask", body));
     setBusy(false);
+    setLive([]);
     if (!j) return setMsgs((m) => [...m, { from: "raah", text: t("ask_offline") }]);
-    const note = j.fallback ? (j.grounded === false ? t("ask_note_ungrounded") : t("ask_note_no_ai")) : undefined;
-    setMsgs((m) => [...m, { from: "raah", text: j.answer, cites: j.citations, note }]);
+    const ungrounded = j.grounded === false || (j.agent_fallback ?? "").startsWith("model used a figure");
+    const note = j.fallback || ungrounded ? (ungrounded ? t("ask_note_ungrounded") : t("ask_note_no_ai")) : undefined;
+    const steps: Step[] | undefined = j.steps?.map((s: any) => ({ n: s.n, tool: s.tool, label: s.label, summary: s.summary, done: true }));
+    setMsgs((m) => [...m, { from: "raah", text: j.answer, cites: j.citations, note, steps }]);
   };
 
   return (
@@ -58,7 +108,13 @@ export default function AskPage() {
       )}
       <div className="space-y-2">
         {msgs.map((m, i) => (
-          <div key={i} className={`flex ${m.from === "me" ? "justify-end" : "justify-start"}`}>
+          <div key={i} className={`flex flex-col ${m.from === "me" ? "items-end" : "items-start"}`}>
+            {m.steps && m.steps.length > 0 && (
+              <details className="mb-1 max-w-[88%] text-xs text-[var(--muted)]">
+                <summary className="cursor-pointer select-none">🧭 {t("agent_how", { n: m.steps.length })}</summary>
+                <div className="mt-1 flex flex-col items-start gap-1">{m.steps.map((s) => <StepBubble key={s.n} s={s} label={stepLabel(s)} />)}</div>
+              </details>
+            )}
             <div className={`max-w-[88%] rounded-2xl px-3 py-2 text-sm ${m.from === "me" ? "bg-[var(--brand)] text-white" : "bg-[var(--card)] ring-1 ring-black/5"}`}>
               <div className="whitespace-pre-line">{m.from === "raah" ? withCites(m.text, i) : m.text}</div>
               {m.note && <div className="mt-1 text-xs text-[var(--muted)]">ℹ️ {m.note}</div>}
@@ -79,7 +135,12 @@ export default function AskPage() {
             </div>
           </div>
         ))}
-        {busy && <div className="text-sm text-[var(--muted)]">🔎 {t("ask_searching")}</div>}
+        {busy && (
+          <div className="flex flex-col items-start gap-1">
+            {live.map((s) => <StepBubble key={s.n} s={s} label={stepLabel(s)} />)}
+            <div className="text-sm text-[var(--muted)]">🔎 {live.length ? t("agent_thinking") : t("ask_searching")}</div>
+          </div>
+        )}
         <div ref={end} />
       </div>
       <Card className="sticky bottom-2">

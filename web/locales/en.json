@@ -502,8 +502,19 @@
  "notif_enrolled": "Enrolled in {module}",
  "notif_payout": "Payout received {amount}",
  "notif_message": "Message from {from}",
-  "watch_off": "Notify me of new dates",
-  "watch_on": "You will be notified",
-  "notif_exam_update": "New dates for {exam}",
-  "notif_an_exam": "an exam"
+ "watch_off": "Notify me of new dates",
+ "watch_on": "You will be notified",
+ "notif_exam_update": "New dates for {exam}",
+ "notif_an_exam": "an exam",
+ "agent_thinking": "Raah is working it out…",
+ "agent_how": "How Raah found this ({n} steps)",
+ "agent_search_dataset": "Searching Raah's data",
+ "agent_rank_careers": "Ranking careers",
+ "agent_compute_plan": "Working out cost and payback",
+ "agent_check_eligibility": "Checking eligibility",
+ "agent_get_scholarships": "Finding scholarships",
+ "agent_nearest_centres": "Finding training centres near you",
+ "agent_get_colleges": "Looking for colleges near you",
+ "agent_list_exams": "Checking exam dates",
+ "agent_get_notifications": "Reading your notifications"
 }

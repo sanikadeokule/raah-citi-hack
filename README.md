@@ -24,6 +24,7 @@ The pilot district is Pune.
 - [Sign-in and roles](#sign-in-and-roles)
 - [AI conversation](#ai-conversation)
 - [Ask Raah (RAG over the dataset)](#ask-raah-rag-over-the-dataset)
+- [Ask Raah agent (MCP tools)](#ask-raah-agent-mcp-tools)
 - [Architecture](#architecture)
 - [Run it locally](#run-it-locally)
 - [API](#api)
@@ -261,6 +262,36 @@ WEAVIATE_URL=http://localhost:8080
 
 If Weaviate stops answering, search falls back to the in-memory index for a minute. `GET /api/ask/status` shows the chunk count per sheet, the embedding model and whether vectors are ready.
 
+## Ask Raah agent (MCP tools)
+
+Ask Raah now reasons in steps instead of answering in one shot. Everything Raah can already work out is a tool on an **MCP server**, `raah-data` (`backend/mcp_servers/data_server.py`, built with the official `mcp` SDK). On start the backend launches it as a child process over stdio and keeps one session open (`backend/raah/mcp_client.py`).
+
+<p align="center"><img src="docs/screenshots/agent-live.png" width="220" alt="Ask Raah showing live tool steps while it works"> <img src="docs/screenshots/agent-steps.png" width="220" alt="Answer with How Raah found this steps and citations to each tool"></p>
+
+| Tool | Wraps | Returns |
+|---|---|---|
+| `search_dataset(query, k)` | the hybrid RAG search | matching sheet rows with source link |
+| `rank_careers(profile, n)` | `engine.rank_careers` | top careers, score breakdown, why |
+| `compute_plan(profile, plan_id or career, hostel)` | `engine.compute_plan` | cost, scholarship cover, net cost, payback month |
+| `check_eligibility(profile, scheme_id?, career?)` | `engine.eligibility` | rule-by-rule result, missing documents and where to get them |
+| `get_scholarships(profile)` | `engine.eligibility` | eligible / need documents / need info |
+| `nearest_centres(profile, centre_type)` | `engine.nearest_centres` | nearest centres with distance |
+| `get_colleges(profile, career?)` | Colleges For You matching | centres and online courses for a career |
+| `list_exams(career?)` | Exams sheet + exam date watcher | dates, timing, fees, official site, last check |
+| `get_notifications(user_id)` | notifications table | the signed-in student's alerts |
+
+**The loop** (`backend/raah/agent.py`, `POST /api/agent/ask`): system prompt + student profile + question + tool list go to the LLM (`llm.chat_tools`, the OpenAI `tools` field, which OpenAI, Groq and Ollama accept). When the model asks for a tool, the backend calls it through MCP and sends the result back, up to **6 rounds**, then the model answers and cites each tool result as `[n]`. Each step streams to the page as a Server-Sent Event, so the student sees grey bubbles such as "Checking eligibility · 8 schemes" while Raah works, and afterwards a "How Raah found this" list above the answer.
+
+**Data still decides.** The student's profile and account id are filled in by the server, never by the model, so it cannot read another student's notifications. Every number in the answer must appear in some tool result, the question or the profile; if not, the one-shot RAG answer (`/api/ask`) is shown instead. Fallbacks keep it working: a model without function calling (Sarvam) plans in JSON (`{"tool": ..., "args": ...}`); with no model at all, a fixed tool chain picked from the question's words runs and the matching dataset rows are shown; if streaming fails, the page calls `/api/ask`. Every run is saved in `agent_runs` (`GET /api/agent/runs`), and `GET /api/mcp/status` shows the server, transport and tools.
+
+The same server works with any MCP client. For Claude Desktop, add to its config:
+
+```json
+{"mcpServers": {"raah-data": {"command": "python", "args": ["-m", "mcp_servers.data_server"], "cwd": "<path to>/raah-citi-hack/backend"}}}
+```
+
+`RAAH_MCP_TRANSPORT=memory` runs the same server and protocol in-process (no child process), useful if a laptop policy blocks it; the backend also falls back to that on its own.
+
 ## Architecture
 
 ```
@@ -373,6 +404,8 @@ Interactive OpenAPI docs: <http://localhost:8000/docs>
 | `POST /api/plan` | Cost & payback for `{profile, plan_id, options}` |
 | `POST /api/eligibility` | Rule-by-rule results for a profile, optionally for a plan |
 | `POST /api/careers` | Top-N careers with score breakdown and reason |
+| `POST /api/agent/ask` | Agentic Ask Raah: tool steps and the answer as Server-Sent Events |
+| `GET /api/agent/runs` · `GET /api/mcp/status` | Agent audit log (teacher: all, student: own) · MCP server and tools |
 | `POST /api/centres` | Nearest centres of a type |
 | `GET /api/voice/status`, `POST /api/voice/tts`, `/api/voice/asr` | Speech through BHASHINI, then Sarvam |
 | `GET /api/teacher/class` | Class with risk and talent flags |
@@ -416,10 +449,14 @@ backend/
     auth.py         register and sign in with mobile + PIN, JWT roles, profiles
     db.py           PostgreSQL schema and connection (DATABASE_URL)
     rag.py          Ask Raah: row chunks, hybrid BM25 + vector search, cited answers
+    agent.py        Ask Raah agent: tool-calling loop (6 steps), SSE steps, grounding, run log
+    mcp_client.py   starts the raah-data MCP server (stdio) and calls its tools
     voice.py        speech: BHASHINI, then Sarvam (ASR / TTS)
     teacher.py      synthetic class, dropout model, bulk recommend
     money.py        pain.001, Account Aggregator mock, skills passport
     partners.py     OAuth2 partner endpoints
+  mcp_servers/
+    data_server.py  raah-data MCP server: careers, plans, eligibility, colleges, exams, notifications
   scripts/add_app_sheets.py
   scripts/add_income_detail.py
   scripts/serve_https.py   https for phones (Cloudflare tunnel or self-signed LAN)
@@ -457,6 +494,7 @@ Tests never use the app's `DATABASE_URL`. Without `TEST_DATABASE_URL` they run o
 
 - `test_parity.py`: Python and TypeScript engines agree on 105 scenarios (3 students × 7 plans × 5 what-if settings), including eligibility and ranking.
 - `test_auth.py`: register then sign in, registered name in the token and `/me`, Argon2 PIN hashing, duplicate and weak-PIN rejection, wrong-PIN countdown and lockout, teacher PIN reset, upgrading an old account, teacher allowlist, role checks on teacher and money endpoints, consent ownership, profile sync and account deletion.
+- `test_agent.py`: the MCP server lists all tools over the real protocol, tools return dataset figures, profile and user id never come from the model, the loop streams steps and cites tool results, an invented figure falls back to RAG, the 6-step limit, the JSON planner, the no-model workflow, notifications only for the signed-in student, the audit log.
 - `test_rag.py`: one chunk per row with path, row and source; tables kept whole in documents; exact codes found; hybrid search; Marathi questions without a model; re-index after a spreadsheet edit; citations; invented numbers rejected; Weaviate path and its fallback.
 - `test_data_driven.py`: edits a copy of the spreadsheet (income limit, course fee, income, occupation earnings, assumption) and checks the eligibility, cost, payback and cached data change accordingly.
 

@@ -502,8 +502,19 @@
  "notif_enrolled": "{module} मध्ये नोंदणी झाली",
  "notif_payout": "पेमेंट मिळाले {amount}",
  "notif_message": "{from} कडून संदेश",
-  "watch_off": "नवीन तारखा कळवा",
-  "watch_on": "तुम्हाला कळवले जाईल",
-  "notif_exam_update": "{exam} साठी नवीन तारखा",
-  "notif_an_exam": "एक परीक्षा"
+ "watch_off": "नवीन तारखा कळवा",
+ "watch_on": "तुम्हाला कळवले जाईल",
+ "notif_exam_update": "{exam} साठी नवीन तारखा",
+ "notif_an_exam": "एक परीक्षा",
+ "agent_thinking": "Raah उत्तर शोधत आहे…",
+ "agent_how": "Raah ने हे कसे शोधले ({n} पायऱ्या)",
+ "agent_search_dataset": "Raah चा डेटा शोधत आहे",
+ "agent_rank_careers": "करिअरची यादी बनवत आहे",
+ "agent_compute_plan": "खर्च आणि परतफेडीचा हिशोब",
+ "agent_check_eligibility": "पात्रता तपासत आहे",
+ "agent_get_scholarships": "शिष्यवृत्ती शोधत आहे",
+ "agent_nearest_centres": "जवळची प्रशिक्षण केंद्रे शोधत आहे",
+ "agent_get_colleges": "जवळची कॉलेज शोधत आहे",
+ "agent_list_exams": "परीक्षेच्या तारखा पाहत आहे",
+ "agent_get_notifications": "तुमच्या सूचना वाचत आहे"
 }
