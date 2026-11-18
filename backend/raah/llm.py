@@ -1,9 +1,10 @@
 """Thin client for open-source LLMs behind OpenAI-compatible chat APIs.
 
-Providers are tried in the order given by LLM_PROVIDERS (default "ollama,groq"):
-  ollama  local Ollama server  (OLLAMA_URL, OLLAMA_MODEL; default gemma4:12b)
-  groq    Groq cloud, Llama    (GROQ_API_KEY, GROQ_MODEL; default llama-3.3-70b-versatile)
-  sarvam  Sarvam AI, Sarvam-M  (SARVAM_API_KEY, SARVAM_MODEL; default sarvam-m)
+Providers are tried in the order given by LLM_PROVIDERS (default "openai,groq"):
+  openai  OpenAI cloud          (OPENAI_API_KEY, OPENAI_MODEL; default gpt-4o-mini)
+  ollama  local Ollama server   (OLLAMA_URL, OLLAMA_MODEL; default gemma4:12b)
+  groq    Groq cloud, Llama     (GROQ_API_KEY, GROQ_MODEL; default llama-3.3-70b-versatile)
+  sarvam  Sarvam AI, Sarvam-M   (SARVAM_API_KEY, SARVAM_MODEL; default sarvam-m)
 If none answers, callers fall back to the scripted flow and template sentences.
 """
 from __future__ import annotations
@@ -22,8 +23,12 @@ class LLMUnavailable(RuntimeError):
 
 def _providers() -> list[dict]:
     out = []
-    for name in [p.strip() for p in os.environ.get("LLM_PROVIDERS", "ollama,groq").split(",") if p.strip()]:
-        if name == "ollama":
+    for name in [p.strip() for p in os.environ.get("LLM_PROVIDERS", "openai,groq").split(",") if p.strip()]:
+        if name == "openai" and os.environ.get("OPENAI_API_KEY"):
+            out.append({"name": "openai", "url": "https://api.openai.com/v1/chat/completions",
+                        "model": os.environ.get("OPENAI_MODEL", "gpt-4o-mini"),
+                        "headers": {"Authorization": f"Bearer {os.environ['OPENAI_API_KEY']}"}, "timeout": 30})
+        elif name == "ollama":
             out.append({"name": "ollama", "url": os.environ.get("OLLAMA_URL", "http://localhost:11434").rstrip("/") + "/v1/chat/completions",
                         "model": os.environ.get("OLLAMA_MODEL", "gemma4:12b"), "headers": {}, "timeout": 120})
         elif name == "groq" and os.environ.get("GROQ_API_KEY"):
