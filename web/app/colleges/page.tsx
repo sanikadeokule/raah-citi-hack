@@ -14,15 +14,22 @@ const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 function CentreCard({ c, t }: { c: any; t: (k: string) => string }) {
   const [open, setOpen] = useState(false);
   const isFree = c.fees_text?.toLowerCase().includes("free");
+  // Only show a fee badge when collapsed if it's short and meaningful
+  const showBadge = c.fees_text && (isFree || c.fees_text.length <= 20);
   return (
     <li className="rounded-xl bg-[var(--bg)] ring-1 ring-black/5 overflow-hidden">
       <button
         onClick={() => setOpen((v) => !v)}
         className="w-full flex items-center justify-between gap-2 px-3 py-3 text-left"
       >
-        <span className="font-semibold leading-snug flex-1 min-w-0 truncate">{c.name}</span>
+        <div className="min-w-0 flex-1">
+          <p className="font-semibold leading-snug truncate">{c.name}</p>
+          <p className="text-xs text-[var(--muted)] truncate">
+            {[c.type, c.taluka, c.district].filter(Boolean).join(" · ")}
+          </p>
+        </div>
         <div className="flex items-center gap-2 shrink-0">
-          {c.fees_text && (
+          {showBadge && (
             <Badge tone={isFree ? "green" : undefined}>
               {isFree ? t("colleges_free") : c.fees_text}
             </Badge>
@@ -33,11 +40,11 @@ function CentreCard({ c, t }: { c: any; t: (k: string) => string }) {
       {open && (
         <div className="px-3 pb-3 space-y-1 border-t border-black/5 pt-2">
           <p className="text-xs text-[var(--muted)]">
-            {[c.type, c.taluka, c.district].filter(Boolean).join(" · ")}
             {c.distance_km != null && (
-              <span> · {c.approximate ? `~${c.distance_km}` : c.distance_km} {t("colleges_km")}{c.approximate ? ` (${t("colleges_approx")})` : ""}</span>
+              <span>{c.approximate ? `~${c.distance_km}` : c.distance_km} {t("colleges_km")}{c.approximate ? ` (${t("colleges_approx")})` : ""}</span>
             )}
           </p>
+          {c.fees_text && <p className="text-xs text-[var(--muted)]">💰 {c.fees_text}</p>}
           {c.courses && <p className="text-xs text-[var(--muted)]">{c.courses}</p>}
           {c.address && <p className="text-xs text-[var(--muted)]">{c.address}</p>}
           {c.source && <Source url={c.source} date={c.last_checked} />}
