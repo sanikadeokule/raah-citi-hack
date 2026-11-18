@@ -487,5 +487,19 @@
  "elig_changed_short": "ही योजना {n} निकाल बदलते",
  "learn_tab_lessons": "धडे",
  "learn_tab_modules": "शिक्षक",
- "learn_no_modules": "अजून शिक्षकांचे कोणतेही मॉड्यूल नाही. शिक्षकांनी प्रकाशित केल्यावर ते इथे दिसेल."
+ "learn_no_modules": "अजून शिक्षकांचे कोणतेही मॉड्यूल नाही. शिक्षकांनी प्रकाशित केल्यावर ते इथे दिसेल.",
+ "home_notifications": "सूचना",
+ "notif_title": "सूचना",
+ "notif_empty": "अद्याप कोणत्याही सूचना नाहीत.",
+ "notif_login": "सूचना पाहण्यासाठी साइन इन करा.",
+ "notif_new": "नवीन",
+ "notif_earlier": "आधीचे",
+ "notif_mark_all_read": "सर्व वाचले म्हणून चिन्हांकित करा",
+ "notif_a_scheme": "एक योजना",
+ "notif_a_module": "एक मॉड्युल",
+ "notif_your_teacher": "तुमचे शिक्षक",
+ "notif_scheme_rec": "तुमच्या शिक्षकाची शिफारस: {scheme}",
+ "notif_enrolled": "{module} मध्ये नोंदणी झाली",
+ "notif_payout": "पेमेंट मिळाले {amount}",
+ "notif_message": "{from} कडून संदेश"
 }

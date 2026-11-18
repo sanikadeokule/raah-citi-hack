@@ -487,5 +487,19 @@
  "elig_changed_short": "This plan changes {n} results",
  "learn_tab_lessons": "Lessons",
  "learn_tab_modules": "Teachers",
- "learn_no_modules": "No modules from teachers yet. When a teacher publishes one, it will appear here."
+ "learn_no_modules": "No modules from teachers yet. When a teacher publishes one, it will appear here.",
+ "home_notifications": "Alerts",
+ "notif_title": "Notifications",
+ "notif_empty": "You have no notifications yet.",
+ "notif_login": "Sign in to see your notifications.",
+ "notif_new": "New",
+ "notif_earlier": "Earlier",
+ "notif_mark_all_read": "Mark all read",
+ "notif_a_scheme": "a scheme",
+ "notif_a_module": "a module",
+ "notif_your_teacher": "Your teacher",
+ "notif_scheme_rec": "Your teacher recommends: {scheme}",
+ "notif_enrolled": "Enrolled in {module}",
+ "notif_payout": "Payout received {amount}",
+ "notif_message": "Message from {from}"
 }

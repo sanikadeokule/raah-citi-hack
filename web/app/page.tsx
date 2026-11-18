@@ -17,6 +17,7 @@ const TILES = [
   { href: "/opportunity/", icon: "🛠️", key: "home_opportunity" },
   { href: "/eligibility/", icon: "📋", key: "home_eligibility" },
   { href: "/compare/", icon: "⚖️", key: "home_compare" },
+  { href: "/notifications/", icon: "🔔", key: "home_notifications" },
 ];
 const STUDENT_TILES = [...TILES, { href: "/progress/", icon: "📈", key: "home_progress" }];
 const STAFF = [
