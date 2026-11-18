@@ -1,7 +1,13 @@
 "use client";
+// Three tabs: For you (alerts sent to this student: notices from official sites that match their roadmap or
+// scholarships, plus teacher/mentor messages, payouts ...), Deadlines (official notices with a last date ahead)
+// and All updates (every notice Raah read from the official sites).
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { fromNotification, NoticeCard, SourcesFooter, useNotices } from "@/components/notices";
+import { Pager, usePaged } from "@/components/pager";
+import { Tabs } from "@/components/tabs";
 import { Card, Shell } from "@/components/ui";
 import { getKV, setKV } from "@/lib/db";
 import { useApp } from "@/lib/store";
@@ -61,10 +67,22 @@ function NotifCard({ n, onRead, t }: { n: any; onRead: (id: number) => void; t: 
   );
 }
 
+type Tab = "for_you" | "deadlines" | "all";
+
 export default function NotificationsPage() {
   const { t, auth, authFetch, online } = useApp();
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [tab, setTabState] = useState<Tab>("for_you");
+  useEffect(() => {
+    try { const v = sessionStorage.getItem("notif_tab"); if (v === "deadlines" || v === "all") setTabState(v); } catch {}
+  }, []);
+  const setTab = (v: Tab) => { setTabState(v); try { sessionStorage.setItem("notif_tab", v); } catch {} };
+
+  // matched notices (with checked translations and teacher verification) to enrich the "notice" alerts
+  const mine = useNotices("for_you", true);
+  const deadlines = useNotices("deadlines", tab === "deadlines");
+  const all = useNotices("all", tab === "all");
 
   useEffect(() => {
     if (!auth) return;
@@ -94,6 +112,12 @@ export default function NotificationsPage() {
     unread.forEach((n) => markRead(n.id));
   };
 
+  const byNotice = new Map(mine.items.map((x: any) => [x.id, x]));
+  const renderItem = (n: any) => n.kind === "notice"
+    ? <NoticeCard key={n.id} n={{ ...fromNotification(n), ...(byNotice.get(n.notice_id) ?? {}) }} unread={!n.read}
+        onOpen={() => !n.read && markRead(n.id)} />
+    : <NotifCard key={n.id} n={n} onRead={markRead} t={t} />;
+
   if (!auth) {
     return (
       <Shell title={t("notif_title")}>
@@ -105,43 +129,76 @@ export default function NotificationsPage() {
     );
   }
 
+  const list = tab === "deadlines" ? deadlines : all;
+  return (
+    <NotificationsView {...{ tab, setTab, unread, read, items, loading, markAllRead, renderItem, mine, list }} />
+  );
+}
+
+const PAGE = 8;
+
+function NotificationsView({ tab, setTab, unread, read, items, loading, markAllRead, renderItem, mine, list }: {
+  tab: Tab; setTab: (v: Tab) => void; unread: any[]; read: any[]; items: any[]; loading: boolean; markAllRead: () => void;
+  renderItem: (n: any) => React.ReactNode; mine: ReturnType<typeof useNotices>; list: ReturnType<typeof useNotices>;
+}) {
+  const { t } = useApp();
+  const pg = usePaged(list.items, PAGE, tab);
   return (
     <Shell title={t("notif_title")}>
-      {loading && items.length === 0 && (
-        <p className="text-sm text-[var(--muted)] animate-pulse px-1">{t("loading")}</p>
-      )}
+      <Tabs<Tab> value={tab} onChange={setTab} tabs={[
+        { key: "for_you", label: t("notices_tab_for_you"), count: unread.length || undefined },
+        { key: "deadlines", label: t("notices_tab_deadlines") },
+        { key: "all", label: t("notices_tab_all") },
+      ]} />
 
-      {!loading && items.length === 0 && (
-        <Card className="text-center py-10 space-y-2">
-          <p className="text-4xl">🔔</p>
-          <p className="text-sm text-[var(--muted)]">{t("notif_empty")}</p>
-        </Card>
-      )}
+      {tab === "for_you" && (<>
+        {loading && items.length === 0 && (
+          <p className="text-sm text-[var(--muted)] animate-pulse px-1">{t("loading")}</p>
+        )}
 
-      {unread.length > 0 && (
-        <div className="space-y-2">
-          <div className="flex items-center justify-between px-1">
-            <p className="text-xs font-semibold text-[var(--muted)] uppercase tracking-wide">
-              {t("notif_new")} · {unread.length}
-            </p>
-            <button onClick={markAllRead} className="text-xs font-semibold text-[var(--brand)]">
-              {t("notif_mark_all_read")}
-            </button>
+        {!loading && items.length === 0 && (
+          <Card className="text-center py-10 space-y-2">
+            <p className="text-4xl">🔔</p>
+            <p className="text-sm text-[var(--muted)]">{t("notices_empty_for_you")}</p>
+          </Card>
+        )}
+
+        {unread.length > 0 && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between px-1">
+              <p className="text-xs font-semibold text-[var(--muted)] uppercase tracking-wide">
+                {t("notif_new")} · {unread.length}
+              </p>
+              <button onClick={markAllRead} className="text-xs font-semibold text-[var(--brand)]">
+                {t("notif_mark_all_read")}
+              </button>
+            </div>
+            <ul className="space-y-2">{unread.map(renderItem)}</ul>
           </div>
-          <ul className="space-y-2">
-            {unread.map((n) => <NotifCard key={n.id} n={n} onRead={markRead} t={t} />)}
-          </ul>
-        </div>
-      )}
+        )}
 
-      {read.length > 0 && (
-        <div className="space-y-2">
-          <p className="px-1 text-xs font-semibold text-[var(--muted)] uppercase tracking-wide">{t("notif_earlier")}</p>
-          <ul className="space-y-2">
-            {read.map((n) => <NotifCard key={n.id} n={n} onRead={markRead} t={t} />)}
-          </ul>
-        </div>
-      )}
+        {read.length > 0 && (
+          <div className="space-y-2">
+            <p className="px-1 text-xs font-semibold text-[var(--muted)] uppercase tracking-wide">{t("notif_earlier")}</p>
+            <ul className="space-y-2">{read.map(renderItem)}</ul>
+          </div>
+        )}
+        <SourcesFooter sources={mine.sources} lastChecked={mine.last_checked} />
+      </>)}
+
+      {tab !== "for_you" && (<>
+        {!list.loaded && <p className="text-sm text-[var(--muted)] animate-pulse px-1">{t("loading")}</p>}
+        {list.loaded && list.items.length === 0 && (
+          <Card className="text-center py-10 space-y-2">
+            <p className="text-4xl">{tab === "deadlines" ? "⏰" : "📰"}</p>
+            <p className="text-sm text-[var(--muted)]">{t(tab === "deadlines" ? "notices_empty_deadlines" : "notices_empty_all")}</p>
+          </Card>
+        )}
+        <div ref={pg.top} />
+        {list.items.length > 0 && <ul className="space-y-2">{pg.pageItems.map((n: any) => <NoticeCard key={n.id} n={n} />)}</ul>}
+        <Pager {...pg} shown={pg.pageItems.length} />
+        <SourcesFooter sources={list.sources} lastChecked={list.last_checked} />
+      </>)}
     </Shell>
   );
 }

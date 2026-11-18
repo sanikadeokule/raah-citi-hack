@@ -1,20 +1,24 @@
 """MCP client for the Ask Raah agent.
 
-At startup the backend launches the raah-data MCP server (backend/mcp_servers/data_server.py) as a child
-process over stdio, keeps one session open, and lists its tools once. agent.py then calls
-`tools()` and `call(name, args)`; both are plain synchronous functions, because the session lives on its
-own asyncio loop in a background thread.
+At startup the backend launches Raah's MCP servers as child processes over stdio, keeps one session open to
+each, and lists their tools once:
+  raah-data     backend/mcp_servers/data_server.py     the verified dataset + engine (careers, costs, schemes ...)
+  raah-notices  backend/mcp_servers/notices_server.py  live notices from official sites (NTA, CET Cell, MahaDBT ...)
+agent.py then calls `tools()` (every server's tools together) and `call(name, args)` (sent to the server that
+has that tool); both are plain synchronous functions, because each session lives on its own asyncio loop in a
+background thread.
 
-RAAH_MCP_TRANSPORT picks how the server is reached:
-  stdio   (default) a real child process, exactly how Claude Desktop or any MCP client would run it
-  memory  the same server and MCP protocol over in-memory streams (no child process; used by the tests)
+RAAH_MCP_TRANSPORT picks how the servers are reached:
+  stdio   (default) real child processes, exactly how Claude Desktop or any MCP client would run them
+  memory  the same servers and MCP protocol over in-memory streams (no child process; used by the tests)
   direct  no MCP at all, the tool functions are called in-process (only if the mcp package is missing)
 If stdio cannot start (for example a laptop policy blocks the child process), memory is tried, then direct,
-so Ask Raah keeps working.
+so Ask Raah keeps working. Each server falls back on its own.
 """
 from __future__ import annotations
 
 import asyncio
+import importlib
 import inspect
 import json
 import os
@@ -27,9 +31,13 @@ from pathlib import Path
 BACKEND = Path(__file__).resolve().parents[1]
 CALL_TIMEOUT = float(os.environ.get("RAAH_MCP_TIMEOUT", "40"))
 
+# (server name, python module); the module has build_server() and TOOLS
+SERVERS = [("raah-data", "mcp_servers.data_server"), ("raah-notices", "mcp_servers.notices_server")]
 
-class _State:
-    def __init__(self):
+
+class _Server:
+    def __init__(self, name: str, module: str):
+        self.name, self.module = name, module
         self.lock = threading.Lock()
         self.loop: asyncio.AbstractEventLoop | None = None
         self.session = None
@@ -41,66 +49,118 @@ class _State:
         self.started_at: float | None = None
         self.calls = 0
 
+    # -------------------------------------------------------------- connecting
 
-_s = _State()
+    async def _serve(self, transport: str, ready: threading.Event) -> None:
+        from mcp import ClientSession
+
+        self.stop = asyncio.Event()
+        if transport == "stdio":
+            from mcp.client.stdio import StdioServerParameters, stdio_client
+
+            params = StdioServerParameters(command=sys.executable, args=["-m", self.module],
+                                           env={**os.environ, "RAG_WARM": "0", "PYTHONIOENCODING": "utf-8"}, cwd=str(BACKEND))
+            async with stdio_client(params) as (read, write):
+                async with ClientSession(read, write) as session:
+                    await session.initialize()
+                    await self._ready(session, transport, ready)
+        else:
+            from mcp.shared.memory import create_connected_server_and_client_session
+
+            build_server = importlib.import_module(self.module).build_server
+            async with create_connected_server_and_client_session(build_server()) as session:
+                await self._ready(session, transport, ready)
+
+    async def _ready(self, session, transport: str, ready: threading.Event) -> None:
+        listed = await session.list_tools()
+        self.session, self.tools, self.transport, self.error = session, [_tool_dict(t) for t in listed.tools], transport, None
+        self.started_at = time.time()
+        ready.set()
+        await self.stop.wait()
+
+    def _run_thread(self, transport: str, ready: threading.Event) -> None:
+        loop = asyncio.new_event_loop()
+        self.loop = loop
+        try:
+            loop.run_until_complete(self._serve(transport, ready))
+        except BaseException as e:  # noqa: BLE001 - reported through status()
+            self.error = f"{transport}: {type(e).__name__} {str(e)[:160]}"
+        finally:
+            self.session = None
+            ready.set()
+            loop.close()
+
+    def _try(self, transport: str, wait: float) -> bool:
+        ready = threading.Event()
+        t = threading.Thread(target=self._run_thread, args=(transport, ready), name=f"mcp-{self.name}-{transport}", daemon=True)
+        t.start()
+        ready.wait(wait)
+        if self.session is not None:
+            self.thread = t
+            return True
+        return False
+
+    def start(self, wait: float = 20) -> str:
+        with self.lock:
+            if self.transport and (self.transport == "direct" or self.session is not None):
+                return self.transport
+            want = os.environ.get("RAAH_MCP_TRANSPORT", "stdio").strip().lower()
+            order = {"stdio": ["stdio", "memory"], "memory": ["memory"], "direct": []}.get(want, ["stdio", "memory"])
+            errors = []
+            for transport in order:
+                try:
+                    import mcp  # noqa: F401
+                except ImportError:
+                    errors.append("mcp package not installed (pip install -r requirements.txt)")
+                    break
+                if self._try(transport, wait):
+                    return transport
+                errors.append(self.error or f"{transport}: did not start in {wait:.0f}s")
+            self.tools, self.transport, self.started_at = _direct_tools(self.module), "direct", time.time()
+            self.error = "; ".join(errors) or None
+            return "direct"
+
+    def stop_session(self) -> None:
+        if self.loop and self.stop and self.session is not None:
+            self.loop.call_soon_threadsafe(self.stop.set)
+            if self.thread:
+                self.thread.join(5)
+        self.session, self.transport, self.tools = None, None, []
+
+    # -------------------------------------------------------------- calling
+
+    def call(self, name: str, args: dict) -> dict:
+        self.calls += 1
+        if self.transport == "direct" or self.session is None:
+            fn = next((f for f in importlib.import_module(self.module).TOOLS if f.__name__ == name), None)
+            if fn is None:
+                return {"error": f"unknown tool {name}"}
+            try:
+                return fn(**args)
+            except Exception as e:  # noqa: BLE001
+                return {"error": f"{type(e).__name__}: {str(e)[:200]}"}
+        try:
+            fut = asyncio.run_coroutine_threadsafe(self.session.call_tool(name, args), self.loop)
+            res = fut.result(CALL_TIMEOUT)
+        except Exception as e:  # noqa: BLE001
+            return {"error": f"{type(e).__name__}: {str(e)[:200]}"}
+        out = _parse(res)
+        if getattr(res, "isError", False):
+            return {"error": out.get("text") if isinstance(out, dict) else str(out)}
+        return out
+
+    def status(self) -> dict:
+        return {"server": self.name, "transport": self.transport,
+                "connected": self.transport == "direct" or self.session is not None,
+                "tools": [t["name"] for t in self.tools], "calls": self.calls, "error": self.error,
+                "since": int(self.started_at) if self.started_at else None}
+
+
+_servers = [_Server(n, m) for n, m in SERVERS]
 
 
 def _tool_dict(t) -> dict:
     return {"name": t.name, "description": t.description or "", "input_schema": t.inputSchema or {"type": "object"}}
-
-
-async def _serve(transport: str, ready: threading.Event) -> None:
-    from mcp import ClientSession
-
-    _s.stop = asyncio.Event()
-    if transport == "stdio":
-        from mcp.client.stdio import StdioServerParameters, stdio_client
-
-        params = StdioServerParameters(command=sys.executable, args=["-m", "mcp_servers.data_server"],
-                                       env={**os.environ, "RAG_WARM": "0", "PYTHONIOENCODING": "utf-8"}, cwd=str(BACKEND))
-        async with stdio_client(params) as (read, write):
-            async with ClientSession(read, write) as session:
-                await session.initialize()
-                await _ready(session, transport, ready)
-    else:
-        from mcp.shared.memory import create_connected_server_and_client_session
-
-        from mcp_servers.data_server import build_server
-
-        async with create_connected_server_and_client_session(build_server()) as session:
-            await _ready(session, transport, ready)
-
-
-async def _ready(session, transport: str, ready: threading.Event) -> None:
-    listed = await session.list_tools()
-    _s.session, _s.tools, _s.transport, _s.error = session, [_tool_dict(t) for t in listed.tools], transport, None
-    _s.started_at = time.time()
-    ready.set()
-    await _s.stop.wait()
-
-
-def _run_thread(transport: str, ready: threading.Event) -> None:
-    loop = asyncio.new_event_loop()
-    _s.loop = loop
-    try:
-        loop.run_until_complete(_serve(transport, ready))
-    except BaseException as e:  # noqa: BLE001 - reported through status()
-        _s.error = f"{transport}: {type(e).__name__} {str(e)[:160]}"
-    finally:
-        _s.session = None
-        ready.set()
-        loop.close()
-
-
-def _try(transport: str, wait: float) -> bool:
-    ready = threading.Event()
-    t = threading.Thread(target=_run_thread, args=(transport, ready), name=f"mcp-{transport}", daemon=True)
-    t.start()
-    ready.wait(wait)
-    if _s.session is not None:
-        _s.thread = t
-        return True
-    return False
 
 
 # ------------------------------------------------------------------ direct fallback (no mcp package)
@@ -120,11 +180,9 @@ def _json_type(ann) -> dict:
     return {"type": "string"}
 
 
-def _direct_tools() -> list[dict]:
-    from mcp_servers.data_server import TOOLS
-
+def _direct_tools(module: str) -> list[dict]:
     out = []
-    for fn in TOOLS:
+    for fn in importlib.import_module(module).TOOLS:
         hints = typing.get_type_hints(fn)
         props, required = {}, []
         for name, prm in inspect.signature(fn).parameters.items():
@@ -134,47 +192,6 @@ def _direct_tools() -> list[dict]:
         out.append({"name": fn.__name__, "description": fn.__doc__ or "",
                     "input_schema": {"type": "object", "properties": props, "required": required}})
     return out
-
-
-# ------------------------------------------------------------------ public API
-
-def start(wait: float = 20) -> str:
-    """Connect once (idempotent). Returns the transport in use."""
-    with _s.lock:
-        if _s.transport and (_s.transport == "direct" or _s.session is not None):
-            return _s.transport
-        want = os.environ.get("RAAH_MCP_TRANSPORT", "stdio").strip().lower()
-        order = {"stdio": ["stdio", "memory"], "memory": ["memory"], "direct": []}.get(want, ["stdio", "memory"])
-        errors = []
-        for transport in order:
-            try:
-                import mcp  # noqa: F401
-            except ImportError:
-                errors.append("mcp package not installed (pip install -r requirements.txt)")
-                break
-            if _try(transport, wait):
-                return transport
-            errors.append(_s.error or f"{transport}: did not start in {wait:.0f}s")
-        _s.tools, _s.transport, _s.started_at = _direct_tools(), "direct", time.time()
-        _s.error = "; ".join(errors) or None
-        return "direct"
-
-
-def start_background() -> None:
-    threading.Thread(target=start, name="mcp-connect", daemon=True).start()
-
-
-def stop() -> None:
-    if _s.loop and _s.stop and _s.session is not None:
-        _s.loop.call_soon_threadsafe(_s.stop.set)
-        if _s.thread:
-            _s.thread.join(5)
-    _s.session, _s.transport, _s.tools = None, None, []
-
-
-def tools() -> list[dict]:
-    start()
-    return list(_s.tools)
 
 
 def _parse(result) -> dict:
@@ -188,32 +205,46 @@ def _parse(result) -> dict:
         return {"text": text}
 
 
-def call(name: str, args: dict) -> dict:
-    """Call one tool. Errors come back as {"error": ...} so the agent can tell the model and carry on."""
-    start()
-    _s.calls += 1
-    if _s.transport == "direct" or _s.session is None:
-        from mcp_servers.data_server import TOOLS
+# ------------------------------------------------------------------ public API
 
-        fn = next((f for f in TOOLS if f.__name__ == name), None)
-        if fn is None:
-            return {"error": f"unknown tool {name}"}
-        try:
-            return fn(**args)
-        except Exception as e:  # noqa: BLE001
-            return {"error": f"{type(e).__name__}: {str(e)[:200]}"}
-    try:
-        fut = asyncio.run_coroutine_threadsafe(_s.session.call_tool(name, args), _s.loop)
-        res = fut.result(CALL_TIMEOUT)
-    except Exception as e:  # noqa: BLE001
-        return {"error": f"{type(e).__name__}: {str(e)[:200]}"}
-    out = _parse(res)
-    if getattr(res, "isError", False):
-        return {"error": out.get("text") if isinstance(out, dict) else str(out)}
+def start(wait: float = 20) -> str:
+    """Connect every server once (idempotent). Returns raah-data's transport."""
+    modes = [s.start(wait) for s in _servers]
+    return modes[0]
+
+
+def start_background() -> None:
+    threading.Thread(target=start, name="mcp-connect", daemon=True).start()
+
+
+def stop() -> None:
+    for s in _servers:
+        s.stop_session()
+
+
+def tools() -> list[dict]:
+    """Every server's tools; a name two servers share goes to the first one."""
+    start()
+    out, seen = [], set()
+    for s in _servers:
+        for t in s.tools:
+            if t["name"] not in seen:
+                seen.add(t["name"])
+                out.append({**t, "server": s.name})
     return out
 
 
+def call(name: str, args: dict) -> dict:
+    """Call one tool on the server that has it. Errors come back as {"error": ...} so the agent can carry on."""
+    start()
+    for s in _servers:
+        if any(t["name"] == name for t in s.tools):
+            return s.call(name, args)
+    return {"error": f"unknown tool {name}"}
+
+
 def status() -> dict:
-    return {"server": "raah-data", "transport": _s.transport, "connected": _s.transport == "direct" or _s.session is not None,
-            "tools": [t["name"] for t in _s.tools], "calls": _s.calls, "error": _s.error,
-            "since": int(_s.started_at) if _s.started_at else None}
+    """raah-data's status at the top level (as before), every server under "servers"."""
+    each = [s.status() for s in _servers]
+    return {**each[0], "tools": [t for st in each for t in st["tools"]], "calls": sum(st["calls"] for st in each),
+            "connected": all(st["connected"] for st in each), "servers": each}

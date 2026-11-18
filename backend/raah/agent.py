@@ -40,7 +40,8 @@ INJECTED = ("profile", "user_id")
 
 def labels() -> dict:
     from mcp_servers.data_server import LABELS
-    return LABELS
+    from mcp_servers.notices_server import LABELS as NOTICE_LABELS
+    return {**LABELS, **NOTICE_LABELS}
 
 
 # ------------------------------------------------------------------ tool specs for the model
@@ -68,6 +69,8 @@ def system_prompt(lang: str, profile: dict, signed_in: bool) -> str:
             "You have tools over Raah's verified dataset. Before answering anything about careers, costs, scholarships, "
             "colleges, training centres or exams, call the tools you need (one or several, in any order); for any other "
             "fact use search_dataset. The student's profile is passed to every tool automatically.\n"
+            "For news, new dates, deadlines or updates from official sites (NTA, JEE, NEET, CET Cell, MahaDBT) use "
+            "latest_notices, and read_notice to open one notice; give the official link.\n"
             f"Use at most {MAX_STEPS} rounds of tool calls, then answer.\n"
             "Each tool result is numbered [1], [2]... in the order you called them. After each fact write the number "
             "of the result it came from, like [2].\n"
@@ -87,7 +90,7 @@ def _short(result: dict) -> str:
     if result.get("error"):
         return "no match"
     for key, word in (("careers", "careers"), ("schemes", "schemes"), ("centres", "centres"), ("exams", "exams"),
-                      ("rows", "rows"), ("notifications", "notifications")):
+                      ("rows", "rows"), ("notifications", "notifications"), ("notices", "notices"), ("dates", "dates")):
         if isinstance(result.get(key), list):
             n = len(result[key])
             names = [x.get("name") or x.get("title") for x in result[key][:2] if isinstance(x, dict)]
@@ -133,6 +136,7 @@ FIXED = [  # (words in the question, tool, args)
     (r"cost|fee|payback|afford|खर्च|फी|शुल्क", "compute_plan", {}),
     (r"career|job|करिअर|करियर|नोकरी|नौकरी|work|become", "rank_careers", {"n": 5}),
     (r"notification|alert|सूचना|update", "get_notifications", {}),
+    (r"notice|news|latest|deadline|last date|update|परिपत्रक|अंतिम तारीख|शेवटची तारीख|ताज्या|नवीनतम", "latest_notices", {}),
 ]
 
 

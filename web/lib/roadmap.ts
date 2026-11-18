@@ -5,8 +5,9 @@
 export const ROADMAP_HREF = "/roadmap/";
 export const BUILD_ROADMAP_HREF = "/discover/";
 
-/** Pages a student can open before a roadmap exists: the steps that build it, plus sign-in and data sources. */
-const OPEN_BEFORE_ROADMAP = ["/", "/discover/", "/roadmap/", "/careers/", "/profile/", "/ask/", "/login/", "/data/"];
+/** Pages a student can open before a roadmap exists: the steps that build it, sign-in, data sources, and
+ *  notifications (official scholarship and exam notices matter even before a roadmap is chosen). */
+const OPEN_BEFORE_ROADMAP = ["/", "/discover/", "/roadmap/", "/careers/", "/profile/", "/ask/", "/login/", "/data/", "/notifications/"];
 
 export function hasRoadmap(profile: any, role?: string | null) {
   if (role === "teacher") return true; // teachers use every tool and preview students

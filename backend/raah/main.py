@@ -24,6 +24,7 @@ from .embed import router as embed_router
 from .mentors import router as mentors_router
 from .modules import router as modules_router
 from .money import router as money_router
+from .notices import router as notices_router
 from .partners import router as partners_router
 from .rag import router as rag_router
 from .rag import warm as rag_warm
@@ -48,7 +49,9 @@ def _connect_database() -> None:
     from . import watcher
     watcher.start_background()
     if os.environ.get("RAAH_TESTING") != "1":
-        mcp_client.start_background()  # launch the raah-data MCP server for the Ask Raah agent
+        from . import notices
+        notices.start_background()  # read official notices (NTA, CET Cell, MahaDBT ...) every 6 hours
+        mcp_client.start_background()  # launch the raah-data and raah-notices MCP servers for the Ask Raah agent
 
 
 @app.on_event("shutdown")
@@ -172,6 +175,7 @@ app.include_router(embed_router)
 app.include_router(voice_router)
 app.include_router(teacher_router)
 app.include_router(money_router)
+app.include_router(notices_router)
 app.include_router(mentors_router)
 app.include_router(modules_router)
 app.include_router(partners_router)
