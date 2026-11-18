@@ -342,3 +342,74 @@ def explain(body: Explain):
     if not text or not grounded(text, context):
         return {"fallback": True, "text": s["why"], "reason": "model added a figure not in the data"}
     return {"fallback": False, "provider": provider, "text": text}
+
+
+# ------------------------------------------------------------------ colleges for you
+
+class CollegesRequest(BaseModel):
+    profile: dict
+    career_id: str
+    lang: str = "en"
+
+
+@router.post("/colleges")
+def colleges_for_you(body: CollegesRequest):
+    """Return nearest training centres + online courses for the student's career, with AI why-lines."""
+    d = dataset.get()
+    career = next((c for c in d["careers"] if c["id"] == body.career_id), None)
+    if not career:
+        return {"centres": [], "courses": [], "fallback": True}
+
+    # find all plans for this career to get centre_types
+    plans = [p for p in d["plans"] if p["career_id"] == body.career_id]
+    centre_types = list({p["centre_type"] for p in plans if p.get("centre_type")})
+
+    # gather centres: match by any relevant centre_type, or return all if none specified
+    if centre_types:
+        all_centres = []
+        for ct in centre_types:
+            all_centres.extend(engine.nearest_centres(d, body.profile, ct, 5))
+        seen, deduped = set(), []
+        for c in sorted(all_centres, key=lambda x: (x["distance_km"] is None, x["distance_km"] or 0)):
+            if c["id"] not in seen:
+                seen.add(c["id"])
+                deduped.append(c)
+        centres = deduped[:5]
+    else:
+        centres = engine.nearest_centres(d, body.profile, None, 5)
+
+    # find online courses linked to this career
+    cname_lower = career["name"].lower()
+    courses = [c for c in d["courses"] if cname_lower in str(c.get("career_text") or "").lower()
+               or body.career_id in str(c.get("career_text") or "")][:6]
+
+    # generate a single AI summary for the whole recommendation
+    student_facts = {
+        "student_name": body.profile.get("name"),
+        "career": career["name"], "category": career["category"],
+        "entry_path": career["entry_path"], "minimum_qualification": career["min_qualification"],
+        "student_class": body.profile.get("class"), "student_taluka": body.profile.get("taluka"),
+        "student_category": body.profile.get("category"),
+        "centres_found": [{"name": c["name"], "type": c["type"], "taluka": c.get("taluka"),
+                           "distance_km": c.get("distance_km"), "fees_text": c.get("fees_text")} for c in centres[:3]],
+        "online_courses_found": [{"title": c["title"], "platform": c["platform"], "fee_text": c.get("fee_text")} for c in courses[:3]],
+    }
+    context = json.dumps(student_facts, ensure_ascii=False)
+    msgs = [
+        {"role": "system", "content": f"You help rural students in {LANG_NAME.get(body.lang, 'English')} find training for their chosen career. "
+         "Write 2-3 short encouraging sentences introducing these options to the student. "
+         "Mention the career name and 1-2 specific centre names or courses from the data. "
+         "Use ONLY the facts given. No numbers that are not in the facts. No greetings, no lists."},
+        {"role": "user", "content": context},
+    ]
+    summary = None
+    provider = None
+    try:
+        text, provider = llm.chat(msgs, temperature=0.4, max_tokens=200)
+        text = text.strip().strip('"')
+        if text and grounded(text, context):
+            summary = text
+    except llm.LLMUnavailable:
+        pass
+
+    return {"centres": centres, "courses": courses, "summary": summary, "provider": provider, "fallback": summary is None}

@@ -12,10 +12,10 @@ import { BUILD_ROADMAP_HREF, hasRoadmap } from "@/lib/roadmap";
 const TILES = [
   { href: "/discover/", icon: "🗣️", key: "home_discover" },
   { href: "/careers/", icon: "🧭", key: "home_careers" },
+  { href: "/colleges/", icon: "🎓", key: "home_colleges" },
   { href: "/learn/", icon: "🎧", key: "home_learn" },
   { href: "/opportunity/", icon: "🛠️", key: "home_opportunity" },
-  { href: "/eligibility/", icon: "🎓", key: "home_eligibility" },
-  { href: "/compare/", icon: "⚖️", key: "home_compare" },
+  { href: "/eligibility/", icon: "📋", key: "home_eligibility" },
 ];
 const STAFF = [
   { href: "/exams/", icon: "📝", key: "home_exams" },
