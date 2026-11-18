@@ -5,6 +5,7 @@ import { Badge, Card, Shell, Stat } from "@/components/ui";
 import { useApp } from "@/lib/store";
 import { getKV, setKV } from "@/lib/db";
 import { MentorRequests, TeacherModules } from "@/components/modules";
+import { TeacherNotices } from "@/components/notices";
 
 /** A student forgot their PIN: clear it so they can register again with the same number. */
 function ResetStudentPin() {
@@ -38,12 +39,15 @@ export default function Teacher() {
   const [planId, setPlanId] = useState("PLN01");
   const [eligible, setEligible] = useState<any>(null);
   const [filter, setFilter] = useState<"all" | "risk" | "talent">("all");
-  const [tab, setTabState] = useState<"students" | "modules">("students");
+  const [tab, setTabState] = useState<"students" | "modules" | "notices">("students");
   // remember the open tab when the teacher goes to another screen and comes back
   useEffect(() => {
-    try { if (sessionStorage.getItem("teacher_tab") === "modules") setTabState("modules"); } catch {}
+    try {
+      const v = sessionStorage.getItem("teacher_tab");
+      if (v === "modules" || v === "notices") setTabState(v);
+    } catch {}
   }, []);
-  const setTab = (v: "students" | "modules") => {
+  const setTab = (v: "students" | "modules" | "notices") => {
     setTabState(v);
     try { sessionStorage.setItem("teacher_tab", v); } catch {}
   };
@@ -73,15 +77,15 @@ export default function Teacher() {
         <Stat label={t("risk")} value={String(st.filter((s: any) => s.risk_level === "high").length)} tone="text-[var(--bad)]" />
         <Stat label={t("talent")} value={String(st.filter((s: any) => s.talent).length)} tone="text-[var(--good)]" />
       </div>
-      <div role="tablist" className="grid grid-cols-2 gap-1 rounded-xl bg-[var(--card)] p-1 ring-1 ring-black/5">
-        {([["students", `👥 ${t("students")}`], ["modules", `📚 ${t("my_modules")}`]] as const).map(([k, label]) => (
+      <div role="tablist" className="grid grid-cols-3 gap-1 rounded-xl bg-[var(--card)] p-1 ring-1 ring-black/5">
+        {([["students", `👥 ${t("students")}`], ["modules", `📚 ${t("my_modules")}`], ["notices", `🛰️ ${t("teacher_tab_notices")}`]] as const).map(([k, label]) => (
           <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)}
             className={`rounded-lg py-2 text-sm font-semibold ${tab === k ? "bg-[var(--brand)] text-white" : "text-[var(--muted)]"}`}>
             {label}
           </button>
         ))}
       </div>
-      {tab === "modules" ? <TeacherModules /> : (<>
+      {tab === "modules" ? <TeacherModules /> : tab === "notices" ? <TeacherNotices /> : (<>
       <Card>
         <h2 className="font-bold">📣 {t("recommend_all")}</h2>
         <div className="mt-2 grid gap-2">

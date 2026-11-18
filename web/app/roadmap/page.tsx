@@ -30,7 +30,7 @@ function duration(t: any, months: number) {
 }
 
 function RoadmapView() {
-  const { data, profile, setProfile, t, lang } = useApp();
+  const { data, profile, setProfile, t, lang, queueAction } = useApp();
   const qs = useSearchParams();
   const top = useMemo(() => (data && profile ? rankCareers(data, profile, 5) : []), [data, profile]);
   const careerId = qs.get("career") || profile?.roadmap_career || top[0]?.career.id;
@@ -213,7 +213,12 @@ function RoadmapView() {
           <div className="mt-3 rounded-xl bg-[var(--brand-soft)] p-3 text-center text-sm font-semibold text-[var(--brand-ink)]">🏁 {t("rm_finish", { y: year0 + Math.ceil(tot.months_to_job / 12) })}</div>
         </Card>
 
-        <button onClick={() => setProfile({ ...profile, roadmap_career: careerId, roadmap_at: new Date().toISOString() })}
+        <button onClick={() => {
+          // also sent to the server, so alerts (official notices for this roadmap's exams) reach the student
+          const next = { ...profile, roadmap_career: careerId, roadmap_at: new Date().toISOString() };
+          setProfile(next);
+          queueAction("profile", next);
+        }}
           disabled={isMine}
           className={`w-full rounded-xl py-3 font-semibold ${isMine ? "bg-emerald-100 text-emerald-900" : "bg-[var(--brand)] text-white"}`}>
           {isMine ? `✓ ${t("rm_saved")}` : `⭐ ${t("rm_make_mine")}`}

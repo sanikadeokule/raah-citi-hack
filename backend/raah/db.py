@@ -178,6 +178,42 @@ agent_runs = Table(
 )
 
 
+# notices read from official sites (NTA, CET Cell, MahaDBT ...) by raah/notices.py. The title, link and
+# published date are kept exactly as the site shows them; exams/schemes/dates are worked out from that text.
+notices = Table(
+    "notices", metadata,
+    Column("id", Integer, primary_key=True, autoincrement=True),
+    Column("source", String(32), nullable=False),
+    Column("hash", String(64), nullable=False, unique=True),
+    Column("title", Text, nullable=False),
+    Column("url", Text, nullable=False),
+    Column("published", String(10)),  # YYYY-MM-DD, or YYYY-MM when only the upload month is known
+    Column("category", String(24)),
+    Column("exams", Text, nullable=False, server_default="[]"),
+    Column("schemes", Text, nullable=False, server_default="[]"),
+    Column("dates", Text, nullable=False, server_default="[]"),
+    Column("deadline", String(10)),
+    Column("summary", Text),  # {"en": ..., "hi": ..., "mr": ...} one-line translations of the title, when an AI was available
+    Column("fresh", Integer, nullable=False, server_default="0"),  # 1 = new enough to send to students
+    Column("first_seen", Integer, nullable=False),
+    Column("verified_at", Integer),
+    Column("verified_by", Integer, ForeignKey("users.id", ondelete="SET NULL")),
+    Column("hidden", Integer, nullable=False, server_default="0"),
+)
+
+# which student was sent which notice, and why ("your roadmap needs MHT-CET"); also stops repeats
+user_notices = Table(
+    "user_notices", metadata,
+    Column("id", Integer, primary_key=True, autoincrement=True),
+    Column("user_id", Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False),
+    Column("notice_id", Integer, ForeignKey("notices.id", ondelete="CASCADE"), nullable=False),
+    Column("why", String(16), nullable=False),
+    Column("ref", Text),
+    Column("created_at", Integer, nullable=False),
+    UniqueConstraint("user_id", "notice_id", name="uq_user_notices_user_notice"),
+)
+
+
 class DatabaseNotConfigured(RuntimeError):
     pass
 
