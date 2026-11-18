@@ -85,3 +85,40 @@ def parse_json(text: str) -> dict:
     if not m:
         raise ValueError("no JSON object in model output")
     return json.loads(m.group(0))
+
+
+class ToolsUnsupported(LLMUnavailable):
+    """No configured provider could take an OpenAI `tools` request; the agent then uses its JSON planner."""
+
+
+# Sarvam's chat API has no function calling; every other provider here accepts the OpenAI `tools` field
+NO_TOOLS = {"sarvam"}
+
+
+def chat_tools(messages: list[dict], tools: list[dict], temperature: float = 0.2, max_tokens: int = 700) -> tuple[dict, str]:
+    """One tool-calling turn. `tools` are OpenAI function specs. Returns (assistant message, provider name):
+    the message has "content" and, when the model wants tools, "tool_calls" ([{id, function: {name, arguments}}])."""
+    errors, tried = [], 0
+    for p in _providers():
+        if p["name"] in NO_TOOLS or time.time() - _down.get(p["name"], 0) < DOWN_SECONDS:
+            continue
+        tried += 1
+        body = {"model": p["model"], "messages": messages, "temperature": temperature, "max_tokens": max_tokens,
+                "tools": tools, "tool_choice": "auto"}
+        if p["name"] == "ollama":
+            body["reasoning_effort"] = "none"
+            body["max_tokens"] = max(max_tokens, 2000)
+        try:
+            r = httpx.post(p["url"], json=body, headers=p["headers"], timeout=p["timeout"] + 15)
+            r.raise_for_status()
+            msg = r.json()["choices"][0]["message"]
+            msg["content"] = re.sub(r"<think>.*?</think>", "", msg.get("content") or "", flags=re.S).strip()
+            if not msg["content"] and not msg.get("tool_calls"):
+                raise ValueError("empty answer")
+            return msg, p["name"]
+        except Exception as e:
+            _down[p["name"]] = time.time()
+            errors.append(f"{p['name']}: {type(e).__name__} {str(e)[:80]}".strip())
+    if not tried:
+        raise ToolsUnsupported("no provider with tool calling is configured or up")
+    raise ToolsUnsupported("; ".join(errors))

@@ -352,16 +352,14 @@ class CollegesRequest(BaseModel):
     lang: str = "en"
 
 
-@router.post("/colleges")
-def colleges_for_you(body: CollegesRequest):
-    """Return nearest training centres + online courses for the student's career, with AI why-lines."""
-    d = dataset.get()
-    career = next((c for c in d["careers"] if c["id"] == body.career_id), None)
+def find_colleges(d: dict, profile: dict, career_id: str) -> dict | None:
+    """Nearest training centres and online courses for one career (shared with the MCP get_colleges tool)."""
+    career = next((c for c in d["careers"] if c["id"] == career_id), None)
     if not career:
-        return {"centres": [], "courses": [], "fallback": True}
+        return None
 
     # find all plans for this career to get centre_types
-    plans = [p for p in d["plans"] if p["career_id"] == body.career_id]
+    plans = [p for p in d["plans"] if p["career_id"] == career_id]
     centre_types = list({p["centre_type"] for p in plans if p.get("centre_type")})
 
     # infer relevant centre types from career category/name when plans don't specify
@@ -380,7 +378,7 @@ def colleges_for_you(body: CollegesRequest):
     if centre_types:
         all_centres = []
         for ct in centre_types:
-            all_centres.extend(engine.nearest_centres(d, body.profile, ct, 5))
+            all_centres.extend(engine.nearest_centres(d, profile, ct, 5))
         seen, deduped = set(), []
         for c in sorted(all_centres, key=lambda x: (x["distance_km"] is None, x["distance_km"] or 0)):
             if c["id"] not in seen:
@@ -388,13 +386,25 @@ def colleges_for_you(body: CollegesRequest):
                 deduped.append(c)
         centres = deduped[:5]
     else:
-        all_near = engine.nearest_centres(d, body.profile, None, 20)
+        all_near = engine.nearest_centres(d, profile, None, 20)
         centres = [c for c in all_near if _relevant(c)][:5]
 
     # find online courses linked to this career
     cname_lower = career["name"].lower()
     courses = [c for c in d["courses"] if cname_lower in str(c.get("career_text") or "").lower()
-               or body.career_id in str(c.get("career_text") or "")][:6]
+               or career_id in str(c.get("career_text") or "")][:6]
+
+    return {"career": career, "centres": centres, "courses": courses}
+
+
+@router.post("/colleges")
+def colleges_for_you(body: CollegesRequest):
+    """Return nearest training centres + online courses for the student's career, with AI why-lines."""
+    d = dataset.get()
+    found = find_colleges(d, body.profile, body.career_id)
+    if not found:
+        return {"centres": [], "courses": [], "fallback": True}
+    career, centres, courses = found["career"], found["centres"], found["courses"]
 
     # generate a single AI summary for the whole recommendation
     student_facts = {

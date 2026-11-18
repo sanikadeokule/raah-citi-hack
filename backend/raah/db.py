@@ -163,6 +163,21 @@ payment_webhook_events = Table(
 )
 
 
+agent_runs = Table(
+    "agent_runs", metadata,
+    Column("id", Integer, primary_key=True, autoincrement=True),
+    Column("user_id", Integer, ForeignKey("users.id", ondelete="SET NULL")),
+    Column("question", Text, nullable=False),
+    Column("mode", String(16), nullable=False),
+    Column("provider", String(32)),
+    Column("steps", Text, nullable=False, server_default="[]"),
+    Column("answer", Text),
+    Column("grounded", Integer),
+    Column("ms", Integer),
+    Column("created_at", Integer, nullable=False),
+)
+
+
 class DatabaseNotConfigured(RuntimeError):
     pass
 

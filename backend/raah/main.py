@@ -15,7 +15,8 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from . import dataset, engine
+from . import dataset, engine, mcp_client
+from .agent import router as agent_router
 from .auth import current_user, log_sync, save_profile
 from .auth import router as auth_router
 from .chat import router as chat_router
@@ -46,6 +47,13 @@ def _connect_database() -> None:
     db.engine()
     from . import watcher
     watcher.start_background()
+    if os.environ.get("RAAH_TESTING") != "1":
+        mcp_client.start_background()  # launch the raah-data MCP server for the Ask Raah agent
+
+
+@app.on_event("shutdown")
+def _stop_mcp() -> None:
+    mcp_client.stop()
 
 
 class Profile(BaseModel):
@@ -158,6 +166,7 @@ def sync(items: list[dict], user: dict = Depends(current_user)):
 
 
 app.include_router(auth_router)
+app.include_router(agent_router)
 app.include_router(chat_router)
 app.include_router(embed_router)
 app.include_router(voice_router)
