@@ -99,7 +99,7 @@ def test_marathi_question_finds_rows_without_any_model(monkeypatch):
     r = c.post("/api/ask", json={"question": "मुलींसाठी वसतिगृह शिष्यवृत्ती", "lang": "mr"}).json()
     assert r["found"] and r["fallback"]
     assert any(x["sheet"] == "Scholarships" for x in r["citations"])
-    assert r["answer"].startswith("Raah च्या")
+    assert r["answer"].startswith("राह च्या")
 
 
 def test_reindexes_when_spreadsheet_changes(monkeypatch, tmp_path):
