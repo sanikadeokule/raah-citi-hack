@@ -22,7 +22,7 @@ from .auth import router as auth_router
 from .chat import router as chat_router
 from .embed import router as embed_router
 from .mentors import router as mentors_router
-from .modules import router as modules_router
+from .modules import router as modules_router, seed_test_demo_module
 from .money import router as money_router
 from .notices import router as notices_router
 from .partners import router as partners_router
@@ -48,6 +48,7 @@ def _connect_database() -> None:
     """Fail at start with a clear message if PostgreSQL is not set up, instead of on the first sign-in."""
     from . import db
     db.engine()
+    seed_test_demo_module()
     from . import watcher
     watcher.start_background()
     from . import guardian

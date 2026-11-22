@@ -376,6 +376,8 @@ npm run build                                             # writes web/out, whic
 
 Copy `backend/.env.example` to `backend/.env` and set `RAZORPAY_KEY_ID` and `RAZORPAY_KEY_SECRET` from the Razorpay Dashboard's **Test Mode** first. Paid student enrolment creates an order on the server; the browser opens Razorpay Checkout; the backend validates the Checkout signature and fetches the payment to confirm the captured amount before unlocking the module. The API secret is server-only. Free modules still work without Razorpay credentials.
 
+When the backend starts with a Test Mode key (`RAZORPAY_KEY_ID` beginning with `rzp_test_`), it idempotently publishes a ₹1 sample module so students can try the checkout flow. This sample is seeded into the database configured for that backend; it is not shared by Git itself. Live-mode deployments do not receive the test module.
+
 For asynchronous confirmation, configure a Razorpay webhook at `/api/modules/razorpay/webhook`, subscribe to `payment.captured`, and set its webhook secret as `RAZORPAY_WEBHOOK_SECRET`. Use test keys and a reachable staging URL to exercise Checkout and webhooks before switching to live credentials. The teacher payout-history page persists each generated pain.001 instruction and its enrolment shares; those instructions are still sandbox records and do not themselves transfer money to a bank account.
 
 ### Voice

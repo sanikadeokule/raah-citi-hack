@@ -118,6 +118,39 @@ def _row(r, with_answers=False) -> dict:
             "price_model": r["price_model"], "price": r["price"], "teacher_id": r["teacher_id"], "created_at": r["created_at"]}
 
 
+def seed_test_demo_module() -> None:
+    """Publish one demo checkout module in databases configured with Razorpay test keys."""
+    if not os.environ.get("RAZORPAY_KEY_ID", "").strip().startswith("rzp_test_"):
+        return
+
+    title = "TEST - Razorpay Checkout: Money Basics"
+    quiz = json.dumps([
+        {"q": "What is a budget for?", "options": ["Planning income and spending", "Borrowing without a plan"], "answer": 0},
+        {"q": "What is a useful saving habit?", "options": ["Save regularly", "Spend all income immediately"], "answer": 0},
+    ])
+    now = int(time.time())
+    with db.connect() as con:
+        teacher = con.execute("SELECT id FROM users WHERE phone = ? AND role = ?", ("9000000001", "teacher")).fetchone()
+        if teacher:
+            teacher_id = teacher["id"]
+        else:
+            teacher_id = con.execute(
+                "INSERT INTO users (phone, role, name, pin_hash, created_at) VALUES (?, ?, ?, NULL, ?) RETURNING id",
+                ("9000000001", "teacher", "Raah Demo Teacher", now),
+            ).scalar()
+
+        existing = con.execute("SELECT id FROM modules WHERE teacher_id = ? AND title = ?", (teacher_id, title)).fetchone()
+        if existing:
+            return
+        con.execute(
+            "INSERT INTO modules (teacher_id, title, lang, lesson, quiz, price_model, price, published, created_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?)",
+            (teacher_id, title, "en", "A short demo lesson for trying the Raah payment flow. Learn to compare needs and wants, "
+             "make a simple budget, and save a small amount regularly. This is sample content created only for testing.",
+             quiz, "per_module", 1.0, now),
+        )
+
+
 # ------------------------------------------------------------------ teacher
 
 @router.post("")
