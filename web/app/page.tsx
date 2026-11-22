@@ -157,13 +157,10 @@ export default function Home() {
 
         <ProShelf />
 
-        <div className="grid grid-cols-4 gap-2">
-          {STAFF.map((x) => (
-            <Link key={x.href} href={x.href} className="flex flex-col items-center rounded-xl bg-[var(--card)] px-1 py-2 text-center text-xs leading-tight ring-1 ring-black/5">
-              <span className="text-xl">{x.icon}</span>{t(x.key)}
-            </Link>
-          ))}
-        </div>
+        {/* Teacher (class dashboard) and Money (bank check, payouts) are staff tools; a student only needs Exams here */}
+        <Link href="/exams/" className="flex items-center justify-center gap-2 rounded-xl bg-[var(--card)] px-3 py-2.5 text-sm font-semibold ring-1 ring-black/5 active:scale-[.98]">
+          <span className="text-xl">📝</span>{t("home_exams")}
+        </Link>
         </>
       )}
     </Shell>
