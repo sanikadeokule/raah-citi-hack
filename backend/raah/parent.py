@@ -27,7 +27,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
 
-from . import db
+from . import dataset, db
 from .auth import SIGNING_KEY, current_user
 
 router = APIRouter(prefix="/api/parent", tags=["parent"])
@@ -44,6 +44,16 @@ class SetPinIn(BaseModel):
 class TokenIn(BaseModel):
     phone: str
     family_pin: str
+
+
+def _career_card(career_id):
+    """Plain facts about the chosen career, so a parent sees a name and the way in, not an id."""
+    c = next((x for x in dataset.get()["careers"] if x["id"] == career_id), None) if career_id else None
+    if c is None:
+        return None
+    return {"name": c["name"], "category": c.get("category"), "entry_path": c.get("entry_path"),
+            "min_qualification": c.get("min_qualification"), "income": c.get("income_text")}
+
 
 
 def _require_family_pin(family_pin: str) -> None:
@@ -165,6 +175,7 @@ def summary(claims: dict = Depends(_family_user)):
     return {
         "student_name": u["name"],
         "is_pro": bool(u["is_pro"]),
+        "career": _career_card(profile.get("roadmap_career")),
         "roadmap_career": profile.get("roadmap_career"),
         "roadmap_at": profile.get("roadmap_at"),
         "language": profile.get("language", "en"),

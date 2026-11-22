@@ -24,6 +24,7 @@ const T: Record<string, Record<string, string>> = {
     new_pin: "New family PIN (4–8 digits)", save_pin: "Save PIN", saving: "Saving…", pin_saved: "PIN saved!",
     remove_pin: "Remove PIN",
     for_student: "For the student — set a family PIN",
+    c_category: "Type of work", c_entry: "How to get in", c_qual: "Minimum qualification", c_income: "Expected income", chosen_on: "Chosen on",
   },
   hi: {
     title: "परिवार दृश्य", sign_in: "अभिभावक के रूप में साइन इन करें",
@@ -39,6 +40,7 @@ const T: Record<string, Record<string, string>> = {
     new_pin: "नया फैमिली PIN (4–8 अंक)", save_pin: "PIN सेव करें", saving: "सेव हो रहा है…", pin_saved: "PIN सेव हुआ!",
     remove_pin: "PIN हटाएँ",
     for_student: "छात्र के लिए — फैमिली PIN सेट करें",
+    c_category: "काम का प्रकार", c_entry: "कैसे प्रवेश करें", c_qual: "न्यूनतम योग्यता", c_income: "अपेक्षित आय", chosen_on: "चुना गया:",
   },
   mr: {
     title: "कुटुंब दृश्य", sign_in: "पालक म्हणून साइन इन करा",
@@ -54,6 +56,7 @@ const T: Record<string, Record<string, string>> = {
     new_pin: "नवीन कुटुंब PIN (4–8 अंक)", save_pin: "PIN सेव करा", saving: "सेव होत आहे…", pin_saved: "PIN सेव झाला!",
     remove_pin: "PIN काढा",
     for_student: "विद्यार्थ्यासाठी — कुटुंब PIN सेट करा",
+    c_category: "कामाचा प्रकार", c_entry: "कसा प्रवेश मिळवावा", c_qual: "किमान पात्रता", c_income: "अपेक्षित उत्पन्न", chosen_on: "निवडले:",
   },
 };
 
@@ -182,16 +185,28 @@ function Dashboard({ token, studentName, onSignOut }: { token: string; studentNa
       <Card className="!bg-gradient-to-br from-[var(--brand)] to-[#0f2547] text-white">
         <div className="text-sm text-white/70">{t("welcome")}</div>
         <div className="mt-1 text-2xl font-extrabold leading-tight">{name}</div>
-        <div className="mt-3 grid grid-cols-2 gap-2">
-          <div className="rounded-xl bg-white/10 p-2.5">
-            <div className="text-[11px] text-white/70">{t("career")}</div>
-            <div className="text-sm font-semibold leading-snug">{data.roadmap_career || t("not_set")}</div>
-          </div>
-          <div className="rounded-xl bg-white/10 p-2.5">
+        <details className="group mt-3 rounded-xl bg-white/10 p-2.5">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-2">
+            <span>
+              <span className="block text-[11px] text-white/70">{t("career")}</span>
+              <span className="block text-sm font-semibold leading-snug">{data.career?.name || t("not_set")}</span>
+            </span>
+            {data.career && <span aria-hidden className="text-lg transition-transform group-open:rotate-90">›</span>}
+          </summary>
+          {data.career && (
+            <dl className="mt-2 space-y-1.5 border-t border-white/15 pt-2 text-xs">
+              {([["category", data.career.category], ["entry", data.career.entry_path], ["qual", data.career.min_qualification], ["income", data.career.income]] as const)
+                .filter(([, v]) => v).map(([k, v]) => (
+                  <div key={k}><dt className="text-white/60">{t(`c_${k}`)}</dt><dd className="font-medium">{v}</dd></div>))}
+            </dl>
+          )}
+        </details>
+        {data.roadmap_at && (
+          <div className="mt-2 rounded-xl bg-white/10 p-2.5">
             <div className="text-[11px] text-white/70">{t("stage")}</div>
-            <div className="text-sm font-semibold">{data.roadmap_at || t("not_set")}</div>
+            <div className="text-sm font-semibold">{t("chosen_on")} {new Date(data.roadmap_at).toLocaleDateString()}</div>
           </div>
-        </div>
+        )}
       </Card>
 
       <Card>
