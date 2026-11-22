@@ -17,7 +17,7 @@ const T: Record<string, Record<string, string>> = {
     add: "Add card", add_title: "Title", add_kind: "Type", college: "College", scholarship: "Scholarship",
     save: "Save", cancel: "Cancel", notes: "Notes", deadline: "Deadline", move: "Move →",
     move_back: "← Back", delete: "Delete", empty: "No cards. Add one above, or tap seed to add from your roadmap.",
-    seed: "Seed from roadmap", seeding: "Seeding…", seeded: "{n} cards added from your roadmap.",
+    seed: "Seed from roadmap", seeding: "Seeding…", seeded: "{n} cards added from your roadmap.", seed_none: "Nothing to add yet: no scholarship matches your profile and we have no location saved for colleges. Complete My details, or add a card yourself.",
     loading: "Loading…", error: "Could not load cards.",
     no_roadmap: "Set a career goal in the app first so we can seed your tracker.",
   },
@@ -28,7 +28,7 @@ const T: Record<string, Record<string, string>> = {
     add: "कार्ड जोड़ें", add_title: "शीर्षक", add_kind: "प्रकार", college: "कॉलेज", scholarship: "छात्रवृत्ति",
     save: "सेव", cancel: "रद्द करें", notes: "नोट्स", deadline: "अंतिम तिथि", move: "आगे →",
     move_back: "← पीछे", delete: "हटाएँ", empty: "कोई कार्ड नहीं। ऊपर से जोड़ें या रोडमैप से सीड करें।",
-    seed: "रोडमैप से सीड करें", seeding: "सीड हो रहा है…", seeded: "{n} कार्ड आपके रोडमैप से जोड़े गए।",
+    seed: "रोडमैप से सीड करें", seeding: "सीड हो रहा है…", seeded: "{n} कार्ड आपके रोडमैप से जोड़े गए।", seed_none: "अभी जोड़ने के लिए कुछ नहीं: कोई छात्रवृत्ति आपकी प्रोफ़ाइल से नहीं मिली और कॉलेज के लिए स्थान सेव नहीं है। मेरा विवरण पूरा करें या खुद कार्ड जोड़ें।",
     loading: "लोड हो रहा है…", error: "कार्ड लोड नहीं हुए।",
     no_roadmap: "पहले ऐप में करियर लक्ष्य चुनें ताकि ट्रैकर सीड हो सके।",
   },
@@ -39,7 +39,7 @@ const T: Record<string, Record<string, string>> = {
     add: "कार्ड जोडा", add_title: "शीर्षक", add_kind: "प्रकार", college: "कॉलेज", scholarship: "शिष्यवृत्ती",
     save: "सेव करा", cancel: "रद्द करा", notes: "नोट्स", deadline: "अंतिम तारीख", move: "पुढे →",
     move_back: "← मागे", delete: "काढा", empty: "कोणतेही कार्ड नाही. वरून जोडा किंवा रोडमॅपमधून सीड करा.",
-    seed: "रोडमॅपमधून सीड करा", seeding: "सीड होत आहे…", seeded: "{n} कार्डे तुमच्या रोडमॅपमधून जोडली.",
+    seed: "रोडमॅपमधून सीड करा", seeding: "सीड होत आहे…", seeded: "{n} कार्डे तुमच्या रोडमॅपमधून जोडली.", seed_none: "जोडण्यासाठी अजून काही नाही: कोणतीही शिष्यवृत्ती तुमच्या प्रोफाइलशी जुळली नाही आणि महाविद्यालयांसाठी ठिकाण सेव्ह नाही. माझा तपशील पूर्ण करा किंवा स्वतः कार्ड जोडा.",
     loading: "लोड होत आहे…", error: "कार्डे लोड होऊ शकली नाहीत.",
     no_roadmap: "प्रथम ॲपमध्ये करिअर ध्येय निवडा म्हणजे ट्रॅकर सीड होईल.",
   },
@@ -195,7 +195,7 @@ function Board() {
     const r = await authFetch("/api/tracker/seed", { method: "POST" });
     if (r.ok) {
       const j = await r.json();
-      setSeedMsg(t("seeded", { n: j.seeded }));
+      setSeedMsg(j.total === 0 ? t("seed_none") : t("seeded", { n: j.seeded }));
       await load();
     }
     setSeeding(false);

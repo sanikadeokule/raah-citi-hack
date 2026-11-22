@@ -153,10 +153,11 @@ def seed(user: dict = Depends(current_user)):
 
     # colleges / training centres for the student's plan
     plan = next((p for p in data.get("plans", []) if p["career_id"] == career_id), None) if career_id else None
-    if plan:
+    # only a few careers have a plan; the others still get the colleges nearest to the student
+    if profile.get("lat") is not None and profile.get("lon") is not None:
         centres = eng_mod.nearestCentres(
             data, {"lat": profile.get("lat"), "lon": profile.get("lon")},
-            plan.get("centre_type", "college"), 5
+            plan.get("centre_type", "college") if plan else "college", 5
         )
         for c in centres:
             cards.append({"kind": "college", "ref_id": c["id"], "title": c["name"]})
