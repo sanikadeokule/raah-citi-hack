@@ -166,3 +166,11 @@ def test_gender_said_in_first_message_is_not_asked_again(monkeypatch):
             {"role": "user", "content": "I WROTE ABOVE"}]
     r = c.post("/api/chat/turn", json={"messages": msgs, "lang": "en", "profile": {"name": "Sanika", "age": 12}}).json()
     assert r["profile"]["gender"] == "F" and "gender" not in r["missing"]
+
+
+def test_prompt_tells_the_model_to_use_what_the_student_already_said():
+    d = __import__("raah.dataset", fromlist=["get"]).get()
+    system = chat._system_turn(d, "en", {"name": "Sanika"})
+    assert "Read the WHOLE conversation" in system
+    assert "do NOT ask for it again" in system
+    assert "NOT answered yet" in system
