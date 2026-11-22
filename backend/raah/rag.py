@@ -384,6 +384,11 @@ MSG = {
     "rows": {"en": "These rows in Raah's data match your question:",
              "hi": "Raah के डेटा में ये पंक्तियाँ आपके सवाल से मेल खाती हैं:",
              "mr": "Raah च्या डेटामधील या ओळी तुमच्या प्रश्नाशी जुळतात:"},
+    "answer_unavailable": {
+        "en": "Sorry, I could not prepare a clear answer from Raah's data. Please try asking another way or ask your teacher.",
+        "hi": "माफ़ कीजिए, Raah की जानकारी से साफ़ जवाब तैयार नहीं हो पाया। कृपया सवाल दूसरे तरीके से पूछें या अपने शिक्षक से पूछें।",
+        "mr": "माफ करा, Raah च्या माहितीतून स्पष्ट उत्तर देता आले नाही. कृपया प्रश्न दुसऱ्या पद्धतीने विचारा किंवा शिक्षकांना विचारा.",
+    },
 }
 
 
@@ -418,14 +423,20 @@ def _citation(n: int, c: dict) -> dict:
 
 
 def rows_answer(chunks: list[dict], lang: str) -> str:
-    lines = [MSG["rows"].get(lang, MSG["rows"]["en"])]
-    lines += [f"[{n}] {c['title']}: {_summary(c)}" for n, c in enumerate(chunks[:3], 1)]
-    return "\n".join(lines)
+    # Never show raw spreadsheet headers/values as a user-facing answer. They are
+    # English source metadata and make Hindi/Marathi fallbacks look half translated.
+    return MSG["answer_unavailable"].get(lang, MSG["answer_unavailable"]["en"])
 
 
 # word stems -> English words, so a Marathi/Hindi question still finds rows when no model is running.
 # Vocabulary only, no dataset values. Matched as prefixes because words inflect (मुलींसाठी, शिष्यवृत्तीसाठी).
 GLOSSARY = {
+    "पॉलिटेक्निक": "polytechnic diploma", "पॉलीटेक्निक": "polytechnic diploma",
+    "डिप्लोमा": "diploma course",
+    "अर्थ": "meaning definition", "मतलब": "meaning definition", "क्या": "what definition",
+    "पॉलिटेक्निकचा": "polytechnic diploma", "पॉलिटेक्निकच्या": "polytechnic diploma",
+    "डिप्लोमाचा": "diploma", "डिप्लोमाच्या": "diploma", "म्हणजे": "meaning what is",
+    "काय": "what meaning",
     "शिष्यवृत्त": "scholarship", "छात्रवृत्त": "scholarship", "स्कॉलरश": "scholarship",
     "वसतिगृह": "hostel", "छात्रावास": "hostel", "हॉस्टेल": "hostel",
     "मुली": "girl female women", "लड़कि": "girl female women", "लड़की": "girl female women", "महिला": "women female",
@@ -488,8 +499,9 @@ def answer(body: AskIn) -> dict:
     profile = {k: v for k, v in (body.profile or {}).items()
                if k in ("class", "gender", "category", "family_income_annual", "taluka", "marks_pct", "can_stay_hostel", "age")}
     about = f"\nAbout the person asking (use it to judge what fits them): {json.dumps(profile, ensure_ascii=False)}" if profile else ""
-    system = (f"You are Raah, a helpful guide for rural students, parents and teachers in Maharashtra. Answer in "
-              f"{LANG_NAME[lang]} in short, simple sentences a Class 9 student understands.\n"
+    system = (f"You are Raah, a helpful guide for rural students, parents and teachers in Maharashtra. Answer entirely in "
+              f"{LANG_NAME[lang]} in short, simple sentences a Class 9 student understands. Do not switch languages mid-answer.\n"
+              "Translate descriptive source content and spreadsheet field names into the requested language. Preserve only proper names, official scheme names, acronyms, codes, and exact figures in their original form. Never expose raw labels such as 'Topic ID', 'Career IDs', 'Step', or 'Kind'.\n"
               "Use ONLY the numbered sources. After each fact write its source number in square brackets, like [2].\n"
               "Copy every amount, date, percentage, age and limit exactly as the source writes it (same digits); "
               "never convert units, add up, round or estimate.\n"

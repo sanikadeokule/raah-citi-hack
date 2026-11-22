@@ -128,15 +128,16 @@ const blobToB64 = (b: Blob) => new Promise<string>((resolve, reject) => {
 });
 
 /** Server speech-to-text; null when the service failed or heard nothing. */
-export async function transcribe(lang: string, wav: Blob): Promise<string | null> {
+export async function transcribe(lang: string, wav: Blob): Promise<{ text: string; lang: string } | null> {
   try {
     const r = await fetch(`${API}/api/voice/asr`, {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ audio_b64: await blobToB64(wav), lang, sample_rate: 16000, format: "wav" }),
     });
     if (!r.ok) return null;
-    const text = ((await r.json()).text as string)?.trim();
-    return text || null;
+    const result = await r.json();
+    const text = (result.text as string)?.trim();
+    return text ? { text, lang: result.detected_lang || lang } : null;
   } catch {
     return null;
   }

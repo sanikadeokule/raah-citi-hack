@@ -123,8 +123,9 @@ export function speechLang(lang: string) {
 /** Text-to-speech: a saved audio file if there is one, then the server (BHASHINI or Sarvam), else the phone's voice.
  *  With `cache`, server audio is saved on the phone so it plays again offline.
  *  When nothing can be played the button turns into a warning and a message says why. */
-export function SpeakButton({ text, label, cache }: { text: string; label?: string; cache?: boolean }) {
-  const { lang, t, online, showToast } = useApp();
+export function SpeakButton({ text, label, cache, lang: speechLanguage }: { text: string; label?: string; cache?: boolean; lang?: string }) {
+  const { lang: appLanguage, t, online, showToast } = useApp();
+  const lang = speechLanguage || appLanguage;
   const [state, setState] = useState<"idle" | "loading" | "on" | "error">("idle");
   const audio = useRef<HTMLAudioElement | null>(null);
   // audio fetched but blocked by the browser (no tap in the chain): the next tap plays it straight away
@@ -206,7 +207,7 @@ export function SpeakButton({ text, label, cache }: { text: string; label?: stri
 /** Voice typing. With a server speech service (BHASHINI or Sarvam) the phone records and the server transcribes,
  *  which works for Marathi on any browser; otherwise the browser's own speech recognition is used.
  *  Every failure (http link, blocked permission, no microphone, nothing heard) is explained in a message. */
-export function MicButton({ onText }: { onText: (s: string) => void }) {
+export function MicButton({ onText }: { onText: (s: string, detectedLang?: string) => void }) {
   const { lang, t, showToast } = useApp();
   const [state, setState] = useState<"idle" | "listening" | "working">("idle");
   const rec = useRef<Recording | null>(null);
@@ -222,8 +223,8 @@ export function MicButton({ onText }: { onText: (s: string) => void }) {
     if (!r) return;
     setState("working");
     try {
-      const text = await transcribe(lang, await r.stop());
-      if (text) onText(text); else tell("asr");
+      const result = await transcribe(lang, await r.stop());
+      if (result) onText(result.text, result.lang); else tell("asr");
     } catch {
       tell("asr");
     } finally {
@@ -259,7 +260,7 @@ export function MicButton({ onText }: { onText: (s: string) => void }) {
       r.lang = speechLang(lang);
       r.interimResults = false;
       let heard = false;
-      r.onresult = (e: any) => { heard = true; onText(e.results[0][0].transcript); };
+      r.onresult = (e: any) => { heard = true; onText(e.results[0][0].transcript, lang); };
       r.onerror = (e: any) => { if (e.error !== "aborted") { heard = true; tell(micErrorKind(e)); } };
       r.onend = () => { if (timer.current) clearTimeout(timer.current); setState("idle"); if (!heard) tell("nospeech"); };
       try {

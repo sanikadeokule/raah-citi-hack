@@ -18,6 +18,7 @@ const KIND_META: Record<string, { icon: string; color: string }> = {
   exam_update:           { icon: "📅", color: "bg-red-50 border-red-300 dark:bg-red-900/20 dark:border-red-700" },
   payout:                { icon: "💰", color: "bg-yellow-50 border-yellow-300 dark:bg-yellow-900/20 dark:border-yellow-700" },
   mentor_message:        { icon: "💬", color: "bg-purple-50 border-purple-300 dark:bg-purple-900/20 dark:border-purple-700" },
+  deadline_alert:        { icon: "⏰", color: "bg-amber-50 border-amber-300 dark:bg-amber-900/20 dark:border-amber-700" },
   teacher_message:       { icon: "👩‍🏫", color: "bg-orange-50 border-orange-300 dark:bg-orange-900/20 dark:border-orange-700" },
 };
 
@@ -26,6 +27,7 @@ function notifLink(n: any): string {
   if (n.kind === "exam_update") return "/exams/";
   if (n.kind === "enrollment_confirmed") return "/learn/";
   if (n.kind === "payout") return "/money/";
+  if (n.kind === "deadline_alert") return n.source === "tracker" ? "/tracker/" : (n.url || "/notifications/");
   if (n.kind === "mentor_message" || n.kind === "teacher_message") return "/ask/";
   return "#";
 }

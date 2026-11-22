@@ -45,6 +45,11 @@ users = Table(
     Column("last_login_at", Integer),
     Column("created_at", Integer, nullable=False),
     Column("google_sub", Text),
+    # Raah Pro: unlocks the financial aid calculator, parent dashboard and application tracker.
+    # There is no payment flow yet; set it with backend/scripts/set_pro.py.
+    Column("is_pro", Integer, nullable=False, server_default="0"),
+    # Family PIN: a separate 4–8 digit code the student sets so a parent can view their dashboard.
+    Column("family_pin_hash", Text),
     UniqueConstraint("phone", "role", name="uq_users_phone_role"),
     UniqueConstraint("google_sub", name="uq_users_google_sub"),
 )
@@ -75,6 +80,20 @@ notifications = Table(
     Column("payload", Text, nullable=False),
     Column("created_at", Integer, nullable=False),
     Column("read_at", Integer),
+)
+
+applications = Table(
+    "applications", metadata,
+    Column("id", Integer, primary_key=True, autoincrement=True),
+    Column("user_id", Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False),
+    Column("kind", Text, nullable=False),   # "college" | "scholarship"
+    Column("ref_id", Text),                 # dataset id when seeded from the roadmap
+    Column("title", Text, nullable=False),
+    Column("column", Text, nullable=False, server_default="'researching'"),  # kanban column
+    Column("notes", Text, server_default="''"),
+    Column("deadline", Text),               # ISO date string or null
+    Column("created_at", Integer, nullable=False),
+    Column("updated_at", Integer, nullable=False),
 )
 
 interests = Table(

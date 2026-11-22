@@ -16,15 +16,16 @@ import { QUESTIONS, cleanPlace, firstMissing, sayGender, type Opt, type Q, type 
 // Both use the same clear wording, example hints and answer chips, and the same checks on typed answers.
 
 // `tr` rebuilds a bubble in the language chosen now, so switching language re-translates the whole chat,
-// not only the newest question. `text` is the fallback (the model's own replies and typed answers).
-type Msg = { from: "raah" | "me"; text: string; hint?: string; tr?: (t: T) => { text: string; hint?: string }; learned?: Record<string, any>; error?: boolean };
+// not only the newest question. `text` is the fallback (the model's own replies and typed answers), and
+// `lang` is the language that fallback text was written in, for read-aloud.
+type Msg = { from: "raah" | "me"; text: string; hint?: string; tr?: (t: T) => { text: string; hint?: string }; learned?: Record<string, any>; error?: boolean; lang?: string };
 type Say = string | ((t: T) => string);
 type Mode = "checking" | "ai" | "script";
 
 const showValue = (v: any) => (Array.isArray(v) ? v.join(", ") : typeof v === "boolean" ? (v ? "✓" : "✗") : String(v));
 
 export default function Discover() {
-  const { data, lang, t, profile, setProfile, queueAction, online, auth, authReady } = useApp();
+  const { data, lang, setLang, t, profile, setProfile, queueAction, online, auth, authReady } = useApp();
   // the registered name is already known, so the chat starts from the next question
   const knownName = auth?.user.name || null;
   const start = { language: lang, school_type: "government", domicile: "Maharashtra", has_bank_account: true, exams_passed: [], ...(knownName ? { name: knownName } : {}) };
@@ -99,13 +100,13 @@ export default function Discover() {
     else setStep(i);
   };
 
-  const sendAi = async (raw: string, patch: Record<string, any> = {}) => {
+  const sendAi = async (raw: string, patch: Record<string, any> = {}, replyLang = lang) => {
     if (!raw.trim() || busy) return;
     const base = { ...draft, ...patch };
     const history = [...msgs, { from: "me" as const, text: raw }];
     setMsgs(history); setDraft(base); setText(""); setMulti([]); setBusy(true);
     const j = await postAi("/api/chat/turn", {
-      lang, profile: base,
+      lang: replyLang, profile: base,
       messages: history.map((m) => ({ role: m.from === "me" ? "user" : "assistant", content: view(m).text })),
     });
     setBusy(false);
@@ -122,10 +123,10 @@ export default function Discover() {
     setDraft(next);
     setAiMissing(j.missing || []);
     if (j.done || !(j.missing || []).length) {
-      setMsgs((m) => [...m, { from: "raah", text: j.reply || "👍", learned: j.learned }]);
+      setMsgs((m) => [...m, { from: "raah", text: j.reply || "👍", learned: j.learned, lang: replyLang }]);
       toScript(next);
     } else {
-      setMsgs((m) => [...m, { from: "raah", text: j.reply, learned: j.learned }]);
+      setMsgs((m) => [...m, { from: "raah", text: j.reply, learned: j.learned, lang: replyLang }]);
     }
   };
 
@@ -137,12 +138,12 @@ export default function Discover() {
 
   // tap: the answer came from a chip, so the next question is the app's own (same wording as the chips), not the model's.
   // Letting the model reply to a tap could repeat the question just answered while the chips already show the next one.
-  const answer = (value: any, said: Say, learned?: Record<string, any>, extra: Record<string, any> = {}, tap = false) => {
+  const answer = (value: any, said: Say, learned?: Record<string, any>, extra: Record<string, any> = {}, tap = false, replyLang = lang) => {
     if (!q) return;
     const shown = typeof said === "string" ? said : said(t);
     const tr = typeof said === "string" ? undefined : (tt: T) => ({ text: said(tt) });
     if (tap && typeof said !== "string") setLabels((l) => ({ ...l, [q.key]: said })); else dropLabels([q.key]);
-    if (mode === "ai" && !tap) { sendAi(shown, { [q.key]: value, ...extra }); return; }
+    if (mode === "ai" && !tap) { sendAi(shown, { [q.key]: value, ...extra }, replyLang); return; }
     const next = { ...draft, [q.key]: value, ...extra };
     if (q.key === "taluka") {
       const tk = data.talukas.find((x: any) => x.name === value);
@@ -161,25 +162,27 @@ export default function Discover() {
     else finish(next);
   };
 
-  const submitText = async (raw: string) => {
+  const submitText = async (raw: string, detectedLang?: string) => {
     if (!raw.trim() || !q) return;
+    const replyLang = detectedLang || lang;
+    if (detectedLang) setLang(detectedLang);
     // answers that need checking (age, exam marks) are checked here in both modes, so a 25/25 unit test never gets through
     if (q.parse) {
       const r = q.parse(raw);
       if (!r.ok) { retry(raw, r.error, r.vars); return; }
       const g = q.key === "age" && !draft.gender ? sayGender(raw) : undefined;
-      answer(r.value, raw, { [q.key]: r.value, ...(g ? { gender: g } : {}) }, { ...r.extra, ...(g ? { gender: g } : {}) });
+      answer(r.value, raw, { [q.key]: r.value, ...(g ? { gender: g } : {}) }, { ...r.extra, ...(g ? { gender: g } : {}) }, false, replyLang);
       return;
     }
-    if (mode === "ai") { sendAi(raw); return; }
+    if (mode === "ai") { sendAi(raw, {}, replyLang); return; }
     if (q.kind === "choice") {
       const low = raw.toLowerCase();
       const hit = options.find((o) => low.includes(String(o.label).toLowerCase()) || low.includes(String(o.v).toLowerCase()));
-      if (hit) answer(hit.v, raw, undefined, hit.patch);
+      if (hit) answer(hit.v, raw, undefined, hit.patch, false, replyLang);
       else if (q.free && cleanPlace(raw)) {
         // a taluka we do not have on the map yet: keep it, and say centre distances will be missing
         const place = cleanPlace(raw)!;
-        answer(place, raw);
+        answer(place, raw, undefined, {}, false, replyLang);
         setMsgs((m) => [...m, say((tt) => tt("q_taluka_not_listed", { taluka: place }))]);
       } else retry(raw, "q_pick_one");
     } else if (q.kind === "multi") {
@@ -187,10 +190,10 @@ export default function Discover() {
       // interests said in the student's own words (any language) are mapped to the dataset's tags on the server
       if (!hits.length && q.key === "interests" && online) {
         const j = await postAi("/api/interests/match", { text: raw });
-        if (j?.tags?.length) { const tags = j.tags.map((x: any) => x.tag); answer(tags, raw, { interests: tags }); return; }
+        if (j?.tags?.length) { const tags = j.tags.map((x: any) => x.tag); answer(tags, raw, { interests: tags }, {}, false, replyLang); return; }
       }
-      answer(hits.length ? hits : raw.split(/,|और|आणि|and/).map((s) => s.trim()).filter(Boolean), raw);
-    } else answer(raw.trim(), raw);
+      answer(hits.length ? hits : raw.split(/,|और|आणि|and/).map((s) => s.trim()).filter(Boolean), raw, undefined, {}, false, replyLang);
+    } else answer(raw.trim(), raw, undefined, {}, false, replyLang);
   };
 
   /** The one button: sends the chips ticked on a multi-choice question (plus anything typed), otherwise the typed answer. */
@@ -241,7 +244,7 @@ export default function Discover() {
                   ))}
                 </div>
               )}
-              {m.from === "raah" && i === msgs.length - 1 && <div className="mt-1"><SpeakButton text={v.hint ? `${v.text} ${v.hint}` : v.text} label="" /></div>}
+              {m.from === "raah" && i === msgs.length - 1 && <div className="mt-1"><SpeakButton text={v.hint ? `${v.text} ${v.hint}` : v.text} label="" lang={m.tr ? lang : m.lang} /></div>}
             </div>
           </div>
         ); })}
@@ -268,7 +271,7 @@ export default function Discover() {
             </div>
           )}
           <div className="flex items-end gap-2">
-            <MicButton onText={(s) => submitText(s)} />
+            <MicButton onText={(s, detectedLang) => submitText(s, detectedLang)} />
             <ChatInput value={text} onChange={setText} onSend={() => { if (canSend) send(); }}
               placeholder={t("type_answer")} inputMode={q.kind === "number" || q.key === "max_commute_km" ? "numeric" : "text"} />
             <button onClick={send} disabled={!canSend} className="rounded-full bg-[var(--brand)] px-4 py-3 text-white disabled:opacity-40">{t("send")}</button>
