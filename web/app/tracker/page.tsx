@@ -11,6 +11,7 @@ import { API, useApp } from "@/lib/store";
 
 const T: Record<string, Record<string, string>> = {
   en: {
+    how: "How it works", how1: "A card is one application you are tracking: a college or a scholarship.", how2: "Tap \"Seed from roadmap\" to add the scholarships you qualify for and colleges near you, or \"+ Add card\" to add your own.", how3: "Move a card with the buttons as you go (Researching, Applied, Docs Submitted, Waiting, Result), or drag it to another section. Tap the pencil to add notes and a deadline: Raah will remind you before the date.",
     title: "Application tracker", intro: "Track your college and scholarship applications.",
     researching: "Researching", applied: "Applied", docs_submitted: "Docs Submitted", waiting: "Waiting", result: "Result",
     add: "Add card", add_title: "Title", add_kind: "Type", college: "College", scholarship: "Scholarship",
@@ -21,6 +22,7 @@ const T: Record<string, Record<string, string>> = {
     no_roadmap: "Set a career goal in the app first so we can seed your tracker.",
   },
   hi: {
+    how: "कैसे इस्तेमाल करें", how1: "एक कार्ड = एक आवेदन जिसे आप ट्रैक कर रहे हैं: कोई कॉलेज या छात्रवृत्ति।", how2: "\"रोडमैप से सीड करें\" दबाएँ तो आपकी पात्र छात्रवृत्तियाँ और पास के कॉलेज जुड़ जाएँगे, या \"+ कार्ड जोड़ें\" से अपना जोड़ें।", how3: "आगे बढ़ने पर बटन से कार्ड को अगले चरण में ले जाएँ (रिसर्च, आवेदन किया, डॉक्स जमा, प्रतीक्षा, परिणाम), या खींचकर दूसरे हिस्से में डालें। पेंसिल दबाकर नोट्स और अंतिम तारीख जोड़ें: तारीख से पहले Raah याद दिलाएगा।",
     title: "आवेदन ट्रैकर", intro: "कॉलेज और छात्रवृत्ति आवेदनों को ट्रैक करें।",
     researching: "रिसर्च", applied: "आवेदन किया", docs_submitted: "डॉक्स जमा", waiting: "प्रतीक्षा", result: "परिणाम",
     add: "कार्ड जोड़ें", add_title: "शीर्षक", add_kind: "प्रकार", college: "कॉलेज", scholarship: "छात्रवृत्ति",
@@ -31,6 +33,7 @@ const T: Record<string, Record<string, string>> = {
     no_roadmap: "पहले ऐप में करियर लक्ष्य चुनें ताकि ट्रैकर सीड हो सके।",
   },
   mr: {
+    how: "कसे वापरायचे", how1: "एक कार्ड = तुम्ही ट्रॅक करत असलेला एक अर्ज: एखादे कॉलेज किंवा शिष्यवृत्ती.", how2: "\"रोडमॅपमधून सीड करा\" दाबा म्हणजे तुम्हाला पात्र शिष्यवृत्त्या आणि जवळची कॉलेजे जोडली जातील, किंवा \"+ कार्ड जोडा\" ने स्वतःचे जोडा.", how3: "पुढे जाताना बटणाने कार्ड पुढच्या टप्प्यात न्या (संशोधन, अर्ज केला, कागदपत्रे जमा, प्रतीक्षा, निकाल), किंवा ओढून दुसऱ्या भागात टाका. पेन्सिल दाबून नोट्स आणि अंतिम तारीख जोडा: तारखेआधी Raah आठवण करून देईल.",
     title: "अर्ज ट्रॅकर", intro: "कॉलेज आणि शिष्यवृत्ती अर्जांचा मागोवा ठेवा.",
     researching: "संशोधन", applied: "अर्ज केला", docs_submitted: "कागदपत्रे जमा", waiting: "प्रतीक्षा", result: "निकाल",
     add: "कार्ड जोडा", add_title: "शीर्षक", add_kind: "प्रकार", college: "कॉलेज", scholarship: "शिष्यवृत्ती",
@@ -219,6 +222,14 @@ function Board() {
           {seeding ? t("seeding") : `🌱 ${t("seed")}`}</button>
       </div>
       {seedMsg && <p className="text-xs text-[var(--good)]">{seedMsg}</p>}
+      <details open={!cards.length} className="rounded-xl bg-[var(--card)] p-3 text-sm ring-1 ring-[var(--border)]">
+        <summary className="cursor-pointer font-semibold">ℹ️ {t("how")}</summary>
+        <ol className="mt-2 list-decimal space-y-1.5 pl-5 text-[13px] leading-snug">
+          <li>{t("how1")}</li>
+          <li>{t("how2")}</li>
+          <li>{t("how3")}</li>
+        </ol>
+      </details>
       <AddForm onAdd={addCard} />
 
       {/* the app is phone-width, so the five columns are stacked; cards still drag between them */}

@@ -13,7 +13,7 @@ import { useApp } from "@/lib/store";
 const T: Record<string, Record<string, string>> = {
   en: {
     tab_inputs: "Numbers", tab_cost: "Cost", tab_loan: "Loan", tab_emi: "EMI", tab_payback: "Payback", next: "Next",
-    title: "Financial aid", hero: "What will this course really cost?",
+    title: "Financial aid calculator", hero: "What will this course really cost?",
     hero_sub: "Scholarships, an education loan and your first salary, worked out together.",
     inputs: "Your numbers", fee: "Course fee per year", years: "Course length", years_n: "{n} years", year_1: "1 year",
     income: "Family income per year", career: "Job after the course", rate: "Bank interest rate", tenure: "Repay over",
@@ -42,7 +42,7 @@ const T: Record<string, Record<string, string>> = {
   },
   hi: {
     tab_inputs: "आँकड़े", tab_cost: "खर्च", tab_loan: "ऋण", tab_emi: "EMI", tab_payback: "चुकौती", next: "आगे",
-    title: "आर्थिक मदद", hero: "यह कोर्स असल में कितने का पड़ेगा?",
+    title: "आर्थिक मदद कैलकुलेटर", hero: "यह कोर्स असल में कितने का पड़ेगा?",
     hero_sub: "छात्रवृत्ति, शिक्षा ऋण और आपकी पहली तनख्वाह, सब एक साथ।",
     inputs: "आपकी जानकारी", fee: "हर साल की फीस", years: "कोर्स की अवधि", years_n: "{n} साल", year_1: "1 साल",
     income: "परिवार की सालाना आय", career: "कोर्स के बाद नौकरी", rate: "बैंक ब्याज दर", tenure: "चुकाने का समय",
@@ -71,7 +71,7 @@ const T: Record<string, Record<string, string>> = {
   },
   mr: {
     tab_inputs: "आकडे", tab_cost: "खर्च", tab_loan: "कर्ज", tab_emi: "EMI", tab_payback: "परतफेड", next: "पुढे",
-    title: "आर्थिक मदत", hero: "हा कोर्स खरंच किती पडेल?",
+    title: "आर्थिक मदत कॅल्क्युलेटर", hero: "हा कोर्स खरंच किती पडेल?",
     hero_sub: "शिष्यवृत्ती, शैक्षणिक कर्ज आणि तुमचा पहिला पगार, सगळं एकत्र.",
     inputs: "तुमची माहिती", fee: "दरवर्षीची फी", years: "कोर्सचा कालावधी", years_n: "{n} वर्षे", year_1: "1 वर्ष",
     income: "कुटुंबाचे वार्षिक उत्पन्न", career: "कोर्सनंतरची नोकरी", rate: "बँक व्याजदर", tenure: "फेडण्याचा कालावधी",
