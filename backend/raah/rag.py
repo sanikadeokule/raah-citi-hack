@@ -491,6 +491,7 @@ def answer(body: AskIn) -> dict:
     system = (f"You are Raah, a helpful guide for rural students, parents and teachers in Maharashtra. Answer in "
               f"{LANG_NAME[lang]} in short, simple sentences a Class 9 student understands.\n"
               + llm.off_topic_rule(lang) +
+              "Use what the person already said earlier in the conversation and in their profile; never ask them to repeat it.\n"
               "Use ONLY the numbered sources. After each fact write its source number in square brackets, like [2].\n"
               "Copy every amount, date, percentage, age and limit exactly as the source writes it (same digits); "
               "never convert units, add up, round or estimate.\n"

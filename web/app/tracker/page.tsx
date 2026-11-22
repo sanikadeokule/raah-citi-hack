@@ -221,27 +221,27 @@ function Board() {
       {seedMsg && <p className="text-xs text-[var(--good)]">{seedMsg}</p>}
       <AddForm onAdd={addCard} />
 
-      {/* horizontal scrolling Kanban */}
-      <div className="flex gap-3 overflow-x-auto pb-4 -mx-2 px-2">
+      {/* the app is phone-width, so the five columns are stacked; cards still drag between them */}
+      {!cards.length && <p className="rounded-xl bg-[var(--card)] p-4 text-center text-sm text-[var(--muted)] ring-1 ring-[var(--border)]">{t("empty")}</p>}
+      <div className="space-y-3 pb-4">
         {COLS.map((col, ci) => {
           const colCards = cards.filter((c) => c.column === col);
           return (
-            <div key={col} className="shrink-0 w-56"
+            <section key={col} className="rounded-2xl bg-[var(--bg)] p-2.5 ring-1 ring-[var(--border)]"
               onDragOver={(e) => { e.preventDefault(); dragOverCol.current = col; }}
               onDrop={(e) => onDrop(e, col)}>
               <div className="mb-2 flex items-center gap-1.5">
-                <span className="text-xs font-bold text-[var(--muted)]">{t(col)}</span>
-                <span className="rounded-full bg-[var(--bg)] px-1.5 py-0.5 text-[10px] font-semibold">{colCards.length}</span>
+                <span className="text-sm font-bold">{ci + 1}. {t(col)}</span>
+                <span className="rounded-full bg-[var(--card)] px-2 py-0.5 text-[11px] font-semibold">{colCards.length}</span>
               </div>
-              <div className="min-h-[8rem] rounded-2xl bg-[var(--bg)] p-2 space-y-2">
-                {colCards.length === 0 && ci === 0 && !cards.length &&
-                  <p className="text-center text-[11px] text-[var(--muted)] py-4">{t("empty")}</p>}
+              <div className="space-y-2">
+                {colCards.length === 0 && <p className="rounded-xl border border-dashed border-[var(--border)] py-3 text-center text-[11px] text-[var(--muted)]">—</p>}
                 {colCards.map((card) => (
                   <CardItem key={card.id} card={card} colIndex={ci} totalCols={COLS.length}
                     onMove={moveCard} onEdit={setEditing} />
                 ))}
               </div>
-            </div>
+            </section>
           );
         })}
       </div>
