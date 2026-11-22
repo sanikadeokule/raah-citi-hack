@@ -4,7 +4,10 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useMemo, useState } from "react";
 import { Badge, Card, Shell, Source } from "@/components/ui";
-import { buildRoadmap, inr, rankCareers } from "@/lib/engine";
+import { buildRoadmap, computePlan, inr, nearestCentres, rankCareers } from "@/lib/engine";
+import { coursesFor } from "@/lib/helpers";
+import { ParentNote } from "@/components/plan";
+import { CentresCard, CoursesCard } from "@/components/getstarted";
 import { useApp } from "@/lib/store";
 
 // One colour and icon per kind of stage, so the road reads at a glance.
@@ -36,10 +39,12 @@ function RoadmapView() {
   const careerId = qs.get("career") || profile?.roadmap_career || top[0]?.career.id;
   const profileClass = Math.min(13, Math.max(9, Math.trunc(Number(profile?.class) || 10)));
   const [cls, setCls] = useState<number | null>(null);
-  const [tab, setTab] = useState<"road" | "other">("road");
+  const [tab, setTab] = useState<"road" | "other" | "start">("road");
   const startClass = cls ?? profileClass;
   const r = useMemo(() => (data && profile && careerId ? buildRoadmap(data, profile, careerId, startClass) : null),
     [data, profile, careerId, startClass]);
+  const plan = r?.plan_id ? data?.plans.find((p: any) => p.id === r.plan_id) : null;
+  const planResult = useMemo(() => (data && profile && plan ? computePlan(data, profile, plan.id) : null), [data, profile, plan]);
   if (!careerId || !r) return <Card>{t("rm_not_added")}</Card>;
   const year0 = new Date().getFullYear();
   const isMine = profile?.roadmap_career === careerId;
@@ -69,9 +74,9 @@ function RoadmapView() {
       </section>
 
       {/* this road, or the other careers that fit: side by side as tabs */}
-      {others.length > 0 && (
-        <div role="tablist" className="grid grid-cols-2 gap-1 rounded-xl bg-[var(--card)] p-1 ring-1 ring-black/5">
-          {([["road", `🗺️ ${t("rm_tab_this")}`], ["other", `🛣️ ${t("rm_other_roads")} (${others.length})`]] as const).map(([k, label]) => (
+      {(
+        <div role="tablist" className={`grid gap-1 rounded-xl bg-[var(--card)] p-1 ring-1 ring-black/5 ${others.length > 0 ? "grid-cols-3" : "grid-cols-2"}`}>
+          {([["road", `🗺️ ${t("rm_tab_this")}`], ["start", `🚀 ${t("rm_tab_start")}`], ...(others.length > 0 ? [["other", `🛣️ ${t("rm_other_roads")} (${others.length})`]] : [])] as [typeof tab, string][]).map(([k, label]) => (
             <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)}
               className={`rounded-lg px-1 py-2 text-sm font-semibold leading-tight ${tab === k ? "bg-[var(--brand)] text-white" : "text-[var(--muted)]"}`}>
               {label}
@@ -80,7 +85,14 @@ function RoadmapView() {
         </div>
       )}
 
-      {tab === "other" && others.length > 0 ? (
+      {tab === "start" ? (
+        <>
+          <CentresCard centres={planResult ? planResult.centres : nearestCentres(data, profile, null, 3)} />
+          <CoursesCard courses={coursesFor(data, r.career, plan)} />
+          {planResult && <ParentNote r={planResult} />}
+          {plan && <Link href={`/plan/?id=${plan.id}`} className="block text-center text-sm font-semibold text-[var(--brand-ink)] underline">{t("rm_full_plan")} ›</Link>}
+        </>
+      ) : tab === "other" && others.length > 0 ? (
         <ul className="space-y-2">
           {others.map((s: any) => {
             const mine = profile?.roadmap_career === s.career.id;

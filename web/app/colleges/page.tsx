@@ -6,6 +6,7 @@ import { Badge, Card, Shell, Source } from "@/components/ui";
 import { getKV, setKV } from "@/lib/db";
 import { useApp } from "@/lib/store";
 import { placeLabel } from "@/lib/questions";
+import { CentreMap } from "@/components/centremap";
 import { postAi } from "@/lib/ai";
 import { BUILD_ROADMAP_HREF } from "@/lib/roadmap";
 import { ExamsList } from "@/components/exams";
@@ -206,6 +207,10 @@ export default function CollegesPage() {
             {loading && <p className="text-sm text-[var(--muted)] animate-pulse">Loading…</p>}
             {!loading && centres.length === 0 && (
               <p className="text-sm text-[var(--muted)]">{t("colleges_no_centres")}</p>
+            )}
+            {!loading && pagedCentres.some((c: any) => c.lat != null) && (
+              <CentreMap centres={pagedCentres.filter((c: any) => c.lat != null).map((c: any) => ({ ...c, approximate: c.approximate ?? c.coord_source !== "exact" }))}
+                home={{ lat: profile?.lat, lon: profile?.lon, label: placeLabel(t, profile?.taluka) || t("your_profile") }} />
             )}
             <ul className="space-y-2">
               {pagedCentres.map((c: any) => (
