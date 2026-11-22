@@ -6,6 +6,9 @@ import { useApp } from "@/lib/store";
 import { getKV, setKV } from "@/lib/db";
 import { MentorRequests, TeacherModules } from "@/components/modules";
 import { TeacherNotices } from "@/components/notices";
+import { Pager, usePaged } from "@/components/pager";
+import { inr } from "@/lib/engine";
+import { categoryLabel, talukaLabel } from "@/lib/labels";
 
 /** A student forgot their PIN: clear it so they can register again with the same number. */
 function ResetStudentPin() {
@@ -29,6 +32,57 @@ function ResetStudentPin() {
       </div>
       {msg && <p className="text-sm text-rose-800">{msg}</p>}
     </Card>
+  );
+}
+
+const SCHOOL: Record<string, string> = { government: "Government", aided: "Aided", local_body: "Local body", private: "Private", top_class: "Top-class" };
+
+/** One student as a card. Closed it shows who and how worried to be; open it lists the details as bullets. */
+function StudentCard({ s }: { s: any }) {
+  const { t, lang } = useApp();
+  const riskTone = s.risk_level === "high" ? "red" : s.risk_level === "medium" ? "amber" : "gray";
+  const yes = (v: boolean | undefined) => (v ? "Yes" : "No");
+  const rows: [string, React.ReactNode][] = [
+    ["Class", s.class ? `${s.class}${s.age ? ` · age ${s.age}` : ""}` : "—"],
+    ["Taluka", talukaLabel(s.taluka, lang) || "—"],
+    ["Marks", s.marks_pct != null ? `${s.marks_pct}%` : "—"],
+    ["Best career match", s.top_career || "—"],
+    ["Interests", s.interests?.length ? s.interests.join(", ") : "—"],
+    ["Category", categoryLabel(s.category, lang) || "—"],
+    ["Family income", s.family_income_annual != null ? `${inr(s.family_income_annual)} / year` : "—"],
+    ["Can travel", s.max_commute_km != null ? `${s.max_commute_km} km` : "—"],
+    ["Can stay in hostel", yes(s.can_stay_hostel)],
+    ["School", SCHOOL[s.school_type] ?? s.school_type ?? "—"],
+    ["Documents", s.documents?.length ? s.documents.map((d: string) => d.replace(/_/g, " ")).join(", ") : "none yet"],
+    ["Profile completed", s.profile_completion != null ? `${s.profile_completion}%` : "—"],
+  ];
+  return (
+    <details className="group rounded-2xl bg-[var(--card)] shadow-sm ring-1 ring-black/5">
+      <summary className="flex cursor-pointer list-none items-center gap-3 p-3.5">
+        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[var(--brand-soft)] text-sm font-bold text-[var(--brand-ink)]">{String(s.name || "?").slice(0, 1)}</span>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate font-bold leading-snug">{s.name}</span>
+          <span className="block truncate text-xs text-[var(--muted)]">{talukaLabel(s.taluka, lang)} · {s.marks_pct}%</span>
+        </span>
+        <span className="flex shrink-0 flex-col items-end gap-1">
+          <Badge tone={riskTone}>{Math.round(s.dropout_risk * 100)}% {t("risk")}</Badge>
+          {s.talent && <Badge tone="green">⭐ {t("talent")}</Badge>}
+        </span>
+        <span aria-hidden className="text-lg text-[var(--muted)] transition-transform group-open:rotate-90">›</span>
+      </summary>
+      <div className="space-y-2.5 border-t border-black/5 p-3.5 pt-3">
+        {s.risk_level !== "low" && s.reasons?.length > 0 && (
+          <div className="rounded-xl bg-rose-50 p-2.5 text-xs leading-snug text-rose-900 dark:bg-rose-900/20 dark:text-rose-200">⚠ {s.reasons.join("; ")}</div>
+        )}
+        {s.talent && <div className="rounded-xl bg-emerald-50 p-2.5 text-xs leading-snug text-emerald-900 dark:bg-emerald-900/20 dark:text-emerald-200">⭐ {s.talent_reason}</div>}
+        <ul className="space-y-1 text-sm">
+          {rows.map(([k, v]) => (
+            <li key={k} className="flex gap-2"><span className="text-[var(--muted)]">•</span>
+              <span><span className="text-[var(--muted)]">{k}:</span> <span className="font-medium">{v}</span></span></li>
+          ))}
+        </ul>
+      </div>
+    </details>
   );
 }
 
@@ -67,9 +121,9 @@ export default function Teacher() {
     const j = await r.json();
     showToast(`${t("sent_to", { n: j.sent })} · ${t("sent_to_app", { n: j.sent_to_app ?? 0 })}`);
   };
+  const pg = usePaged((cls?.students ?? []).filter((s: any) => filter === "all" || (filter === "risk" ? s.risk_level === "high" : s.talent)), 5, filter);
   if (!cls) return <Shell title={t("teacher_dashboard")} role="teacher"><Card>Connect to the Raah server to load the class.</Card></Shell>;
   const st = cls.students;
-  const shown = st.filter((s: any) => filter === "all" || (filter === "risk" ? s.risk_level === "high" : s.talent));
   return (
     <Shell title={t("teacher_dashboard")} role="teacher">
       <div className="grid grid-cols-3 gap-2">
@@ -113,22 +167,11 @@ export default function Teacher() {
           </div>
         </div>
         <p className="mb-2 text-xs text-[var(--muted)]">Top interests: {cls.top_interests.map((x: any) => `${x[0]} (${x[1]})`).join(", ")}</p>
-        <ul className="divide-y divide-black/5">
-          {shown.map((s: any) => (
-            <li key={s.id} className="py-2 text-sm">
-              <div className="flex items-center justify-between gap-2">
-                <b>{s.name}</b>
-                <span className="flex gap-1">
-                  {s.talent && <Badge tone="green">⭐ {t("talent")}</Badge>}
-                  <Badge tone={s.risk_level === "high" ? "red" : s.risk_level === "medium" ? "amber" : "gray"}>{Math.round(s.dropout_risk * 100)}%</Badge>
-                </span>
-              </div>
-              <div className="text-xs text-[var(--muted)]">{s.taluka} · {s.marks_pct}% · profile {s.profile_completion}% · {s.top_career}</div>
-              {s.risk_level !== "low" && s.reasons.length > 0 && <div className="text-xs text-[var(--bad)]">⚠ {s.reasons.join("; ")}</div>}
-              {s.talent && <div className="text-xs text-[var(--good)]">⭐ {s.talent_reason}</div>}
-            </li>
-          ))}
-        </ul>
+        <div ref={pg.top} />
+        <div className="space-y-2">
+          {pg.pageItems.map((s: any) => <StudentCard key={s.id} s={s} />)}
+        </div>
+        <Pager {...pg} shown={pg.pageItems.length} />
         <p className="mt-2 text-xs text-[var(--muted)]">{cls.model_note} Class roster is synthetic.</p>
       </Card>
       <MentorRequests />
