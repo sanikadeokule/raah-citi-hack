@@ -12,6 +12,7 @@ import { useApp } from "@/lib/store";
 
 const T: Record<string, Record<string, string>> = {
   en: {
+    tab_inputs: "Numbers", tab_cost: "Cost", tab_loan: "Loan", tab_emi: "EMI", tab_payback: "Payback", next: "Next",
     title: "Financial aid", hero: "What will this course really cost?",
     hero_sub: "Scholarships, an education loan and your first salary, worked out together.",
     inputs: "Your numbers", fee: "Course fee per year", years: "Course length", years_n: "{n} years", year_1: "1 year",
@@ -40,6 +41,7 @@ const T: Record<string, Record<string, string>> = {
     note: "Rates and rules change; your bank gives the final figure. Scholarships and pay come from the Raah dataset.",
   },
   hi: {
+    tab_inputs: "आँकड़े", tab_cost: "खर्च", tab_loan: "ऋण", tab_emi: "EMI", tab_payback: "चुकौती", next: "आगे",
     title: "आर्थिक मदद", hero: "यह कोर्स असल में कितने का पड़ेगा?",
     hero_sub: "छात्रवृत्ति, शिक्षा ऋण और आपकी पहली तनख्वाह, सब एक साथ।",
     inputs: "आपकी जानकारी", fee: "हर साल की फीस", years: "कोर्स की अवधि", years_n: "{n} साल", year_1: "1 साल",
@@ -68,6 +70,7 @@ const T: Record<string, Record<string, string>> = {
     note: "दरें और नियम बदलते हैं; अंतिम आँकड़ा आपका बैंक देगा। छात्रवृत्ति और तनख्वाह राह डेटासेट से हैं।",
   },
   mr: {
+    tab_inputs: "आकडे", tab_cost: "खर्च", tab_loan: "कर्ज", tab_emi: "EMI", tab_payback: "परतफेड", next: "पुढे",
     title: "आर्थिक मदत", hero: "हा कोर्स खरंच किती पडेल?",
     hero_sub: "शिष्यवृत्ती, शैक्षणिक कर्ज आणि तुमचा पहिला पगार, सगळं एकत्र.",
     inputs: "तुमची माहिती", fee: "दरवर्षीची फी", years: "कोर्सचा कालावधी", years_n: "{n} वर्षे", year_1: "1 वर्ष",
@@ -97,6 +100,8 @@ const T: Record<string, Record<string, string>> = {
   },
 };
 
+type Tab = "inputs" | "cost" | "loan" | "emi" | "payback";
+const TAB_ICON: Record<Tab, string> = { inputs: "✏️", cost: "🧾", loan: "🏦", emi: "📅", payback: "⏳" };
 const TENURES = [5, 7, 10, 15];
 
 function Slider({ label, value, display, min, max, step, onChange }: {
@@ -123,6 +128,7 @@ function Calculator() {
     ...d0, scholarship_ids: [], other_scholarship_per_year: 0, career_id: startCareer, rate_pct: 10.5, tenure_years: 10,
   });
   const set = (p: Partial<AidInput>) => setInp((x) => ({ ...x, ...p }));
+  const [tab, setTab] = useState<Tab>("inputs");
 
   const matches = useMemo(() => matchingScholarships(data, profile || {}, inp.family_income), [data, profile, inp.family_income]);
   // tick the scholarships that match; untick any that stop matching when the income changes
@@ -137,11 +143,27 @@ function Calculator() {
   const affordTone = { comfortable: "green", tight: "amber", heavy: "red", unknown: "gray" } as const;
   const sharePct = aid.emi_share === null ? null : Math.round(aid.emi_share * 100);
   const barMax = Math.max(aid.course_cost, 1);
+  const order: Tab[] = L.needed ? ["inputs", "cost", "loan", "emi", "payback"] : ["inputs", "cost"];
+  const active: Tab = order.includes(tab) ? tab : "cost";
+  const nextBtn = (cur: Tab) => {
+    const n = order[order.indexOf(cur) + 1];
+    return n ? <button onClick={() => setTab(n)} className="w-full rounded-xl bg-[var(--brand)] py-3 text-sm font-semibold text-white">{t("next")}: {TAB_ICON[n]} {t(`tab_${n}`)} →</button> : null;
+  };
   const schShown = aid.scholarships.filter((s) => inp.scholarship_ids.includes(s.id));
   const best = aid.stacked ? null : schShown.reduce((a: any, s) => (!a || s.value > a.value ? s : a), null);
 
   return (
     <>
+      {/* one row of tabs: your numbers, then the cost, then the loan, its EMI and the payback */}
+      <div className="flex gap-1 rounded-2xl bg-[var(--card)] p-1 ring-1 ring-[var(--border)]" role="tablist">
+        {order.map((k) => (
+          <button key={k} role="tab" aria-selected={active === k} onClick={() => setTab(k)}
+            className={`flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-xl px-1 py-1.5 text-[11px] font-semibold leading-tight ${active === k ? "bg-[var(--brand)] text-white" : "text-[var(--muted)]"}`}>
+            <span className="text-base leading-none">{TAB_ICON[k]}</span>
+            <span className="max-w-full truncate">{t(`tab_${k}`)}</span>
+          </button>
+        ))}
+      </div>
       <Card className="!bg-gradient-to-br from-[var(--brand)] to-[#0f2547] text-white">
         <div className="flex items-center gap-2"><ProBadge /><span className="text-xs text-white/80">{t("title")}</span></div>
         <h2 className="mt-2 text-xl font-bold leading-tight">{t("hero")}</h2>
@@ -160,6 +182,7 @@ function Calculator() {
         </div>
       </Card>
 
+      {active === "inputs" && (
       <Card className="space-y-4">
         <h3 className="font-bold">✏️ {t("inputs")}</h3>
         <Slider label={t("fee")} value={inp.fee_per_year} display={inr(inp.fee_per_year)} min={0} max={500000} step={5000} onChange={(v) => set({ fee_per_year: v })} />
@@ -204,7 +227,10 @@ function Calculator() {
           </label>
         </div>
       </Card>
+      )}
+      {active === "inputs" && nextBtn("inputs")}
 
+      {active === "cost" && (
       <Card>
         <h3 className="font-bold">🧾 {t("net")}</h3>
         <div className="mt-3 space-y-2 text-sm">
@@ -222,8 +248,10 @@ function Calculator() {
         </div>
         {!L.needed && <p className="mt-3 rounded-xl bg-emerald-50 p-3 text-center text-sm font-semibold text-emerald-900 dark:bg-emerald-900/30 dark:text-emerald-200">🎉 {t("covered")}</p>}
       </Card>
+      )}
+      {active === "cost" && nextBtn("cost")}
 
-      {L.needed && <>
+        {L.needed && active === "loan" && (
         <Card>
           <div className="flex items-center justify-between gap-2">
             <h3 className="font-bold">🏦 {t("loan_title")}</h3>
@@ -238,7 +266,10 @@ function Calculator() {
             <li className="flex gap-2"><span>{L.csis || L.vidyalaxmi ? "🎁" : "ℹ️"}</span><span>{L.csis ? t("csis") : L.vidyalaxmi ? t("vidyalaxmi") : t("no_sub")}</span></li>
           </ul>
         </Card>
+        )}
+        {active === "loan" && nextBtn("loan")}
 
+        {L.needed && active === "emi" && (
         <Card>
           <h3 className="font-bold">📅 {t("emi_title")}</h3>
           <div className="mt-1 flex items-end gap-2">
@@ -278,7 +309,10 @@ function Calculator() {
           </div>
           {aid.job && <div className="mt-1"><Source url={aid.job.source} label={aid.job.career} /></div>}
         </Card>
+        )}
+        {active === "emi" && nextBtn("emi")}
 
+        {L.needed && active === "payback" && (
         <Card>
           <h3 className="font-bold">⏳ {t("timeline")}</h3>
           {(() => {
@@ -312,7 +346,8 @@ function Calculator() {
           </div>
           <p className="mt-2 text-sm">💡 {aid.fast_payback_months !== null ? t("fast", { m: aid.fast_payback_months }) : t("fast_none")}</p>
         </Card>
-      </>}
+        )}
+        {active === "payback" && nextBtn("payback")}
 
       <Card className="space-y-2">
         <a href={LOAN_SOURCES[0].url} target="_blank" rel="noreferrer" className="block rounded-xl bg-[var(--brand)] py-3 text-center font-semibold text-white">{t("apply")} ↗</a>
