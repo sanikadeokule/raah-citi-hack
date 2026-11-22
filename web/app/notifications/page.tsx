@@ -4,7 +4,7 @@
 // and All updates (every notice Raah read from the official sites).
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { fromNotification, NoticeCard, SourcesFooter, useNotices } from "@/components/notices";
 import { Pager, usePaged } from "@/components/pager";
 import { Tabs } from "@/components/tabs";
@@ -137,7 +137,7 @@ export default function NotificationsPage() {
   );
 }
 
-const PAGE = 8;
+const PAGE = 5;
 
 function NotificationsView({ tab, setTab, unread, read, items, loading, markAllRead, renderItem, mine, list }: {
   tab: Tab; setTab: (v: Tab) => void; unread: any[]; read: any[]; items: any[]; loading: boolean; markAllRead: () => void;
@@ -145,6 +145,10 @@ function NotificationsView({ tab, setTab, unread, read, items, loading, markAllR
 }) {
   const { t } = useApp();
   const pg = usePaged(list.items, PAGE, tab);
+  const mineAll = useMemo(() => [...unread, ...read], [unread, read]);
+  const pgMine = usePaged(mineAll, PAGE, `${tab}|${items.length}`);
+  const pageUnread = pgMine.pageItems.filter((n: any) => !n.read);
+  const pageRead = pgMine.pageItems.filter((n: any) => n.read);
   return (
     <Shell title={t("notif_title")}>
       <Tabs<Tab> value={tab} onChange={setTab} tabs={[
@@ -165,7 +169,8 @@ function NotificationsView({ tab, setTab, unread, read, items, loading, markAllR
           </Card>
         )}
 
-        {unread.length > 0 && (
+        <div ref={pgMine.top} />
+        {pageUnread.length > 0 && (
           <div className="space-y-2">
             <div className="flex items-center justify-between px-1">
               <p className="text-xs font-semibold text-[var(--muted)] uppercase tracking-wide">
@@ -175,16 +180,17 @@ function NotificationsView({ tab, setTab, unread, read, items, loading, markAllR
                 {t("notif_mark_all_read")}
               </button>
             </div>
-            <ul className="space-y-2">{unread.map(renderItem)}</ul>
+            <ul className="space-y-2">{pageUnread.map(renderItem)}</ul>
           </div>
         )}
 
-        {read.length > 0 && (
+        {pageRead.length > 0 && (
           <div className="space-y-2">
             <p className="px-1 text-xs font-semibold text-[var(--muted)] uppercase tracking-wide">{t("notif_earlier")}</p>
-            <ul className="space-y-2">{read.map(renderItem)}</ul>
+            <ul className="space-y-2">{pageRead.map(renderItem)}</ul>
           </div>
         )}
+        <Pager {...pgMine} shown={pgMine.pageItems.length} />
         <SourcesFooter sources={mine.sources} lastChecked={mine.last_checked} />
       </>)}
 
