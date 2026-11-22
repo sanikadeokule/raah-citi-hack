@@ -12,6 +12,7 @@ export const PRO_FEATURES: ProFeature[] = [
   // ── Financial aid calculator
 
   // ── Parent dashboard
+  { href: "/parent/", icon: "👨‍👩‍👧", title: { en: "Parent view", hi: "परिवार दृश्य", mr: "कुटुंब दृश्य" }, sub: { en: "Roadmap · exams · lessons", hi: "रोडमैप · परीक्षा · पाठ", mr: "रोडमॅप · परीक्षा · धडे" } },
 
   // ── Application tracker
 
