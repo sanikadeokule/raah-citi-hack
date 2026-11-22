@@ -181,7 +181,7 @@ export default function CollegesPage() {
 
   return (
     <Shell title={t("colleges_title")}>
-      <Tabs value={tab} onChange={setTab} tabs={[{ key: "colleges", label: `🏫 ${t("adm_tab_colleges")}` }, { key: "exams", label: `📝 ${t("home_exams")}` }]} />
+      <Tabs value={tab} onChange={setTab} tabs={[{ key: "exams", label: `📝 ${t("home_exams")}` }, { key: "colleges", label: `🏫 ${t("adm_tab_colleges")}` }]} />
       {tab === "exams" ? <ExamsList /> : noRoadmap ? (
         <Card className="text-center space-y-3">
           <p className="text-4xl">🎓</p>

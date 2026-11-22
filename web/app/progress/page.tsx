@@ -9,7 +9,7 @@ import { FOR_YOU } from "@/lib/lessons";
 import Link from "next/link";
 
 export default function Progress() {
-  const { t, authFetch, auth, data } = useApp();
+  const { t, authFetch, auth, data, lang } = useApp();
   const [progress, setProgress] = useState<any>(null);
   const [learnQuizzes, setLearnQuizzes] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -28,6 +28,13 @@ export default function Progress() {
     Promise.all(topics.map((topic) => getKV<any>(`quiz_topic_${topic}`))).then((records) =>
       setLearnQuizzes(records.filter((r) => r && Number.isFinite(r.score) && Number.isFinite(r.total))));
   }, [data]);
+  // "topic_for_you" and "topic_basics" are ids; show the lesson topic's own name in the student's language
+  const quizTitle = (quiz: string) => {
+    const id = quiz.replace(/^topic_/, "");
+    if (id === FOR_YOU) return t("quiz_for_you");
+    const name = (data?.lesson_topics || []).find((x: any) => x.id === id)?.name;
+    return t("progress_quiz_topic", { topic: name?.[lang] ?? name?.en ?? id.replace(/_/g, " ") });
+  };
   const moduleScores = (progress?.modules || []).filter((m: any) => m.score != null);
   const quizQuestionCount = moduleScores.reduce((n: number, m: any) => n + m.total, 0) + learnQuizzes.reduce((n, q) => n + q.total, 0);
   const quizCorrectCount = moduleScores.reduce((n: number, m: any) => n + m.score, 0) + learnQuizzes.reduce((n, q) => n + q.score, 0);
@@ -37,10 +44,24 @@ export default function Progress() {
     <Shell title={t("progress_title")}>
       <Link href="/learn/" className="text-sm font-semibold text-[var(--brand-ink)] underline">← {t("home_learn")}</Link>
       {auth?.user.role !== "student" ? <Card>{t("progress_students_only")}</Card> : error ? <Card>{error}</Card> : !progress ? <Card>Loading…</Card> : <>
-        <div className="grid grid-cols-2 gap-2">
-          <Stat label={t("progress_completed")} value={`${progress.completed}/${progress.enrolled}`} />
-          <Stat label={t("progress_score")} value={averageQuizScore == null ? "—" : `${averageQuizScore}%`}
-            sub={`${progress.scores_recorded + learnQuizzes.length} ${t("progress_scores_recorded")}`} />
+        <div className="grid grid-cols-2 gap-3">
+          <div className="rounded-2xl bg-[var(--card)] p-4 shadow-sm ring-1 ring-black/5">
+            <span className="grid h-9 w-9 place-items-center rounded-full bg-emerald-100 text-lg dark:bg-emerald-900/30">✅</span>
+            <div className="mt-2 text-3xl font-extrabold leading-none text-[var(--brand-ink)]">{progress.completed}<span className="text-lg font-bold text-[var(--muted)]">/{progress.enrolled}</span></div>
+            <div className="mt-1 text-xs font-semibold text-[var(--muted)]">{t("progress_completed")}</div>
+            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[var(--bg)]">
+              <div className="h-full rounded-full bg-emerald-500" style={{ width: `${progress.enrolled ? Math.round((progress.completed / progress.enrolled) * 100) : 0}%` }} />
+            </div>
+          </div>
+          <div className="rounded-2xl bg-[var(--card)] p-4 shadow-sm ring-1 ring-black/5">
+            <span className="grid h-9 w-9 place-items-center rounded-full bg-amber-100 text-lg dark:bg-amber-900/30">🏆</span>
+            <div className="mt-2 text-3xl font-extrabold leading-none text-[var(--brand-ink)]">{averageQuizScore == null ? "—" : `${averageQuizScore}%`}</div>
+            <div className="mt-1 text-xs font-semibold text-[var(--muted)]">{t("progress_score")}</div>
+            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[var(--bg)]">
+              <div className="h-full rounded-full bg-amber-400" style={{ width: `${averageQuizScore ?? 0}%` }} />
+            </div>
+            <div className="mt-1.5 text-[11px] text-[var(--muted)]">{progress.scores_recorded + learnQuizzes.length} {t("progress_scores_recorded")}</div>
+          </div>
         </div>
         <Card>
           <h2 className="font-bold">💰 {t("progress_income_title")}</h2>
@@ -58,7 +79,7 @@ export default function Progress() {
             <ul className="mt-2 divide-y divide-black/5">
               {learnQuizzes.map((q) => (
                 <li key={q.quiz} className="flex items-center justify-between gap-2 py-2 text-sm">
-                  <span>{t("progress_quiz_topic", { topic: q.quiz.replace(/^topic_/, "") })}</span>
+                  <span>{quizTitle(q.quiz)}</span>
                   <span className="font-semibold">{q.score}/{q.total} · {new Date(q.at).toLocaleDateString()}</span>
                 </li>
               ))}

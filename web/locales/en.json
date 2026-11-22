@@ -43,6 +43,7 @@
  "progress_learn_quizzes": "Learn quiz scores",
  "progress_no_learn_quizzes": "Complete a Learn quiz to see its score here.",
  "progress_quiz_topic": "{topic} quiz",
+ "quiz_for_you": "Quiz on lessons picked for you",
  "progress_take_quiz": "Take another quiz",
  "progress_view_dashboard": "View all progress and quiz scores",
  "teacher_payout_history": "Payout history",
