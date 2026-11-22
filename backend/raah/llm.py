@@ -17,6 +17,20 @@ import time
 import httpx
 
 
+# Shared by every Raah chatbot prompt: what to say to a question that has nothing to do with careers, study,
+# money for study, exams, scholarships or the student's own profile (politics, weather, entertainment, sport ...).
+OFF_TOPIC_REPLY = {"en": "This is unrelated. I cannot answer this.",
+                   "hi": "यह असंबंधित है। मैं इसका उत्तर नहीं दे सकती।",
+                   "mr": "हे असंबंधित आहे. मी याचे उत्तर देऊ शकत नाही."}
+
+
+def off_topic_rule(lang: str) -> str:
+    return ("Stay on topic. If the student asks something completely unrelated to careers, studies, training, exams, "
+            "scholarships, loans, fees, jobs or their own profile (for example politics, weather, entertainment, sport, "
+            "general knowledge, jokes or anything else random), do not answer it and do not use any tool. "
+            f"Reply with exactly this sentence and nothing else: \"{OFF_TOPIC_REPLY.get(lang, OFF_TOPIC_REPLY['en'])}\"\n")
+
+
 class LLMUnavailable(RuntimeError):
     pass
 

@@ -174,3 +174,14 @@ def test_prompt_tells_the_model_to_use_what_the_student_already_said():
     assert "Read the WHOLE conversation" in system
     assert "do NOT ask for it again" in system
     assert "NOT answered yet" in system
+
+
+def test_every_chatbot_prompt_has_the_off_topic_rule():
+    from raah import agent, rag
+    d = __import__("raah.dataset", fromlist=["get"]).get()
+    for lang in ("en", "hi", "mr"):
+        sentence = llm.OFF_TOPIC_REPLY[lang]
+        assert sentence in chat._system_turn(d, lang, {})
+        assert sentence in agent.system_prompt(lang, {}, True)
+    assert "This is unrelated. I cannot answer this." in llm.off_topic_rule("en")
+    assert "politics, weather, entertainment" in llm.off_topic_rule("en")
