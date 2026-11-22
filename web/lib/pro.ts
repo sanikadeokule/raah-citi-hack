@@ -10,6 +10,7 @@ export interface ProFeature {
 
 export const PRO_FEATURES: ProFeature[] = [
   // ── Financial aid calculator
+  { href: "/financials/", icon: "🧮", title: { en: "Aid calculator", hi: "सहायता कैलकुलेटर", mr: "मदत कॅल्क्युलेटर" }, sub: { en: "Loan · EMI · payback", hi: "ऋण · EMI · चुकाना", mr: "कर्ज · EMI · फेड" } },
 
   // ── Parent dashboard
 
