@@ -7,6 +7,7 @@ import { getKV, setKV } from "@/lib/db";
 import { useApp } from "@/lib/store";
 import { postAi } from "@/lib/ai";
 import { BUILD_ROADMAP_HREF } from "@/lib/roadmap";
+import { CHANCE_TEXT, chanceFor } from "@/lib/chance";
 
 const PAGE_SIZE = 5;
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
@@ -35,8 +36,12 @@ function cleanCourses(courses: string | undefined): string | null {
   return courses.replace(/\s*[-–]\s*(trade list |info )?not in source.*$/i, "").trim() || null;
 }
 
-function CentreCard({ c, t }: { c: any; t: (k: string) => string }) {
+const CHANCE_TONE = { safe: "green", good: "blue", reach: "amber" } as const;
+
+function CentreCard({ c, t, profile, lang }: { c: any; t: (k: string) => string; profile: any; lang: string }) {
   const [open, setOpen] = useState(false);
+  const chance = chanceFor(c, profile);
+  const ct = CHANCE_TEXT[lang] ?? CHANCE_TEXT.en;
   const color = typeColor(c.type);
   const fees = cleanFees(c.fees_text);
   const courses = cleanCourses(c.courses);
@@ -54,6 +59,11 @@ function CentreCard({ c, t }: { c: any; t: (k: string) => string }) {
         <span className={`mt-1 h-8 w-1 shrink-0 rounded-full ${color.bg.replace("bg-", "bg-").replace("50", "400").replace("900/30", "500")}`} aria-hidden />
         <div className="min-w-0 flex-1">
           <p className="font-bold text-sm leading-snug">{c.name}</p>
+          <div className="mt-1 flex flex-wrap items-center gap-1.5">
+            <Badge tone={CHANCE_TONE[chance.level]}>{ct[chance.level]}</Badge>
+            {chance.farAway && <span className="text-[10px] text-[var(--muted)]">{ct.far}</span>}
+            {chance.needsMarks && <span className="text-[10px] text-[var(--muted)]">{ct.no_marks}</span>}
+          </div>
           <div className="mt-1 flex flex-wrap items-center gap-1.5">
             {c.type && (
               <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${color.bg} ${color.text}`}>
@@ -193,7 +203,7 @@ export default function CollegesPage() {
             )}
             <ul className="space-y-2">
               {pagedCentres.map((c: any) => (
-                <CentreCard key={c.id} c={c} t={t} />
+                <CentreCard key={c.id} c={c} t={t} profile={profile} lang={lang} />
               ))}
             </ul>
             {totalCentrePages > 1 && (

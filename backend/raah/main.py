@@ -50,6 +50,8 @@ def _connect_database() -> None:
     db.engine()
     from . import watcher
     watcher.start_background()
+    from . import guardian
+    guardian.start_background()
     if os.environ.get("RAAH_TESTING") != "1":
         from . import notices
         notices.start_background()  # read official notices (NTA, CET Cell, MahaDBT ...) every 6 hours
