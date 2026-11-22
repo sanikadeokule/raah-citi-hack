@@ -45,6 +45,9 @@ users = Table(
     Column("last_login_at", Integer),
     Column("created_at", Integer, nullable=False),
     Column("google_sub", Text),
+    # Raah Pro: unlocks the financial aid calculator, parent dashboard and application tracker.
+    # There is no payment flow yet; set it with backend/scripts/set_pro.py.
+    Column("is_pro", Integer, nullable=False, server_default="0"),
     UniqueConstraint("phone", "role", name="uq_users_phone_role"),
     UniqueConstraint("google_sub", name="uq_users_google_sub"),
 )
