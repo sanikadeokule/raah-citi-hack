@@ -23,12 +23,6 @@ const TILES = [
   { href: "/notifications/", icon: "🔔", key: "home_notifications" },
 ];
 const STUDENT_TILES = [...TILES, { href: "/progress/", icon: "📈", key: "home_progress" }];
-const STAFF = [
-  { href: "/exams/", icon: "📝", key: "home_exams" },
-  { href: "/teacher/", icon: "👩‍🏫", key: "home_teacher" },
-  { href: "/money/", icon: "🏦", key: "home_money" },
-];
-
 // A teacher's main job is the class: one big card to the class dashboard with the headline numbers.
 function ClassDashboardCard() {
   const { t, auth, authFetch, online, data } = useApp();
@@ -49,20 +43,20 @@ function ClassDashboardCard() {
     { label: t("talent"), value: st.filter((s) => s.talent).length, tone: "text-green-200" },
   ];
   return (
-    <Link href="/teacher/" className="flex flex-1 flex-col justify-center rounded-3xl border-b-4 border-[var(--accent)] bg-[var(--brand)] px-5 py-5 text-white shadow-sm active:scale-95">
+    <Link href="/teacher/" className="block rounded-2xl border-b-4 border-[var(--accent)] bg-[var(--brand)] px-4 py-3.5 text-white shadow-sm active:scale-[.98]">
       <span className="flex items-center gap-3">
-        <span className="text-4xl leading-none">👩‍🏫</span>
+        <span className="text-3xl leading-none">👩‍🏫</span>
         <span className="min-w-0 flex-1">
-          <span className="block text-xl font-bold leading-tight">{t("teacher_dashboard")}</span>
+          <span className="block text-lg font-bold leading-tight">{t("teacher_dashboard")}</span>
           <span className="block text-xs leading-snug text-white/85">{t("home_class_dash_sub")}</span>
         </span>
         <span aria-hidden className="text-2xl">›</span>
       </span>
       {cls && (
-        <span className="mt-4 grid grid-cols-3 gap-2 text-center">
+        <span className="mt-3 grid grid-cols-3 gap-2 text-center">
           {stats.map((s) => (
             <span key={s.label} className="rounded-xl bg-white/10 px-1 py-2">
-              <span className={`block text-2xl font-bold ${s.tone}`}>{s.value}</span>
+              <span className={`block text-xl font-bold ${s.tone}`}>{s.value}</span>
               <span className="block truncate text-[11px] text-white/80">{s.label}</span>
             </span>
           ))}
@@ -74,7 +68,7 @@ function ClassDashboardCard() {
 
 export default function Home() {
   const { t, profile, setProfile, data, auth, lang } = useApp();
-  const [tTab, setTTab] = useState<"class" | "tools">("class");
+  const [tTab, setTTab] = useState<"class" | "tools" | "money">("class");
   const isTeacher = auth?.user.role === "teacher";
   // greet the signed-in person by their registered name, never by a demo profile
   const greetName = auth?.user.name || (isTeacher ? null : profile?.name) || "";
@@ -94,7 +88,22 @@ export default function Home() {
                 : <Link href="/profile/" className="text-xs font-semibold text-[var(--brand)] underline">{t("my_details")}</Link>)}
             </div>
           </div>
-          {isTeacher && profile && data?.students?.length > 0 && (
+
+        </Card>
+      )}
+      <p className="-mt-1 px-1 text-xs leading-snug text-[var(--muted)]">{t("tagline")}</p>
+
+      {isTeacher ? (
+        <>
+        <Tabs value={tTab} onChange={setTTab} tabs={[
+          { key: "class", label: `📊 ${t("teacher_dashboard")}` },
+          { key: "tools", label: `🧑‍🎓 ${t("home_student_tools")}` },
+          { key: "money", label: `🏦 ${t("home_money")}` },
+        ]} />
+        {tTab === "class" && <ClassDashboardCard />}
+        {tTab === "tools" && <>
+        {profile && data?.students?.length > 0 && (
+          <div className="rounded-xl bg-[var(--card)] p-3 ring-1 ring-black/5">
             <label className="flex items-center gap-2 text-sm text-[var(--muted)]">
               {t("preview_demo")}
               <select aria-label={t("preview_demo")} value={profile.id ?? ""} onChange={(e) => setProfile(data.students.find((s: any) => s.id === e.target.value))}
@@ -102,40 +111,27 @@ export default function Home() {
                 {data.students.map((s: any) => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
             </label>
-          )}
-        </Card>
-      )}
-      <p className="-mt-1 px-1 text-xs leading-snug text-[var(--muted)]">{t("tagline")}</p>
-
-      {isTeacher ? (
-        <>
-        <Tabs value={tTab} onChange={setTTab} tabs={[{ key: "class", label: `📊 ${t("teacher_dashboard")}` }, { key: "tools", label: `🧑‍🎓 ${t("home_student_tools")}` }]} />
-        {tTab === "class" && <>
-        <ClassDashboardCard />
-
+          </div>
+        )}
         <div className="grid grid-cols-3 gap-2">
-          {STAFF.filter((x) => x.href !== "/teacher/").map((x) => (
-            <Link key={x.href} href={x.href} className="flex flex-col items-center rounded-xl bg-[var(--card)] px-1 py-2 text-center text-xs leading-tight ring-1 ring-black/5">
-              <span className="text-xl">{x.icon}</span>{t(x.key)}
+          {[{ href: "/ask/", icon: "💬", key: "home_ask" }, ...TILES, { href: "/exams/", icon: "📝", key: "home_exams" }].map((x) => (
+            <Link key={x.href} href={x.href} className="flex flex-col items-center rounded-xl bg-[var(--card)] px-1 py-2.5 text-center text-xs leading-tight ring-1 ring-black/5 active:scale-95">
+              <span className="text-2xl">{x.icon}</span>{t(x.key)}
             </Link>
           ))}
         </div>
-        </>}
-        {tTab === "tools" && <>
-        {/* the student screens stay one tap away, smaller, for previewing what a student sees */}
-        <div className="space-y-1">
-          <div className="px-1 text-xs font-semibold text-[var(--muted)]">{t("home_student_tools")}</div>
-          <div className="grid grid-cols-3 gap-2">
-            {[{ href: "/ask/", icon: "💬", key: "home_ask" }, ...TILES].map((x) => (
-              <Link key={x.href} href={x.href} className="flex flex-col items-center rounded-xl bg-[var(--card)] px-1 py-2 text-center text-xs leading-tight text-[var(--brand-ink)] ring-1 ring-black/5 active:scale-95">
-                <span className="text-2xl">{x.icon}</span>{t(x.key)}
-              </Link>
-            ))}
-          </div>
-        </div>
-
         <ProShelf />
         </>}
+        {tTab === "money" && (
+          <Link href="/money/" className="flex items-center gap-3 rounded-2xl bg-[var(--card)] p-4 shadow-sm ring-1 ring-black/5 active:scale-[.98]">
+            <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-[var(--brand-soft)] text-2xl">🏦</span>
+            <span className="min-w-0 flex-1">
+              <span className="block font-bold">{t("home_money")}</span>
+              <span className="block text-xs text-[var(--muted)]">{t("money_layer")}</span>
+            </span>
+            <span aria-hidden className="text-2xl text-[var(--muted)]">›</span>
+          </Link>
+        )}
         </>
       ) : !unlocked ? (
         /* before a roadmap exists there is one thing to do: build it. A short story shows why. */
