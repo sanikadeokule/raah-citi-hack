@@ -46,7 +46,7 @@ function ClassDashboardCard() {
       <span className="flex items-center gap-3">
         <span className="text-3xl leading-none">👩‍🏫</span>
         <span className="min-w-0 flex-1">
-          <span className="block text-lg font-bold leading-tight">{t("teacher_dashboard")}</span>
+          <span className="block text-lg font-bold leading-tight">{t("tab_class")}</span>
           <span className="block text-xs leading-snug text-white/85">{t("home_class_dash_sub")}</span>
         </span>
         <span aria-hidden className="text-2xl">›</span>
@@ -94,13 +94,9 @@ export default function Home() {
 
       {isTeacher ? (
         <>
-        {/* three big tiles, the same size as the student home tiles */}
-        <div className="grid grid-cols-3 gap-2">
-          {/* My class and Money open their pages with one tap; Student view opens the preview tools below */}
-          <Link href="/teacher/" className="flex flex-col items-center justify-center rounded-2xl border-b-4 border-[var(--accent)] bg-[var(--card)] px-1 py-5 text-center text-[var(--brand-ink)] shadow-sm active:scale-95">
-            <span className="text-4xl leading-none">📊</span>
-            <span className="mt-2 text-sm font-semibold leading-tight">{t("tab_class")}</span>
-          </Link>
+        <ClassDashboardCard />
+        {/* two big tiles below the class card */}
+        <div className="grid grid-cols-2 gap-2">
           <button onClick={() => setTTab(tTab === "tools" ? "class" : "tools")} aria-pressed={tTab === "tools"}
             className={`flex flex-col items-center justify-center rounded-2xl border-b-4 border-[var(--accent)] px-1 py-5 text-center shadow-sm active:scale-95 ${tTab === "tools" ? "bg-[var(--brand)] text-white" : "bg-[var(--card)] text-[var(--brand-ink)]"}`}>
             <span className="text-4xl leading-none">🧑‍🎓</span>
@@ -111,7 +107,6 @@ export default function Home() {
             <span className="mt-2 text-sm font-semibold leading-tight">{t("home_money")}</span>
           </Link>
         </div>
-        {tTab === "class" && <ClassDashboardCard />}
         {tTab === "tools" && <>
         {profile && data?.students?.length > 0 && (
           <div className="rounded-xl bg-[var(--card)] p-3 ring-1 ring-black/5">
