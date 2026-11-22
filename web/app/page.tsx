@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { categoryLabel, talukaLabel } from "@/lib/labels";
 import { useEffect, useState } from "react";
+import { Tabs } from "@/components/tabs";
 import { Card, Shell } from "@/components/ui";
 import { TeacherInbox } from "@/components/inbox";
 import { HomeStory } from "@/components/story";
@@ -73,6 +74,7 @@ function ClassDashboardCard() {
 
 export default function Home() {
   const { t, profile, setProfile, data, auth, lang } = useApp();
+  const [tTab, setTTab] = useState<"class" | "tools">("class");
   const isTeacher = auth?.user.role === "teacher";
   // greet the signed-in person by their registered name, never by a demo profile
   const greetName = auth?.user.name || (isTeacher ? null : profile?.name) || "";
@@ -107,8 +109,19 @@ export default function Home() {
 
       {isTeacher ? (
         <>
+        <Tabs value={tTab} onChange={setTTab} tabs={[{ key: "class", label: `📊 ${t("teacher_dashboard")}` }, { key: "tools", label: `🧑‍🎓 ${t("home_student_tools")}` }]} />
+        {tTab === "class" && <>
         <ClassDashboardCard />
 
+        <div className="grid grid-cols-3 gap-2">
+          {STAFF.filter((x) => x.href !== "/teacher/").map((x) => (
+            <Link key={x.href} href={x.href} className="flex flex-col items-center rounded-xl bg-[var(--card)] px-1 py-2 text-center text-xs leading-tight ring-1 ring-black/5">
+              <span className="text-xl">{x.icon}</span>{t(x.key)}
+            </Link>
+          ))}
+        </div>
+        </>}
+        {tTab === "tools" && <>
         {/* the student screens stay one tap away, smaller, for previewing what a student sees */}
         <div className="space-y-1">
           <div className="px-1 text-xs font-semibold text-[var(--muted)]">{t("home_student_tools")}</div>
@@ -122,14 +135,7 @@ export default function Home() {
         </div>
 
         <ProShelf />
-
-        <div className="grid grid-cols-3 gap-2">
-          {STAFF.filter((x) => x.href !== "/teacher/").map((x) => (
-            <Link key={x.href} href={x.href} className="flex flex-col items-center rounded-xl bg-[var(--card)] px-1 py-2 text-center text-xs leading-tight ring-1 ring-black/5">
-              <span className="text-xl">{x.icon}</span>{t(x.key)}
-            </Link>
-          ))}
-        </div>
+        </>}
         </>
       ) : !unlocked ? (
         /* before a roadmap exists there is one thing to do: build it. A short story shows why. */
