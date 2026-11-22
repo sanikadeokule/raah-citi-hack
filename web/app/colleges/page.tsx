@@ -5,12 +5,13 @@ import { useEffect, useState } from "react";
 import { Badge, Card, Shell, Source } from "@/components/ui";
 import { getKV, setKV } from "@/lib/db";
 import { useApp } from "@/lib/store";
+import { placeLabel } from "@/lib/questions";
 import { postAi } from "@/lib/ai";
 import { BUILD_ROADMAP_HREF } from "@/lib/roadmap";
 import { ExamsList } from "@/components/exams";
 import { Tabs } from "@/components/tabs";
 import { CHANCE_TEXT, chanceFor } from "@/lib/chance";
-import { centreTypeLabel, districtLabel, talukaLabel } from "@/lib/labels";
+import { centreTypeLabel } from "@/lib/labels";
 
 const PAGE_SIZE = 5;
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
@@ -75,7 +76,7 @@ function CentreCard({ c, t, profile, lang }: { c: any; t: (k: string) => string;
             )}
             {(c.taluka || c.district) && (
               <span className="text-[11px] text-[var(--muted)]">
-                {[talukaLabel(c.taluka, lang), districtLabel(c.district, lang)].filter(Boolean).join(", ")}
+                {[c.taluka, c.district].filter(Boolean).map((x: string) => placeLabel(t, x)).join(", ")}
               </span>
             )}
           </div>

@@ -10,7 +10,7 @@ Keys go in backend/.env (never in code):
   BHASHINI_API_KEY=...          (ulcaApiKey from your BHASHINI profile)
   BHASHINI_PIPELINE_ID=64392f96daac500b55c543cd   (MeitY default pipeline)
   SARVAM_API_KEY=...            (dashboard.sarvam.ai; the same key the AI chat uses)
-  SARVAM_TTS_MODEL=bulbul:v2    SARVAM_TTS_SPEAKER=anushka   SARVAM_ASR_MODEL=saarika:v2.5
+  SARVAM_TTS_MODEL=bulbul:v3    SARVAM_TTS_SPEAKER=anushka   SARVAM_ASR_MODEL=saaras:v4
 """
 from __future__ import annotations
 
@@ -160,20 +160,22 @@ def _sarvam_tts(text: str, lang: str, gender: str) -> bytes:
     for part in _chunks(text):
         r = httpx.post(SARVAM_TTS_URL, timeout=30, headers=_sarvam_headers(), json={
             "text": part, "target_language_code": LOCALE.get(lang, "en-IN"), "speaker": speaker,
-            "model": os.environ.get("SARVAM_TTS_MODEL", "bulbul:v2"), "pace": 0.95})
+            "model": os.environ.get("SARVAM_TTS_MODEL", "bulbul:v3"), "pace": 0.95})
         if r.status_code != 200:
             raise VoiceError(f"Sarvam TTS returned {r.status_code}")
         wavs.append(base64.b64decode(r.json()["audios"][0]))
     return _join_wavs(wavs)
 
 
-def _sarvam_asr(audio: bytes, lang: str, fmt: str, sample_rate: int) -> str:
+def _sarvam_asr(audio: bytes, lang: str, fmt: str, sample_rate: int) -> dict:
     r = httpx.post(SARVAM_ASR_URL, timeout=30, headers=_sarvam_headers(),
-                   data={"model": os.environ.get("SARVAM_ASR_MODEL", "saarika:v2.5"), "language_code": LOCALE.get(lang, "unknown")},
+                   data={"model": os.environ.get("SARVAM_ASR_MODEL", "saaras:v4"), "mode": "transcribe"},
                    files={"file": (f"speech.{fmt}", audio, f"audio/{fmt}")})
     if r.status_code != 200:
         raise VoiceError(f"Sarvam ASR returned {r.status_code}")
-    return r.json().get("transcript", "")
+    result = r.json()
+    return {"text": result.get("transcript", ""), "language_code": result.get("language_code"),
+            "language_probability": result.get("language_probability")}
 
 
 def _run(task: str, *args):
@@ -233,5 +235,16 @@ def asr(body: ASRIn):
         raise HTTPException(400, "audio_b64 is not valid base64")
     if not audio:
         raise HTTPException(400, "empty recording")
-    text, provider = _run("asr", audio, body.lang, body.format, body.sample_rate)
-    return {"text": text.strip(), "provider": provider}
+    result, provider = _run("asr", audio, body.lang, body.format, body.sample_rate)
+    if isinstance(result, dict):
+        text = result.get("text", "")
+        language_code = result.get("language_code")
+        confidence = result.get("language_probability")
+    else:  # BHASHINI returns text only; keep its explicitly selected language.
+        text = result
+        language_code = LOCALE.get(body.lang)
+        confidence = None
+    detected_lang = next((short for short, code in (("mr", "mr-IN"), ("hi", "hi-IN"), ("en", "en-IN"))
+                          if language_code and language_code.lower().startswith(short)), body.lang)
+    return {"text": text.strip(), "provider": provider, "detected_lang": detected_lang,
+            "language_code": language_code, "language_probability": confidence}

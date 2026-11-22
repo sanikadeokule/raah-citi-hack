@@ -122,6 +122,14 @@ const ask = (key: string, vars?: (p: any, t: T) => Record<string, string | numbe
   return { text: t(`q_${key}`, v), hint: t(`q_${key}_hint`, v) };
 };
 
+/** An interest tag in the student's language; the stored value stays the dataset's English tag. */
+export const tagLabel = (t: T, tag: string) => { const k = `interest_${tag}`; const s = t(k); return s === k ? tag : s; };
+
+/** A taluka or district in the student's language; the stored value stays the dataset's English name. */
+export const placeLabel = (t: T, place?: string | null) => { if (!place) return ""; const k = `place_${place}`; const s = t(k); return s === k ? place : s; };
+/** A profile field's name ("taluka") in the student's language. */
+export const fieldLabel = (t: T, key: string) => { const k = `field_${key}`; const s = t(k); return s === k ? key.replaceAll("_", " ") : s; };
+
 export const QUESTIONS: Q[] = [
   { key: "name", kind: "text", ask: ask("name") },
   { key: "age", kind: "number", ask: ask("age"), parse: parseAge },
@@ -139,10 +147,10 @@ export const QUESTIONS: Q[] = [
       { v: undefined, label: t("opt_fix_class"), icon: "✏️", patch: { class: undefined } },
     ] },
   { key: "interests", kind: "multi", ask: ask("interests"),
-    options: (d) => {
+    options: (d, t) => {
       const count: Record<string, number> = {};
       d.careers.forEach((c: any) => c.tags.forEach((x: string) => (count[x] = (count[x] || 0) + 1)));
-      return Object.entries(count).sort((a, b) => b[1] - a[1]).slice(0, 18).map(([x]) => ({ v: x, label: x }));
+      return Object.entries(count).sort((a, b) => b[1] - a[1]).slice(0, 18).map(([x]) => ({ v: x, label: tagLabel(t, x) }));
     } },
   { key: "marks_exam", kind: "choice", ask: ask("marks_exam"),
     options: (_d, t, p) => [...examsFor(p.class).map((e) => ({ v: e.id, label: t(`exam_${e.id}`), icon: "📄" })),
@@ -151,7 +159,7 @@ export const QUESTIONS: Q[] = [
     answered: (p) => !isMissing(p.marks_pct) || p.marks_exam === "unknown",
     options: (_d, t) => [{ v: null, label: t("opt_dont_remember"), icon: "🤷", patch: { marks_exam: "unknown" } }] },
   { key: "taluka", kind: "choice", free: true, ask: ask("taluka"),
-    options: (d) => d.talukas.filter((x: any) => x.name !== "Pune city").map((x: any) => ({ v: x.name, label: x.name })) },
+    options: (d, t) => d.talukas.filter((x: any) => x.name !== "Pune city").map((x: any) => ({ v: x.name, label: placeLabel(t, x.name) })) },
   { key: "category", kind: "choice", ask: ask("category"),
     options: (_d, t) => CATEGORIES.map((c) => ({ v: c, label: c === "General" ? t("opt_general") : c })) },
   { key: "family_income_annual", kind: "choice", ask: ask("income"),

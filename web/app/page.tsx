@@ -1,7 +1,7 @@
 "use client";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import Link from "next/link";
-import { categoryLabel, talukaLabel } from "@/lib/labels";
+import { categoryLabel } from "@/lib/labels";
 import { useEffect, useState } from "react";
 import { Card, Shell } from "@/components/ui";
 import { TeacherInbox } from "@/components/inbox";
@@ -9,6 +9,7 @@ import { HomeStory } from "@/components/story";
 import { ProShelf } from "@/components/pro";
 import { getKV, setKV } from "@/lib/db";
 import { useApp } from "@/lib/store";
+import { placeLabel } from "@/lib/questions";
 import { BUILD_ROADMAP_HREF, hasRoadmap } from "@/lib/roadmap";
 
 const TILES = [
@@ -72,7 +73,7 @@ export default function Home() {
   // greet the signed-in person by their registered name, never by a demo profile
   const greetName = auth?.user.name || (isTeacher ? null : profile?.name) || "";
   const unlocked = hasRoadmap(profile, auth?.user.role);
-  const details = profile ? [profile.class && t("class_n", { n: profile.class }), talukaLabel(profile.taluka, lang), categoryLabel(profile.category, lang)].filter(Boolean).join(" · ") : "";
+  const details = profile ? [profile.class && t("class_n", { n: profile.class }), placeLabel(t, profile.taluka), categoryLabel(profile.category, lang)].filter(Boolean).join(" · ") : "";
   return (
     <Shell back={null} fit>
       {/* language is switched from the header; the home screen fits one phone screen without scrolling */}

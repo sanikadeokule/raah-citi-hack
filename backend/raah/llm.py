@@ -51,7 +51,7 @@ def _providers() -> list[dict]:
                         "headers": {"Authorization": f"Bearer {os.environ['GROQ_API_KEY']}"}, "timeout": 30})
         elif name == "sarvam" and os.environ.get("SARVAM_API_KEY"):
             out.append({"name": "sarvam", "url": "https://api.sarvam.ai/v1/chat/completions",
-                        "model": os.environ.get("SARVAM_MODEL", "sarvam-m"),
+                        "model": os.environ.get("SARVAM_MODEL", "sarvam-105b"),
                         "headers": {"api-subscription-key": os.environ["SARVAM_API_KEY"]}, "timeout": 30})
     return out
 
@@ -74,6 +74,11 @@ def chat(messages: list[dict], json_mode: bool = False, temperature: float = 0.3
         if time.time() - _down.get(p["name"], 0) < DOWN_SECONDS:
             continue
         body = {"model": p["model"], "messages": messages, "temperature": temperature, "max_tokens": max_tokens}
+        if p["name"] == "sarvam":
+            # Sarvam-105B reasons by default; short requests (such as search
+            # keyword translation) can spend the entire token budget thinking.
+            # Null disables reasoning for these latency-sensitive app replies.
+            body["reasoning_effort"] = None
         if p["name"] == "ollama":
             # gemma4 is a "thinking" model: its reasoning can use up the whole token budget and leave an empty answer
             body["reasoning_effort"] = "none"

@@ -12,7 +12,7 @@ import { useApp } from "@/lib/store";
 
 type Cite = { n: number; sheet: string; row_id: string; title: string; excel_rows: number[]; source: string; summary: string };
 type Step = { n: number; tool: string; label: string; summary?: string; done?: boolean };
-type Msg = { from: "me" | "raah"; text: string; cites?: Cite[]; note?: string; steps?: Step[] };
+type Msg = { from: "me" | "raah"; text: string; cites?: Cite[]; note?: string; steps?: Step[]; lang?: string };
 
 const EXAMPLES = ["ask_ex1", "ask_ex2", "ask_ex3"];
 
@@ -35,7 +35,7 @@ function StepBubble({ s, label }: { s: Step; label: string }) {
 }
 
 export default function AskPage() {
-  const { t, lang, profile, online, authFetch } = useApp();
+  const { t, lang, setLang, profile, online, authFetch } = useApp();
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
@@ -75,23 +75,24 @@ export default function AskPage() {
 
   const stepLabel = (s: Step) => { const k = `agent_${s.tool}`; const v = t(k); return v === k ? s.label : v; };
 
-  const ask = async (q: string) => {
+  const ask = async (q: string, responseLang = lang) => {
     q = q.trim();
     if (!q || busy) return;
+    if (responseLang !== lang) setLang(responseLang);
     setText("");
     const history = msgs.slice(-4).map((m) => ({ role: m.from === "me" ? "user" : "assistant", content: m.text }));
     setMsgs((m) => [...m, { from: "me", text: q }]);
     setBusy(true);
     setLive([]);
-    const body = { question: q, lang, history, profile };
+    const body = { question: q, lang: responseLang, history, profile };
     const j = (await askAgent(body)) ?? (await postAi("/api/ask", body));
     setBusy(false);
     setLive([]);
-    if (!j) return setMsgs((m) => [...m, { from: "raah", text: t("ask_offline") }]);
+    if (!j) return setMsgs((m) => [...m, { from: "raah", text: t("ask_offline"), lang: responseLang }]);
     const ungrounded = j.grounded === false || (j.agent_fallback ?? "").startsWith("model used a figure");
     const note = j.fallback || ungrounded ? (ungrounded ? t("ask_note_ungrounded") : t("ask_note_no_ai")) : undefined;
     const steps: Step[] | undefined = j.steps?.map((s: any) => ({ n: s.n, tool: s.tool, label: s.label, summary: s.summary, done: true }));
-    setMsgs((m) => [...m, { from: "raah", text: j.answer, cites: j.citations, note, steps }]);
+    setMsgs((m) => [...m, { from: "raah", text: j.answer, cites: j.citations, note, steps, lang: responseLang }]);
   };
 
   return (
@@ -131,7 +132,7 @@ export default function AskPage() {
                   ))}
                 </ol>
               )}
-              {m.from === "raah" && i === msgs.length - 1 && <div className="mt-1"><SpeakButton text={m.text.replace(/\[\d+\]/g, "")} label="" /></div>}
+              {m.from === "raah" && i === msgs.length - 1 && <div className="mt-1"><SpeakButton text={m.text.replace(/\[\d+\]/g, "")} label="" lang={m.lang} /></div>}
             </div>
           </div>
         ))}
@@ -146,7 +147,7 @@ export default function AskPage() {
       <Card className="sticky bottom-2">
         {!online && <p className="mb-2 text-xs text-amber-700">{t("ask_offline")}</p>}
         <div className="flex items-end gap-2">
-          <MicButton onText={(s) => ask(s)} />
+          <MicButton onText={(s, detectedLang) => ask(s, detectedLang || lang)} />
           <ChatInput value={text} onChange={setText} onSend={() => { if (!busy && text.trim()) ask(text); }}
             placeholder={t("ask_placeholder")} maxLength={500} />
           <button onClick={() => ask(text)} disabled={busy || !text.trim()} className="rounded-full bg-[var(--brand)] px-4 py-3 text-white disabled:opacity-40">{t("send")}</button>

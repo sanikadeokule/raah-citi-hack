@@ -64,9 +64,10 @@ def tool_specs(signed_in: bool) -> list[dict]:
 
 
 def system_prompt(lang: str, profile: dict, signed_in: bool) -> str:
-    return (f"You are Raah, a career guide for rural students, parents and teachers in Maharashtra. Answer in "
-            f"{LANG_NAME.get(lang, 'English')} in short, simple sentences a Class 9 student understands.\n"
+    return (f"You are Raah, a career guide for rural students, parents and teachers in Maharashtra. Answer entirely in "
+            f"{LANG_NAME.get(lang, 'English')} in short, simple sentences a Class 9 student understands. Do not switch languages mid-answer.\n"
             + llm.off_topic_rule(lang) +
+            "Translate descriptive tool data and field names into the requested language. Preserve only proper names, official scheme names, acronyms, codes, and exact figures in their original form. Never repeat raw database labels or internal tool formatting.\n"
             "In Hindi or Marathi always write the app name as राह, never as Raah.\n"
             "Read the whole conversation and the student's profile first. If they already told you something that "
             "answers your question (even in passing or with spelling mistakes), use it; never ask them to repeat it. "

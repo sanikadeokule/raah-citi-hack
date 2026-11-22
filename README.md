@@ -383,11 +383,13 @@ For asynchronous confirmation, configure a Razorpay webhook at `/api/modules/raz
 Speech runs on the server when keys are set in `backend/.env`, so Marathi works even on phones that have no Marathi voice installed:
 
 - **BHASHINI** (`BHASHINI_USER_ID`, `BHASHINI_API_KEY`), the government ULCA pipeline.
-- **Sarvam AI** (`SARVAM_API_KEY`): Bulbul for text-to-speech, Saarika for speech-to-text.
+- **Sarvam AI** (`SARVAM_API_KEY`): Bulbul v3 for text-to-speech and Saaras v4 for speech-to-text. Saaras detects Hindi, Marathi, or English; voice questions in Discover, Ask Raah, and Learn use the detected language for that reply.
 
 `VOICE_PROVIDERS` (default `bhashini,sarvam`) sets the order. A provider without keys is skipped, and one that fails is tried last for two minutes, so a slow service does not hold up every request. `GET /api/voice/status` shows which providers are active. Generated speech is cached on the server in `RAAH_TTS_CACHE` (default `backend/data/tts`), so each lesson or message is synthesised once and cached audio still plays if the keys or the service go away; lesson audio can also be saved on the phone for offline listening.
 
 Without keys the app uses the phone's own voices (`mr-IN`, `hi-IN`, `en-IN`) and the browser's speech recognition. If the phone has no Marathi voice, a Hindi voice reads Marathi text (same script). When something cannot work, the app says why instead of staying silent: the page is not on https, microphone permission is blocked, no microphone, nothing heard, no voice for the language, or audio could not play on the device (for example a desktop with no speakers). The speaker button turns into ⚠️ and can be tapped to try again.
+
+To verify Sarvam STT locally, install the backend requirements and run `.venv/Scripts/python.exe scripts/sarvam_first_call.py` from `backend/`. The script uses the ignored `backend/.env`, synthesizes a short Marathi sample, and prints the Saaras transcript and detected language.
 
 ### ISO 20022 validation
 

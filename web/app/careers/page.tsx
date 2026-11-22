@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Badge, Card, Shell } from "@/components/ui";
 import { computePlan, inr, rankCareers } from "@/lib/engine";
 import { useApp } from "@/lib/store";
+import { tagLabel } from "@/lib/questions";
 import { paybackText } from "@/components/plan";
 import { aiAvailable, postAi } from "@/lib/ai";
 import { Pager, usePaged } from "@/components/pager";
@@ -72,7 +73,7 @@ export default function CareersPage() {
           <h2 className="text-lg font-bold">⭐ {t("shortlist")}</h2>
           <Link href="/profile/" className="text-sm underline">{t("edit_profile")}</Link>
         </div>
-        <p className="text-xs text-[var(--muted)]">{(profile?.interests || []).join(", ")}</p>
+        <p className="text-xs text-[var(--muted)]">{(profile?.interests || []).map((x: string) => tagLabel(t, x)).join(", ")}</p>
         <p className="mt-1 text-xs font-medium text-[var(--brand-ink)]">🗺️ {t("rm_tap_hint")}</p>
         <ul className="mt-2 space-y-2">
           {top.map((s: any, i: number) => {

@@ -7,7 +7,7 @@ import { Badge, Card, Shell, Source } from "@/components/ui";
 import { CashChart, ParentNote, PaybackCard, SchemeResult, WhatIf } from "@/components/plan";
 import { computePlan, inr, type PlanOptions } from "@/lib/engine";
 import { useApp } from "@/lib/store";
-import { talukaLabel } from "@/lib/labels";
+import { placeLabel } from "@/lib/questions";
 import { coursesFor } from "@/lib/helpers";
 import { PlanExams } from "@/components/exams";
 import { CentreMap } from "@/components/centremap";
@@ -57,7 +57,7 @@ function PlanView() {
       {r.centres.length > 0 && (
         <Card>
           <h2 className="mb-2 text-lg font-bold">📍 {t("nearest_centres")}</h2>
-          <CentreMap centres={r.centres} home={{ lat: profile?.lat, lon: profile?.lon, label: talukaLabel(profile?.taluka, lang) || t("your_profile") }} />
+          <CentreMap centres={r.centres} home={{ lat: profile?.lat, lon: profile?.lon, label: placeLabel(t, profile?.taluka) || t("your_profile") }} />
           <ul className="space-y-2">
             {r.centres.map((c: any, i: number) => (
               <li key={c.id} className="rounded-xl bg-[var(--bg)] p-3 text-sm">

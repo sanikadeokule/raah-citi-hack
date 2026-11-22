@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { Card, Shell } from "@/components/ui";
 import { useApp } from "@/lib/store";
-import { categoryLabel, talukaLabel } from "@/lib/labels";
+import { categoryLabel } from "@/lib/labels";
+import { placeLabel } from "@/lib/questions";
 import { db, getKV } from "@/lib/db";
 
 type Lang3 = [string, string, string]; // English, Hindi, Marathi
@@ -63,11 +64,11 @@ export default function ProfilePage() {
             )}
           </label>
         ))}
-        <label className="block text-sm"><span className="text-[var(--muted)]">{TALUKA_WORD[li]}</span>
+        <label className="block text-sm"><span className="text-[var(--muted)]">{t("field_taluka")}</span>
           <select value={p.taluka ?? ""} className="mt-1 w-full rounded-lg bg-[var(--bg)] p-2" onChange={(e) => {
             const tk = data.talukas.find((x: any) => x.name === e.target.value);
             setP({ ...p, taluka: e.target.value, lat: tk?.lat ?? p.lat, lon: tk?.lon ?? p.lon });
-          }}>{data.talukas.map((x: any) => <option key={x.name} value={x.name}>{talukaLabel(x.name, lang)}</option>)}</select>
+          }}>{data.talukas.map((x: any) => <option key={x.name} value={x.name}>{placeLabel(t, x.name)}</option>)}</select>
         </label>
         <button onClick={() => { setProfile(p); queueAction("profile", p); showToast(t("saved")); }} className="w-full rounded-xl bg-[var(--brand)] py-3 font-semibold text-white">{t("save")}</button>
       </Card>
