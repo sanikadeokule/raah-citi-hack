@@ -7,7 +7,7 @@
 import { useEffect, useState } from "react";
 import { Badge, Card, Shell } from "@/components/ui";
 import { useText } from "@/components/pro";
-import { API } from "@/lib/store";
+import { API, useApp } from "@/lib/store";
 
 const T: Record<string, Record<string, string>> = {
   en: {
@@ -238,6 +238,7 @@ function Dashboard({ token, studentName, onSignOut }: { token: string; studentNa
 
 export default function ParentPage() {
   const t = useText(T);
+  const { auth } = useApp();
   const [familyToken, setFamilyToken] = useState<string | null>(null);
   const [studentName, setStudentName] = useState("");
 
@@ -254,7 +255,15 @@ export default function ParentPage() {
     <Shell title={t("title")} publicPage>
       {familyToken
         ? <Dashboard token={familyToken} studentName={studentName} onSignOut={signOut} />
-        : <SignInForm onToken={(tok, name) => { setFamilyToken(tok); setStudentName(name); }} />}
+        : <>
+            {auth?.token && auth.user.role === "student" && (
+              <div className="mb-2">
+                <p className="mb-1 px-1 text-xs font-semibold text-[var(--muted)]">{t("for_student")}</p>
+                <PinManager studentToken={auth.token} />
+              </div>
+            )}
+            <SignInForm onToken={(tok, name) => { setFamilyToken(tok); setStudentName(name); }} />
+          </>}
     </Shell>
   );
 }
