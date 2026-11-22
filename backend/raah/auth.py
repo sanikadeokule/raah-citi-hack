@@ -87,7 +87,7 @@ def current_user(cred: HTTPAuthorizationCredentials | None = Depends(bearer)) ->
     except jwt.PyJWTError:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "invalid or expired token", headers={"WWW-Authenticate": "Bearer"})
     with db.connect() as con:
-        row = con.execute("SELECT id, phone, role, name FROM users WHERE id = ?", (int(claims["sub"]),)).fetchone()
+        row = con.execute("SELECT id, phone, role, name, is_pro FROM users WHERE id = ?", (int(claims["sub"]),)).fetchone()
     if row is None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "account no longer exists")
     return dict(row)
@@ -209,7 +209,7 @@ def login(body: LoginIn):
     with db.connect() as con:
         con.execute("UPDATE users SET failed_logins = 0, locked_until = 0, last_login_at = ?, pin_hash = ? WHERE id = ?",
                     (now, new_hash, row["id"]))
-    u = {"id": row["id"], "phone": row["phone"], "role": row["role"], "name": row["name"]}
+    u = {"id": row["id"], "phone": row["phone"], "role": row["role"], "name": row["name"], "is_pro": row["is_pro"]}
     return {"access_token": issue_token(u), "token_type": "bearer", "expires_in": TOKEN_TTL_SECONDS, "user": public(u)}
 
 
@@ -230,8 +230,14 @@ def reset_pin(body: ResetPinIn, teacher: dict = Depends(require_role("teacher"))
     return {"reset": True}
 
 
+def has_pro(u: dict) -> bool:
+    """Pro features are open to Pro students; teachers always see them, since they preview every student screen."""
+    return u.get("role") == "teacher" or bool(u.get("is_pro"))
+
+
 def public(u: dict) -> dict:
-    return {"id": u["id"], "role": u["role"], "name": u.get("name"), "phone": "XXXXXX" + u["phone"][-4:]}
+    return {"id": u["id"], "role": u["role"], "name": u.get("name"), "phone": "XXXXXX" + u["phone"][-4:],
+            "is_pro": has_pro(u)}
 
 
 @router.get("/me")

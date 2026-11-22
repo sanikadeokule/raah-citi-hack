@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { Card, Shell } from "@/components/ui";
 import { TeacherInbox } from "@/components/inbox";
 import { HomeStory } from "@/components/story";
+import { ProShelf } from "@/components/pro";
 import { getKV, setKV } from "@/lib/db";
 import { useApp } from "@/lib/store";
 import { BUILD_ROADMAP_HREF, hasRoadmap } from "@/lib/roadmap";
@@ -120,6 +121,8 @@ export default function Home() {
           </div>
         </div>
 
+        <ProShelf />
+
         <div className="grid grid-cols-3 gap-2">
           {STAFF.filter((x) => x.href !== "/teacher/").map((x) => (
             <Link key={x.href} href={x.href} className="flex flex-col items-center rounded-xl bg-[var(--card)] px-1 py-2 text-center text-xs leading-tight ring-1 ring-black/5">
@@ -152,6 +155,8 @@ export default function Home() {
             </Link>
           ))}
         </div>
+
+        <ProShelf />
 
         <div className="grid grid-cols-4 gap-2">
           {STAFF.map((x) => (

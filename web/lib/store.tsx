@@ -18,7 +18,7 @@ export const LANGS = [
   { code: "en", label: "English", short: "Eng", speech: "en-IN" },
 ];
 
-export interface AuthUser { id: number; role: "student" | "teacher"; name: string | null; phone: string }
+export interface AuthUser { id: number; role: "student" | "teacher"; name: string | null; phone: string; is_pro?: boolean }
 interface Auth { token: string; user: AuthUser }
 
 interface Ctx {
