@@ -6,7 +6,7 @@ import { Suspense, useMemo, useState } from "react";
 import { Badge, Card, Shell, Source } from "@/components/ui";
 import { buildRoadmap, computePlan, inr, nearestCentres, rankCareers } from "@/lib/engine";
 import { coursesFor } from "@/lib/helpers";
-import { ParentNote } from "@/components/plan";
+import { ParentNote, RoadmapParentNote } from "@/components/plan";
 import { CentresCard, CoursesCard } from "@/components/getstarted";
 import { useApp } from "@/lib/store";
 
@@ -89,7 +89,7 @@ function RoadmapView() {
         <>
           <CentresCard centres={planResult ? planResult.centres : nearestCentres(data, profile, null, 3)} />
           <CoursesCard courses={coursesFor(data, r.career, plan)} />
-          {planResult && <ParentNote r={planResult} />}
+          {planResult ? <ParentNote r={planResult} /> : r.available && <RoadmapParentNote r={r} />}
           {plan && <Link href={`/plan/?id=${plan.id}`} className="block text-center text-sm font-semibold text-[var(--brand-ink)] underline">{t("rm_full_plan")} ›</Link>}
         </>
       ) : tab === "other" && others.length > 0 ? (

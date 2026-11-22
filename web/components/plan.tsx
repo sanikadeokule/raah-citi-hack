@@ -271,3 +271,44 @@ export function ParentNote({ r }: { r: any }) {
     </Card>
   );
 }
+
+// For careers that have no cost plan yet: the same message, built from the roadmap's totals.
+export function roadmapMessage(lang: string, profile: any, r: any) {
+  const name = profile?.name;
+  const career = r.career.name;
+  const tot = r.totals;
+  const yrs = Math.round((tot.months_to_job / 12) * 10) / 10;
+  const net = tot.net_low === tot.net_high ? inr(tot.net_high) : `${inr(tot.net_low)} - ${inr(tot.net_high)}`;
+  const inc = r.income ? inr(r.income.median) : null;
+  const pay = r.payback?.high_cost;
+  if (lang === "mr") {
+    return `आई-बाबा, मी ${name}. मला ${career} व्हायचे आहे. पहिल्या नोकरीपर्यंत सुमारे ${yrs} वर्षे लागतात.` +
+      ` शिष्यवृत्ती वजा करून आपला खर्च सुमारे ${net} आहे.` + (inc ? ` नोकरी लागल्यावर साधारण ${inc} महिना मिळू शकतात.` : "") +
+      (pay != null && pay > 0 ? ` खर्च ${pay} महिन्यांच्या कामात परत मिळेल.` : "");
+  }
+  if (lang === "hi") {
+    return `माँ-पापा, मैं ${name}. मैं ${career} बनना चाहती/चाहता हूँ। पहली नौकरी तक लगभग ${yrs} साल लगते हैं।` +
+      ` छात्रवृत्ति घटाकर हमारा खर्च लगभग ${net} है।` + (inc ? ` नौकरी लगने पर लगभग ${inc} महीना मिल सकता है।` : "") +
+      (pay != null && pay > 0 ? ` खर्च ${pay} महीनों के काम में वसूल होगा।` : "");
+  }
+  return `Hi Aai-Baba, it's ${name}. I want to become ${career}. It takes about ${yrs} years to reach my first job.` +
+    ` After scholarships our cost is about ${net}.` + (inc ? ` After I start working I can earn about ${inc} a month.` : "") +
+    (pay != null && pay > 0 ? ` The cost pays back in ${pay} months of work.` : "");
+}
+
+export function RoadmapParentNote({ r }: { r: any }) {
+  const { t, lang, profile } = useApp();
+  const msg = roadmapMessage(lang, profile, r);
+  return (
+    <Card>
+      <h2 className="mb-2 text-lg font-bold">👪 {t("parent_message")}</h2>
+      <p className="rounded-xl bg-[var(--bg)] p-3 text-sm leading-relaxed">{msg}</p>
+      <div className="mt-3 flex gap-2">
+        <SpeakButton text={msg} />
+        <a className="inline-flex items-center gap-1 rounded-full bg-[#25D366] px-3 py-1.5 text-sm font-medium text-white"
+          href={`https://wa.me/?text=${encodeURIComponent(msg)}`} target="_blank" rel="noreferrer">💬 {t("share_whatsapp")}</a>
+      </div>
+      <VoiceNote text={msg} name={profile?.name} />
+    </Card>
+  );
+}
