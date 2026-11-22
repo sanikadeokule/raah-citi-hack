@@ -230,10 +230,27 @@ def exam_from_question(text: str) -> str | None:
     return eid if eid in EXAMS else None
 
 
+_GIRL = {"girl", "girls", "female", "woman", "lady", "gurl", "hirl", "girll", "grl", "gril", "girlie", "मुलगी", "लड़की", "लडकी", "स्त्री", "महिला"}
+_BOY = {"boy", "boys", "male", "man", "gents", "मुलगा", "लड़का", "लडका", "पुरुष"}
+
+
+def gender_from_text(text: str) -> str | None:
+    """'F' or 'M' when the student says it in their own words, typos included ("im a hirl"). Words that describe
+    someone else ("my son", "daughter") are not read as the student's own gender."""
+    words = re.findall(r"[\wऀ-ॿ]+", (text or "").lower())
+    girl = any(w in _GIRL for w in words)
+    boy = any(w in _BOY for w in words)
+    if girl != boy:
+        return "F" if girl else "M"
+    return None
+
+
 def pre_extract(profile: dict, user_text: str, last_question: str) -> dict:
     """Plain answers (a class, marks, a percentage, km, age) are read here before the model sees them, so a small
     model that forgets to fill a field cannot make the student repeat themselves. Anything unclear is left to the model."""
     p = dict(profile)
+    if not p.get("gender") and (g := gender_from_text(user_text)):
+        p["gender"] = g  # said once, in any answer: never ask again
     missing = missing_fields(p)
     if not missing:
         return p
@@ -270,6 +287,11 @@ def turn(body: Turn):
     last_user = next((str(m["content"]) for m in reversed(body.messages) if m.get("role") == "user"), "")
     last_ask = next((str(m["content"]) for m in reversed(body.messages) if m.get("role") == "assistant"), "")
     body.profile = pre_extract(body.profile, last_user, last_ask)
+    if not body.profile.get("gender"):  # said earlier in the chat (e.g. in the first message)
+        for m in reversed(body.messages):
+            if m.get("role") == "user" and (g := gender_from_text(str(m["content"]))):
+                body.profile["gender"] = g
+                break
     msgs = [{"role": "system", "content": _system_turn(d, body.lang, body.profile)}]
     msgs += [{"role": m["role"], "content": str(m["content"])[:1000]} for m in body.messages[-12:]
              if m.get("role") in ("user", "assistant")]

@@ -142,3 +142,27 @@ def test_plain_answers_are_read_before_the_model():
     r = chat.pre_extract(p, "340 out of 400", q)
     assert r["marks_pct"] == 85.0 and r["marks_total"] == 400
     assert "marks_pct" not in chat.pre_extract(p, "25 out of 25", q)
+
+
+def test_gender_read_from_text_typos_included():
+    g = chat.gender_from_text
+    assert g("im 12 yr old and wnt to be a doctor and im a hirl") == "F"
+    assert g("I WROTE ABOVE IM A GIRL") == "F"
+    assert g("मी मुलगी आहे") == "F"
+    assert g("I am a boy") == "M"
+    assert g("I am a female") == "F" and g("male") == "M"
+    assert g("my body hurts") is None and g("my son and my daughter") is None
+
+
+def test_gender_said_in_first_message_is_not_asked_again(monkeypatch):
+    seen = {}
+
+    def _chat(messages, json_mode=False, **kw):
+        seen["system"] = messages[0]["content"]
+        return json.dumps({"reply": "ok", "profile": {}, "done": False}), "test"
+    monkeypatch.setattr(llm, "chat", _chat)
+    msgs = [{"role": "user", "content": "im 12 and want to be a doctor and im a hirl"},
+            {"role": "assistant", "content": "Are you a girl or a boy?"},
+            {"role": "user", "content": "I WROTE ABOVE"}]
+    r = c.post("/api/chat/turn", json={"messages": msgs, "lang": "en", "profile": {"name": "Sanika", "age": 12}}).json()
+    assert r["profile"]["gender"] == "F" and "gender" not in r["missing"]
