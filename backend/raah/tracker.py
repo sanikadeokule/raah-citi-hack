@@ -4,7 +4,7 @@ Columns (in order): researching → applied → docs_submitted → waiting → r
 
 The board is seeded from the student's roadmap on first use:
   - scholarships from the dataset whose eligibility status is eligible or eligible_missing_docs
-  - colleges / training centres from nearestCentres for the plan's centre_type (optional, best-effort)
+  - colleges / training centres from nearest_centres for the plan's centre_type (optional, best-effort)
 
 Each card has: title, kind (college/scholarship), notes (free text), deadline (ISO date), column.
 
@@ -155,7 +155,7 @@ def seed(user: dict = Depends(current_user)):
     plan = next((p for p in data.get("plans", []) if p["career_id"] == career_id), None) if career_id else None
     # only a few careers have a plan; the others still get the colleges nearest to the student
     if profile.get("lat") is not None and profile.get("lon") is not None:
-        centres = eng_mod.nearestCentres(
+        centres = eng_mod.nearest_centres(
             data, {"lat": profile.get("lat"), "lon": profile.get("lon")},
             plan.get("centre_type", "college") if plan else "college", 5
         )

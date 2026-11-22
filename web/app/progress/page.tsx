@@ -38,6 +38,9 @@ export default function Progress() {
   const moduleScores = (progress?.modules || []).filter((m: any) => m.score != null);
   const quizQuestionCount = moduleScores.reduce((n: number, m: any) => n + m.total, 0) + learnQuizzes.reduce((n, q) => n + q.total, 0);
   const quizCorrectCount = moduleScores.reduce((n: number, m: any) => n + m.score, 0) + learnQuizzes.reduce((n, q) => n + q.score, 0);
+  // completed = finished modules + finished learn quizzes
+  const doneCount = (progress?.completed ?? 0) + learnQuizzes.length;
+  const totalCount = (progress?.enrolled ?? 0) + learnQuizzes.length;
   const averageQuizScore = quizQuestionCount ? Math.round(quizCorrectCount / quizQuestionCount * 100) : null;
 
   return (
@@ -47,10 +50,10 @@ export default function Progress() {
         <div className="grid grid-cols-2 gap-3">
           <div className="rounded-2xl bg-[var(--card)] p-4 shadow-sm ring-1 ring-black/5">
             <span className="grid h-9 w-9 place-items-center rounded-full bg-emerald-100 text-lg dark:bg-emerald-900/30">✅</span>
-            <div className="mt-2 text-3xl font-extrabold leading-none text-[var(--brand-ink)]">{progress.completed}<span className="text-lg font-bold text-[var(--muted)]">/{progress.enrolled}</span></div>
+            <div className="mt-2 text-3xl font-extrabold leading-none text-[var(--brand-ink)]">{doneCount}<span className="text-lg font-bold text-[var(--muted)]">/{totalCount}</span></div>
             <div className="mt-1 text-xs font-semibold text-[var(--muted)]">{t("progress_completed")}</div>
             <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[var(--bg)]">
-              <div className="h-full rounded-full bg-emerald-500" style={{ width: `${progress.enrolled ? Math.round((progress.completed / progress.enrolled) * 100) : 0}%` }} />
+              <div className="h-full rounded-full bg-emerald-500" style={{ width: `${totalCount ? Math.round((doneCount / totalCount) * 100) : 0}%` }} />
             </div>
           </div>
           <div className="rounded-2xl bg-[var(--card)] p-4 shadow-sm ring-1 ring-black/5">
