@@ -10,6 +10,7 @@ import { BUILD_ROADMAP_HREF } from "@/lib/roadmap";
 import { ExamsList } from "@/components/exams";
 import { Tabs } from "@/components/tabs";
 import { CHANCE_TEXT, chanceFor } from "@/lib/chance";
+import { centreTypeLabel, districtLabel, talukaLabel } from "@/lib/labels";
 
 const PAGE_SIZE = 5;
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
@@ -69,12 +70,12 @@ function CentreCard({ c, t, profile, lang }: { c: any; t: (k: string) => string;
           <div className="mt-1 flex flex-wrap items-center gap-1.5">
             {c.type && (
               <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${color.bg} ${color.text}`}>
-                {c.type}
+                {centreTypeLabel(c.type, lang)}
               </span>
             )}
             {(c.taluka || c.district) && (
               <span className="text-[11px] text-[var(--muted)]">
-                {[c.taluka, c.district].filter(Boolean).join(", ")}
+                {[talukaLabel(c.taluka, lang), districtLabel(c.district, lang)].filter(Boolean).join(", ")}
               </span>
             )}
           </div>
@@ -112,7 +113,7 @@ function CentreCard({ c, t, profile, lang }: { c: any; t: (k: string) => string;
           ) : (
             <div className="flex items-center gap-2 text-xs text-[var(--muted)]">
               <span className="text-base">💰</span>
-              <span>Fees not listed on official site</span>
+              <span>{t("fees_not_listed")}</span>
             </div>
           )}
           {courses && (

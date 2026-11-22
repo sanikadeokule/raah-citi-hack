@@ -7,10 +7,11 @@ import { Badge, Card } from "./ui";
 import { haversine } from "@/lib/engine";
 import { mentorMatches, pickForCareers, type CareerChoice } from "@/lib/listings";
 import { useApp } from "@/lib/store";
+import { talukaLabel } from "@/lib/labels";
 import { RelatedNote } from "./careerfilter";
 
 export function Mentors({ career, top }: { career: CareerChoice; top: string[] }) {
-  const { data, profile, t, authFetch, online, auth } = useApp();
+  const { data, profile, t, authFetch, online, auth, lang } = useApp();
   const [maxKm, setMaxKm] = useState(60);
   const [asking, setAsking] = useState<string | null>(null);
   const [contacts, setContacts] = useState<Record<string, string>>({});
@@ -52,7 +53,7 @@ export function Mentors({ career, top }: { career: CareerChoice; top: string[] }
           <li key={m.id} className="rounded-xl bg-[var(--bg)] p-3 text-sm">
             <div className="flex items-start justify-between gap-2">
               <div><b>{m.name}</b><div className="text-xs text-[var(--muted)]">{m.works_as}</div></div>
-              <span className="whitespace-nowrap text-xs text-[var(--muted)]">{m.taluka}{m.km !== null ? ` · ~${Math.round(m.km)} km` : ""}</span>
+              <span className="whitespace-nowrap text-xs text-[var(--muted)]">{talukaLabel(m.taluka, lang)}{m.km !== null ? ` · ~${Math.round(m.km)} km` : ""}</span>
             </div>
             <div className="mt-1">💬 {m.helps_with}</div>
             <div className="text-xs text-[var(--muted)]">🗣️ {m.languages.join(", ")} · {m.mode} · {m.available}</div>

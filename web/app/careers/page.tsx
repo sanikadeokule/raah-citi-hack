@@ -29,13 +29,13 @@ function WhyLine({ s, profile, lang }: { s: any; profile: any; lang: string }) {
   return <p className="mt-1 text-sm">{ai ? <>✨ {ai}</> : s.why}</p>;
 }
 
-function flagBadges(c: any) {
+function flagBadges(c: any, t: (k: string) => string) {
   return (
     <span className="flex flex-wrap gap-1">
-      {c.flags.vocational && <Badge tone="blue">Vocational</Badge>}
-      {c.flags.self_employment && <Badge tone="amber">Self-employment</Badge>}
-      {c.flags.health && <Badge tone="green">Health</Badge>}
-      {c.flags.non_stem && !c.flags.self_employment && <Badge>Non-STEM</Badge>}
+      {c.flags.vocational && <Badge tone="blue">{t("tag_vocational")}</Badge>}
+      {c.flags.self_employment && <Badge tone="amber">{t("tag_self_employment")}</Badge>}
+      {c.flags.health && <Badge tone="green">{t("tag_health")}</Badge>}
+      {c.flags.non_stem && !c.flags.self_employment && <Badge>{t("tag_non_stem")}</Badge>}
     </span>
   );
 }
@@ -85,7 +85,7 @@ export default function CareersPage() {
                   <span className="text-xs text-[var(--muted)]">{Math.round(s.score * 100)}%</span>
                 </div>
                 <div className="mt-1 flex flex-wrap gap-1">
-                  {flagBadges(s.career)}
+                  {flagBadges(s.career, t)}
                   {/* say plainly when a career is only near the student's interests, or not linked to them at all */}
                   {s.has_interests && s.fit === "related" && <Badge tone="green">{t("fit_related")}</Badge>}
                   {s.has_interests && s.fit === "none" && <Badge>{t("fit_none")}</Badge>}
