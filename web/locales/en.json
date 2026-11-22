@@ -89,6 +89,7 @@
  "need_info": "Need more information",
  "not_eligible": "Not eligible",
  "rules_met": "{p} of {t} rules met",
+ "class_n": "Class {n}",
  "adm_tab_colleges": "Colleges",
  "more_details": "More details",
  "why_not": "Not eligible. You do not meet",

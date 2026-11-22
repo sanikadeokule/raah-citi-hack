@@ -1,6 +1,7 @@
 "use client";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import Link from "next/link";
+import { categoryLabel, talukaLabel } from "@/lib/labels";
 import { useEffect, useState } from "react";
 import { Card, Shell } from "@/components/ui";
 import { TeacherInbox } from "@/components/inbox";
@@ -71,12 +72,12 @@ function ClassDashboardCard() {
 }
 
 export default function Home() {
-  const { t, profile, setProfile, data, auth } = useApp();
+  const { t, profile, setProfile, data, auth, lang } = useApp();
   const isTeacher = auth?.user.role === "teacher";
   // greet the signed-in person by their registered name, never by a demo profile
   const greetName = auth?.user.name || (isTeacher ? null : profile?.name) || "";
   const unlocked = hasRoadmap(profile, auth?.user.role);
-  const details = profile ? [profile.class && `Class ${profile.class}`, profile.taluka, profile.category].filter(Boolean).join(" · ") : "";
+  const details = profile ? [profile.class && t("class_n", { n: profile.class }), talukaLabel(profile.taluka, lang), categoryLabel(profile.category, lang)].filter(Boolean).join(" · ") : "";
   return (
     <Shell back={null} fit>
       {/* language is switched from the header; the home screen fits one phone screen without scrolling */}
