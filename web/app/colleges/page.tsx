@@ -7,6 +7,8 @@ import { getKV, setKV } from "@/lib/db";
 import { useApp } from "@/lib/store";
 import { postAi } from "@/lib/ai";
 import { BUILD_ROADMAP_HREF } from "@/lib/roadmap";
+import { ExamsList } from "@/components/exams";
+import { Tabs } from "@/components/tabs";
 import { CHANCE_TEXT, chanceFor } from "@/lib/chance";
 
 const PAGE_SIZE = 5;
@@ -146,6 +148,7 @@ export default function CollegesPage() {
   const [result, setResult] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [centrePage, setCentrePage] = useState(0);
+  const [tab, setTab] = useState<"colleges" | "exams">("colleges");
 
   useEffect(() => {
     if (!careerId || !profile) return;
@@ -178,7 +181,8 @@ export default function CollegesPage() {
 
   return (
     <Shell title={t("colleges_title")}>
-      {noRoadmap ? (
+      <Tabs value={tab} onChange={setTab} tabs={[{ key: "colleges", label: `🏫 ${t("adm_tab_colleges")}` }, { key: "exams", label: `📝 ${t("home_exams")}` }]} />
+      {tab === "exams" ? <ExamsList /> : noRoadmap ? (
         <Card className="text-center space-y-3">
           <p className="text-4xl">🎓</p>
           <p className="text-sm text-[var(--muted)]">{t("colleges_no_roadmap")}</p>

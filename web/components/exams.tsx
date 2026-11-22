@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Card, Source } from "./ui";
 import { inr } from "@/lib/engine";
+import { Pager, usePaged } from "./pager";
 import { useApp } from "@/lib/store";
 
 function WatchButton({ examId, inline = false }: { examId: string; inline?: boolean }) {
@@ -98,6 +99,24 @@ export function ExamTile({ e, paths = [] }: { e: any; paths?: any[] }) {
         </details>
       </div>
     </details>
+  );
+}
+
+export function ExamsList() {
+  const { data, t } = useApp();
+  const exams = data?.exams || [];
+  // which cost plans use each exam, so a student can jump from the exam to the path
+  const usedBy = (id: string) => (data?.plans || []).filter((p: any) => (p.exams || []).includes(id));
+  const pg = usePaged(exams, 5, "exams");
+  return (
+    <>
+      <Card><p className="text-sm text-[var(--muted)]">{t("exams_intro")}</p></Card>
+      <div ref={pg.top} />
+      <div className="space-y-2">
+        {pg.pageItems.map((e: any) => <ExamTile key={e.id} e={e} paths={usedBy(e.id)} />)}
+      </div>
+      <Pager {...pg} shown={pg.pageItems.length} />
+    </>
   );
 }
 
