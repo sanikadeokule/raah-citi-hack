@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Card, Shell } from "@/components/ui";
 import { useApp } from "@/lib/store";
+import { placeLabel } from "@/lib/questions";
 import { db, getKV } from "@/lib/db";
 
 const FIELDS: { k: string; label: string; type: "text" | "number" | "bool" | "list" | "select"; options?: string[] }[] = [
@@ -47,11 +48,11 @@ export default function ProfilePage() {
             )}
           </label>
         ))}
-        <label className="block text-sm"><span className="text-[var(--muted)]">Taluka</span>
+        <label className="block text-sm"><span className="text-[var(--muted)]">{t("field_taluka")}</span>
           <select value={p.taluka ?? ""} className="mt-1 w-full rounded-lg bg-[var(--bg)] p-2" onChange={(e) => {
             const tk = data.talukas.find((x: any) => x.name === e.target.value);
             setP({ ...p, taluka: e.target.value, lat: tk?.lat ?? p.lat, lon: tk?.lon ?? p.lon });
-          }}>{data.talukas.map((x: any) => <option key={x.name}>{x.name}</option>)}</select>
+          }}>{data.talukas.map((x: any) => <option key={x.name} value={x.name}>{placeLabel(t, x.name)}</option>)}</select>
         </label>
         <button onClick={() => { setProfile(p); queueAction("profile", p); showToast(t("saved")); }} className="w-full rounded-xl bg-[var(--brand)] py-3 font-semibold text-white">{t("save")}</button>
       </Card>

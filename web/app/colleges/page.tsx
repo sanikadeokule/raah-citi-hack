@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { Badge, Card, Shell, Source } from "@/components/ui";
 import { getKV, setKV } from "@/lib/db";
 import { useApp } from "@/lib/store";
+import { placeLabel } from "@/lib/questions";
 import { postAi } from "@/lib/ai";
 import { BUILD_ROADMAP_HREF } from "@/lib/roadmap";
 import { CHANCE_TEXT, chanceFor } from "@/lib/chance";
@@ -72,7 +73,7 @@ function CentreCard({ c, t, profile, lang }: { c: any; t: (k: string) => string;
             )}
             {(c.taluka || c.district) && (
               <span className="text-[11px] text-[var(--muted)]">
-                {[c.taluka, c.district].filter(Boolean).join(", ")}
+                {[c.taluka, c.district].filter(Boolean).map((x: string) => placeLabel(t, x)).join(", ")}
               </span>
             )}
           </div>

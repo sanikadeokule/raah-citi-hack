@@ -7,7 +7,7 @@ import { ChatInput } from "@/components/chatinput";
 import { useApp } from "@/lib/store";
 import { setKV } from "@/lib/db";
 import { aiAvailable, postAi, resetAiStatus } from "@/lib/ai";
-import { QUESTIONS, cleanPlace, firstMissing, sayGender, type Opt, type Q, type T } from "@/lib/questions";
+import { QUESTIONS, cleanPlace, firstMissing, sayGender, tagLabel, placeLabel, fieldLabel, type Opt, type Q, type T } from "@/lib/questions";
 
 // Two modes fill the same profile fields:
 // - AI chat: an open-source LLM (see backend/raah/llm.py) asks questions and returns the fields it understood;
@@ -186,7 +186,8 @@ export default function Discover() {
         setMsgs((m) => [...m, say((tt) => tt("q_taluka_not_listed", { taluka: place }))]);
       } else retry(raw, "q_pick_one");
     } else if (q.kind === "multi") {
-      const hits = options.filter((o) => raw.toLowerCase().includes(String(o.v).toLowerCase())).map((o) => o.v);
+      const low = raw.toLowerCase();
+      const hits = options.filter((o) => low.includes(String(o.v).toLowerCase()) || low.includes(String(o.label).toLowerCase())).map((o) => o.v);
       // interests said in the student's own words (any language) are mapped to the dataset's tags on the server
       if (!hits.length && q.key === "interests" && online) {
         const j = await postAi("/api/interests/match", { text: raw });
@@ -240,7 +241,7 @@ export default function Discover() {
                 <div className="mt-2 flex flex-wrap gap-1">
                   <span className={`text-xs ${m.from === "me" ? "text-white/80" : "text-[var(--muted)]"}`}>{t("ai_understood")}:</span>
                   {Object.entries(m.learned).map(([k, val]) => (
-                    <span key={k} className="rounded-full bg-[var(--brand-soft)] px-2 py-0.5 text-xs text-[var(--brand-ink)]">{k.replaceAll("_", " ")}: {labels[k]?.(t) ?? showValue(val)}{k === "marks_pct" ? "%" : ""}</span>
+                    <span key={k} className="rounded-full bg-[var(--brand-soft)] px-2 py-0.5 text-xs text-[var(--brand-ink)]">{fieldLabel(t, k)}: {labels[k]?.(t) ?? (k === "interests" && Array.isArray(val) ? val.map((x) => tagLabel(t, x)).join(", ") : k === "taluka" ? placeLabel(t, val) : showValue(val))}{k === "marks_pct" ? "%" : ""}</span>
                   ))}
                 </div>
               )}

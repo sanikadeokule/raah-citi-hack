@@ -8,6 +8,7 @@ import { HomeStory } from "@/components/story";
 import { ProShelf } from "@/components/pro";
 import { getKV, setKV } from "@/lib/db";
 import { useApp } from "@/lib/store";
+import { placeLabel } from "@/lib/questions";
 import { BUILD_ROADMAP_HREF, hasRoadmap } from "@/lib/roadmap";
 
 const TILES = [
@@ -77,7 +78,7 @@ export default function Home() {
   // greet the signed-in person by their registered name, never by a demo profile
   const greetName = auth?.user.name || (isTeacher ? null : profile?.name) || "";
   const unlocked = hasRoadmap(profile, auth?.user.role);
-  const details = profile ? [profile.class && `Class ${profile.class}`, profile.taluka, profile.category].filter(Boolean).join(" · ") : "";
+  const details = profile ? [profile.class && t("opt_class", { n: profile.class }), placeLabel(t, profile.taluka), profile.category].filter(Boolean).join(" · ") : "";
   return (
     <Shell back={null} fit>
       {/* language is switched from the header; the home screen fits one phone screen without scrolling */}
