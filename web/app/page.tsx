@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { categoryLabel, talukaLabel } from "@/lib/labels";
 import { useEffect, useState } from "react";
-import { Tabs } from "@/components/tabs";
 import { Card, Shell } from "@/components/ui";
 import { TeacherInbox } from "@/components/inbox";
 import { HomeStory } from "@/components/story";
@@ -68,7 +67,7 @@ function ClassDashboardCard() {
 
 export default function Home() {
   const { t, profile, setProfile, data, auth, lang } = useApp();
-  const [tTab, setTTab] = useState<"class" | "tools" | "money">("class");
+  const [tTab, setTTab] = useState<"class" | "tools">("class");
   const isTeacher = auth?.user.role === "teacher";
   // greet the signed-in person by their registered name, never by a demo profile
   const greetName = auth?.user.name || (isTeacher ? null : profile?.name) || "";
@@ -95,11 +94,24 @@ export default function Home() {
 
       {isTeacher ? (
         <>
-        <Tabs value={tTab} onChange={setTTab} tabs={[
-          { key: "class", label: `📊 ${t("teacher_dashboard")}` },
-          { key: "tools", label: `🧑‍🎓 ${t("home_student_tools")}` },
-          { key: "money", label: `🏦 ${t("home_money")}` },
-        ]} />
+        {/* three big tiles, the same size as the student home tiles; the open one is filled */}
+        <div role="tablist" className="grid grid-cols-3 gap-2">
+          {([
+            { key: "class", icon: "📊", label: t("tab_class") },
+            { key: "tools", icon: "🧑‍🎓", label: t("tab_student") },
+          ] as const).map((x) => (
+            <button key={x.key} role="tab" aria-selected={tTab === x.key} onClick={() => setTTab(x.key)}
+              className={`flex flex-col items-center justify-center rounded-2xl border-b-4 border-[var(--accent)] px-1 py-5 text-center shadow-sm active:scale-95 ${tTab === x.key ? "bg-[var(--brand)] text-white" : "bg-[var(--card)] text-[var(--brand-ink)]"}`}>
+              <span className="text-4xl leading-none">{x.icon}</span>
+              <span className="mt-2 text-sm font-semibold leading-tight">{x.label}</span>
+            </button>
+          ))}
+          {/* Money opens its page straight away: no second tap */}
+          <Link href="/money/" className="flex flex-col items-center justify-center rounded-2xl border-b-4 border-[var(--accent)] bg-[var(--card)] px-1 py-5 text-center text-[var(--brand-ink)] shadow-sm active:scale-95">
+            <span className="text-4xl leading-none">🏦</span>
+            <span className="mt-2 text-sm font-semibold leading-tight">{t("home_money")}</span>
+          </Link>
+        </div>
         {tTab === "class" && <ClassDashboardCard />}
         {tTab === "tools" && <>
         {profile && data?.students?.length > 0 && (
@@ -122,16 +134,6 @@ export default function Home() {
         </div>
         <ProShelf />
         </>}
-        {tTab === "money" && (
-          <Link href="/money/" className="flex items-center gap-3 rounded-2xl bg-[var(--card)] p-4 shadow-sm ring-1 ring-black/5 active:scale-[.98]">
-            <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-[var(--brand-soft)] text-2xl">🏦</span>
-            <span className="min-w-0 flex-1">
-              <span className="block font-bold">{t("home_money")}</span>
-              <span className="block text-xs text-[var(--muted)]">{t("money_layer")}</span>
-            </span>
-            <span aria-hidden className="text-2xl text-[var(--muted)]">›</span>
-          </Link>
-        )}
         </>
       ) : !unlocked ? (
         /* before a roadmap exists there is one thing to do: build it. A short story shows why. */

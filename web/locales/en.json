@@ -89,6 +89,8 @@
  "need_info": "Need more information",
  "not_eligible": "Not eligible",
  "rules_met": "{p} of {t} rules met",
+ "tab_class": "My class",
+ "tab_student": "Student view",
  "tag_vocational": "Vocational",
  "tag_self_employment": "Self-employment",
  "tag_health": "Health",
