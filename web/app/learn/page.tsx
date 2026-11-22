@@ -6,6 +6,7 @@ import { ChatInput } from "@/components/chatinput";
 import { FOR_YOU, forYou, lessonTopics, lessons, quiz } from "@/lib/lessons";
 import { useApp } from "@/lib/store";
 import { StudentModules } from "@/components/modules";
+import { FreeCourses } from "@/components/freecourses";
 import { Tabs } from "@/components/tabs";
 import { getKV, setKV } from "@/lib/db";
 import { cachedAudio, fetchAudio, voiceAvailable } from "@/lib/audio";
@@ -29,7 +30,7 @@ export default function Learn() {
   const [learnTurns, setLearnTurns] = useState<any[]>([]);
   const [asking, setAsking] = useState(false);
   const pickTopic = (id: string) => { setPicked(id); setAns({}); setChecked(false); };
-  const [tab, setTab] = useState<"lessons" | "modules" | "quiz">("lessons");
+  const [tab, setTab] = useState<"lessons" | "modules" | "courses" | "quiz">("lessons");
   useEffect(() => { getKV<string[]>("lessons_done").then((v) => v && setDone(v)); }, []);
   // audio files for offline lessons: which lessons already have one saved for the current text
   const [voice, setVoice] = useState(false);
@@ -77,12 +78,13 @@ export default function Learn() {
     <Shell title={t("home_learn")}>
       <Tabs value={tab} onChange={setTab} tabs={[
         { key: "lessons", label: `🎧 ${t("learn_tab_lessons")}`, count: ls.length },
+        { key: "courses", label: `🇮🇳 ${t("learn_tab_courses")}` },
         { key: "modules", label: `👩‍🏫 ${t("learn_tab_modules")}` },
         { key: "quiz", label: `📝 ${t("quiz")}`, count: qs.length },
       ]} />
 
       {/* one topic drives both the lessons and the quiz built from them */}
-      {tab !== "modules" && (
+      {tab !== "modules" && tab !== "courses" && (
         <label className="block text-sm font-medium">
           {t("lesson_topic")}
           <select value={topic} onChange={(e) => pickTopic(e.target.value)}
@@ -93,6 +95,8 @@ export default function Learn() {
           {topic === FOR_YOU && <span className="mt-1 block text-xs font-normal text-[var(--muted)]">{t("lesson_for_you_note")}</span>}
         </label>
       )}
+
+      {tab === "courses" && <FreeCourses />}
 
       {tab === "modules" && <StudentModules emptyText={t("learn_no_modules")} />}
 
