@@ -170,6 +170,7 @@ export function Provider({ children }: { children: React.ReactNode }) {
 
   const setProfile = useCallback((p: any) => { setProfileState(p); setKV("profile", p); }, []);
   const setLang = useCallback((l: string) => { setLangState(l); setKV("lang", l); }, []);
+  useEffect(() => { document.title = lang === "hi" || lang === "mr" ? "राह" : "Raah"; }, [lang]);
   const queueAction = useCallback(async (kind: string, payload: unknown) => {
     await enqueue(kind, payload);
     await flushQueue(false);

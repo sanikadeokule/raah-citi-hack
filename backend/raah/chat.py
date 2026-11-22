@@ -200,6 +200,7 @@ Rules:
 - Be specific. Never ask vague questions like "how much did you score?" without naming the exam and asking "out of how many".
 - If the student's answer is unclear or impossible, say so kindly and ask the same question again with an example.
 - {"The student's name is " + str(name) + ". Do not ask it again; use it sometimes." if name else "You do not know the student's name yet."}
+- In Hindi or Marathi always write the app name as राह, never as Raah.
 - {llm.off_topic_rule(lang)}  (If you replied with that sentence, set "profile" to {{}} and keep the question you were asking for the next turn.)
 - Read the WHOLE conversation before you ask anything. If the student has already said something that answers any question, the one you are about to ask or a later one in the "still missing" list, even in passing, in the middle of another sentence, or with spelling mistakes (for example "im 12 and want to be a doctor and im a hirl" gives age 12, interest doctor and gender F), put it in "profile" and do NOT ask for it again. Never ask the student to repeat what they already told you.
 - Pick the next question from the first item in "Next question" or "Still missing" that the conversation has NOT answered yet. If the suggested next question is already answered, skip it and ask the next unanswered one. If everything is answered, set done to true.

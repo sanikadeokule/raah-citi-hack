@@ -379,11 +379,11 @@ def search(query: str, k: int = TOP_K, keywords: str = "") -> dict:
 LANG_NAME = {"mr": "Marathi", "hi": "Hindi", "en": "English"}
 MSG = {
     "not_found": {"en": "I could not find this in Raah's data. Please ask your teacher, or try other words.",
-                  "hi": "यह जानकारी Raah के डेटा में नहीं मिली। कृपया अपने शिक्षक से पूछें या दूसरे शब्दों में पूछें।",
-                  "mr": "ही माहिती Raah च्या डेटामध्ये सापडली नाही. कृपया तुमच्या शिक्षकांना विचारा किंवा दुसऱ्या शब्दांत विचारा."},
+                  "hi": "यह जानकारी राह के डेटा में नहीं मिली। कृपया अपने शिक्षक से पूछें या दूसरे शब्दों में पूछें।",
+                  "mr": "ही माहिती राह च्या डेटामध्ये सापडली नाही. कृपया तुमच्या शिक्षकांना विचारा किंवा दुसऱ्या शब्दांत विचारा."},
     "rows": {"en": "These rows in Raah's data match your question:",
-             "hi": "Raah के डेटा में ये पंक्तियाँ आपके सवाल से मेल खाती हैं:",
-             "mr": "Raah च्या डेटामधील या ओळी तुमच्या प्रश्नाशी जुळतात:"},
+             "hi": "राह के डेटा में ये पंक्तियाँ आपके सवाल से मेल खाती हैं:",
+             "mr": "राह च्या डेटामधील या ओळी तुमच्या प्रश्नाशी जुळतात:"},
 }
 
 
@@ -491,6 +491,7 @@ def answer(body: AskIn) -> dict:
     system = (f"You are Raah, a helpful guide for rural students, parents and teachers in Maharashtra. Answer in "
               f"{LANG_NAME[lang]} in short, simple sentences a Class 9 student understands.\n"
               + llm.off_topic_rule(lang) +
+              "In Hindi or Marathi always write the app name as राह, never as Raah.\n"
               "Use what the person already said earlier in the conversation and in their profile; never ask them to repeat it.\n"
               "Use ONLY the numbered sources. After each fact write its source number in square brackets, like [2].\n"
               "Copy every amount, date, percentage, age and limit exactly as the source writes it (same digits); "
