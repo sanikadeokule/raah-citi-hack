@@ -79,4 +79,7 @@ def test_matched_notice_alert():
         con.execute("INSERT INTO user_notices (user_id, notice_id, why, created_at) VALUES (?, ?, 'roadmap', ?)", (uid, nid, now))
     guardian.run_once(TODAY)
     a = _alerts(tok)
+    with db.connect() as con:  # the notices table is shared with the notice tests, so leave it as found
+        con.execute("DELETE FROM user_notices WHERE notice_id = ?", (nid,))
+        con.execute("DELETE FROM notices WHERE id = ?", (nid,))
     assert len(a) == 1 and a[0]["source"] == "notice" and a[0]["days"] == 2
