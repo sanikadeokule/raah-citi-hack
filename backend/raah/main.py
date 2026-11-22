@@ -31,6 +31,7 @@ from .rag import warm as rag_warm
 from .teacher import router as teacher_router
 from .voice import router as voice_router
 from .parent import router as parent_router
+from .tracker import router as tracker_router
 from .watcher import router as watcher_router
 
 app = FastAPI(
@@ -182,6 +183,7 @@ app.include_router(modules_router)
 app.include_router(partners_router)
 app.include_router(rag_router)
 app.include_router(parent_router)
+app.include_router(tracker_router)
 app.include_router(watcher_router)
 
 if os.environ.get("RAG_WARM", "1") == "1":
