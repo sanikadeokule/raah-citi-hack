@@ -179,6 +179,11 @@ export function SchemeResult({ e, open = false, tag, hideStatus = false, onPage 
   const { t, data } = useApp();
   const scheme = data.scholarships.find((s: any) => s.id === e.id);
   const icon: Record<string, string> = { pass: "✅", fail: "❌", unknown: "❔", missing_doc: "📄" };
+  // not eligible / need info: say plainly which rules fail, instead of showing the scheme text
+  const failed = e.rules.filter((r: any) => r.status === "fail").map((r: any) => r.label);
+  const unknown = e.rules.filter((r: any) => r.status === "unknown").map((r: any) => r.label);
+  const reasons = e.status === "not_eligible" && failed.length ? { head: t("why_not"), list: failed.join("; ") }
+    : e.status === "need_info" && unknown.length ? { head: t("why_info"), list: unknown.join("; ") } : null;
   return (
     <details className={`group rounded-xl p-3 ${onPage ? "bg-[var(--card)] shadow-sm ring-1 ring-black/5" : "bg-[var(--bg)]"}`} open={open}>
       <summary className="cursor-pointer list-none">
@@ -192,7 +197,9 @@ export function SchemeResult({ e, open = false, tag, hideStatus = false, onPage 
           {tag && <Badge tone="blue">{tag}</Badge>}
         </div>
         {/* the amount can run long: one line while closed, all of it once opened */}
-        <div className="mt-0.5 line-clamp-1 text-xs text-[var(--muted)] group-open:line-clamp-none">💰 {e.amount_text}</div>
+        {reasons ? (
+          <div className="mt-1.5 rounded-lg bg-rose-50 p-2 text-xs leading-snug text-rose-900 dark:bg-rose-900/20 dark:text-rose-200"><b>{reasons.head}:</b> {reasons.list}</div>
+        ) : <div className="mt-0.5 line-clamp-1 text-xs text-[var(--muted)] group-open:line-clamp-none">💰 {e.amount_text}</div>}
       </summary>
       <ul className="mt-2 space-y-1 text-sm">
         {e.rules.map((r: any, i: number) => (
@@ -207,10 +214,10 @@ export function SchemeResult({ e, open = false, tag, hideStatus = false, onPage 
           ))}
         </div>
       )}
-      {scheme?.rules_text && <p className="mt-2 text-xs text-[var(--muted)]">{scheme.rules_text}</p>}
+      {scheme?.rules_text && e.status !== "not_eligible" && <p className="mt-2 text-xs text-[var(--muted)]">{scheme.rules_text}</p>}
       <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
         <Source url={e.source} date={e.last_checked} />
-        <a className="text-sm font-medium text-[var(--brand-ink)] underline" href={applyUrl(e.apply_via, e.source)} target="_blank" rel="noreferrer">{e.apply_via}</a>
+        {e.status !== "not_eligible" && <a className="text-sm font-medium text-[var(--brand-ink)] underline" href={applyUrl(e.apply_via, e.source)} target="_blank" rel="noreferrer">{e.apply_via}</a>}
       </div>
     </details>
   );

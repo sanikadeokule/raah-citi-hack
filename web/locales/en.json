@@ -88,6 +88,8 @@
  "need_info": "Need more information",
  "not_eligible": "Not eligible",
  "rules_met": "{p} of {t} rules met",
+ "why_not": "Not eligible. You do not meet",
+ "why_info": "We still need to know",
  "missing_document": "Missing document",
  "where_to_get": "Where to get it",
  "apply": "Apply on the official portal",

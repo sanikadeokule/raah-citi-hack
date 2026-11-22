@@ -8,6 +8,7 @@ import { computePlan, inr, rankCareers } from "@/lib/engine";
 import { useApp } from "@/lib/store";
 import { paybackText } from "@/components/plan";
 import { aiAvailable, postAi } from "@/lib/ai";
+import { Pager, usePaged } from "@/components/pager";
 
 // National Career Service, Ministry of Labour & Employment, Government of India
 const NCS_URL = "https://www.ncs.gov.in/";
@@ -55,6 +56,7 @@ export default function CareersPage() {
   const plans = useMemo(() => Object.fromEntries((data?.plans || []).map((p: any) => [p.career_id, p])), [data]);
   const quick = (planId: string) => computePlan(data, profile, planId);
   const all = (data?.careers || []).filter((c: any) => c.name.toLowerCase().includes(q.toLowerCase()));
+  const pg = usePaged(all, 5, `${q}|${tab}`);
   const tabBtn = (id: "top" | "all", label: string) => (
     <button key={id} onClick={() => setTab(id)} aria-pressed={tab === id}
       className={`flex-1 rounded-full px-3 py-2 text-sm font-semibold ${tab === id ? "bg-[var(--brand)] text-white" : "bg-[var(--bg)] ring-1 ring-black/10"}`}>{label}</button>
@@ -118,8 +120,9 @@ export default function CareersPage() {
       {tab === "all" && <Card>
         <h2 className="text-lg font-bold">{t("all_careers", { n: all.length })}</h2>
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search" className="mt-2 w-full rounded-lg bg-[var(--bg)] p-2" />
+        <div ref={pg.top} />
         <ul className="mt-2 divide-y divide-black/5">
-          {all.map((c: any) => (
+          {pg.pageItems.map((c: any) => (
             <li key={c.id} {...cardProps(c.id)} className="cursor-pointer py-2 hover:bg-[var(--bg)]">
               <div className="flex items-start justify-between gap-2">
                 <div>
@@ -135,6 +138,7 @@ export default function CareersPage() {
             </li>
           ))}
         </ul>
+        <Pager {...pg} shown={pg.pageItems.length} />
       </Card>}
     </Shell>
   );
