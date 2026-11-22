@@ -94,19 +94,18 @@ export default function Home() {
 
       {isTeacher ? (
         <>
-        {/* three big tiles, the same size as the student home tiles; the open one is filled */}
-        <div role="tablist" className="grid grid-cols-3 gap-2">
-          {([
-            { key: "class", icon: "📊", label: t("tab_class") },
-            { key: "tools", icon: "🧑‍🎓", label: t("tab_student") },
-          ] as const).map((x) => (
-            <button key={x.key} role="tab" aria-selected={tTab === x.key} onClick={() => setTTab(x.key)}
-              className={`flex flex-col items-center justify-center rounded-2xl border-b-4 border-[var(--accent)] px-1 py-5 text-center shadow-sm active:scale-95 ${tTab === x.key ? "bg-[var(--brand)] text-white" : "bg-[var(--card)] text-[var(--brand-ink)]"}`}>
-              <span className="text-4xl leading-none">{x.icon}</span>
-              <span className="mt-2 text-sm font-semibold leading-tight">{x.label}</span>
-            </button>
-          ))}
-          {/* Money opens its page straight away: no second tap */}
+        {/* three big tiles, the same size as the student home tiles */}
+        <div className="grid grid-cols-3 gap-2">
+          {/* My class and Money open their pages with one tap; Student view opens the preview tools below */}
+          <Link href="/teacher/" className="flex flex-col items-center justify-center rounded-2xl border-b-4 border-[var(--accent)] bg-[var(--card)] px-1 py-5 text-center text-[var(--brand-ink)] shadow-sm active:scale-95">
+            <span className="text-4xl leading-none">📊</span>
+            <span className="mt-2 text-sm font-semibold leading-tight">{t("tab_class")}</span>
+          </Link>
+          <button onClick={() => setTTab(tTab === "tools" ? "class" : "tools")} aria-pressed={tTab === "tools"}
+            className={`flex flex-col items-center justify-center rounded-2xl border-b-4 border-[var(--accent)] px-1 py-5 text-center shadow-sm active:scale-95 ${tTab === "tools" ? "bg-[var(--brand)] text-white" : "bg-[var(--card)] text-[var(--brand-ink)]"}`}>
+            <span className="text-4xl leading-none">🧑‍🎓</span>
+            <span className="mt-2 text-sm font-semibold leading-tight">{t("tab_student")}</span>
+          </button>
           <Link href="/money/" className="flex flex-col items-center justify-center rounded-2xl border-b-4 border-[var(--accent)] bg-[var(--card)] px-1 py-5 text-center text-[var(--brand-ink)] shadow-sm active:scale-95">
             <span className="text-4xl leading-none">🏦</span>
             <span className="mt-2 text-sm font-semibold leading-tight">{t("home_money")}</span>
