@@ -25,7 +25,6 @@ const STAFF = [
   { href: "/exams/", icon: "📝", key: "home_exams" },
   { href: "/teacher/", icon: "👩‍🏫", key: "home_teacher" },
   { href: "/money/", icon: "🏦", key: "home_money" },
-  { href: "/data/", icon: "📊", key: "home_data" },
 ];
 
 // A teacher's main job is the class: one big card to the class dashboard with the headline numbers.
