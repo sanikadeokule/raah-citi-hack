@@ -14,6 +14,7 @@ export const PRO_FEATURES: ProFeature[] = [
   // ── Parent dashboard
 
   // ── Application tracker
+  { href: "/tracker/", icon: "📋", title: { en: "App tracker", hi: "आवेदन ट्रैकर", mr: "अर्ज ट्रॅकर" }, sub: { en: "College · scholarship board", hi: "कॉलेज · छात्रवृत्ति", mr: "कॉलेज · शिष्यवृत्ती" } },
 
 ];
 
