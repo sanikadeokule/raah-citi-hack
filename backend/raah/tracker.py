@@ -157,7 +157,7 @@ def seed(user: dict = Depends(current_user)):
     if profile.get("lat") is not None and profile.get("lon") is not None:
         centres = eng_mod.nearest_centres(
             data, {"lat": profile.get("lat"), "lon": profile.get("lon")},
-            plan.get("centre_type", "college") if plan else "college", 5
+            (plan or {}).get("centre_type"), 5
         )
         for c in centres:
             cards.append({"kind": "college", "ref_id": c["id"], "title": c["name"]})
