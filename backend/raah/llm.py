@@ -3,7 +3,7 @@
 Providers are tried in the order given by LLM_PROVIDERS (default "openai,groq"):
   openai  OpenAI cloud          (OPENAI_API_KEY, OPENAI_MODEL; default gpt-4o-mini)
   ollama  local Ollama server   (OLLAMA_URL, OLLAMA_MODEL; default gemma4:12b)
-  groq    Groq cloud, Llama     (GROQ_API_KEY, GROQ_MODEL; default llama-3.3-70b-versatile)
+  groq    Groq cloud, Llama     (GROQ_API_KEY, GROQ_MODEL; default openai/gpt-oss-120b)
   sarvam  Sarvam AI, Sarvam-M   (SARVAM_API_KEY, SARVAM_MODEL; default sarvam-m)
 If none answers, callers fall back to the scripted flow and template sentences.
 """
@@ -51,7 +51,7 @@ def _providers() -> list[dict]:
                         "model": os.environ.get("OLLAMA_MODEL", "gemma4:12b"), "headers": {}, "timeout": 120})
         elif name == "groq" and _env("GROQ_API_KEY"):
             out.append({"name": "groq", "url": "https://api.groq.com/openai/v1/chat/completions",
-                        "model": os.environ.get("GROQ_MODEL", "llama-3.3-70b-versatile"),
+                        "model": os.environ.get("GROQ_MODEL", "openai/gpt-oss-120b"),
                         "headers": {"Authorization": f"Bearer {_env('GROQ_API_KEY')}"}, "timeout": 30})
         elif name == "sarvam" and _env("SARVAM_API_KEY"):
             out.append({"name": "sarvam", "url": "https://api.sarvam.ai/v1/chat/completions",

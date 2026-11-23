@@ -24,11 +24,13 @@ services:
       - key: RAAH_SIGNING_KEY
         generateValue: true
       - key: LLM_PROVIDERS
-        value: openai,groq
+        value: groq,openai
       - key: OPENAI_API_KEY
         sync: false
       - key: GROQ_API_KEY
         sync: false
+      - key: GROQ_MODEL
+        value: openai/gpt-oss-120b
       - key: SARVAM_API_KEY
         sync: false
       - key: RAZORPAY_KEY_ID
