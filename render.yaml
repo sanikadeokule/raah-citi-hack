@@ -24,7 +24,9 @@ services:
       - key: RAAH_SIGNING_KEY
         generateValue: true
       - key: LLM_PROVIDERS
-        value: groq
+        value: openai,groq
+      - key: OPENAI_API_KEY
+        sync: false
       - key: GROQ_API_KEY
         sync: false
       - key: SARVAM_API_KEY
