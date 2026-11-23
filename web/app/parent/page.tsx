@@ -24,7 +24,7 @@ const T: Record<string, Record<string, string>> = {
     new_pin: "New family PIN (4–8 digits)", save_pin: "Save PIN", saving: "Saving…", pin_saved: "PIN saved!",
     remove_pin: "Remove PIN",
     for_student: "For the student — set a family PIN",
-    c_category: "Type of work", c_entry: "How to get in", c_qual: "Minimum qualification", c_income: "Expected income", chosen_on: "Chosen on",
+    expired: "Your family session ended. Please sign in again with the same number and PIN.", c_category: "Type of work", c_entry: "How to get in", c_qual: "Minimum qualification", c_income: "Expected income", chosen_on: "Chosen on",
   },
   hi: {
     title: "परिवार दृश्य", sign_in: "अभिभावक के रूप में साइन इन करें",
@@ -40,7 +40,7 @@ const T: Record<string, Record<string, string>> = {
     new_pin: "नया फैमिली PIN (4–8 अंक)", save_pin: "PIN सेव करें", saving: "सेव हो रहा है…", pin_saved: "PIN सेव हुआ!",
     remove_pin: "PIN हटाएँ",
     for_student: "छात्र के लिए — फैमिली PIN सेट करें",
-    c_category: "काम का प्रकार", c_entry: "कैसे प्रवेश करें", c_qual: "न्यूनतम योग्यता", c_income: "अपेक्षित आय", chosen_on: "चुना गया:",
+    expired: "आपका सत्र खत्म हो गया। उसी नंबर और PIN से फिर साइन इन करें।", c_category: "काम का प्रकार", c_entry: "कैसे प्रवेश करें", c_qual: "न्यूनतम योग्यता", c_income: "अपेक्षित आय", chosen_on: "चुना गया:",
   },
   mr: {
     title: "कुटुंब दृश्य", sign_in: "पालक म्हणून साइन इन करा",
@@ -56,7 +56,7 @@ const T: Record<string, Record<string, string>> = {
     new_pin: "नवीन कुटुंब PIN (4–8 अंक)", save_pin: "PIN सेव करा", saving: "सेव होत आहे…", pin_saved: "PIN सेव झाला!",
     remove_pin: "PIN काढा",
     for_student: "विद्यार्थ्यासाठी — कुटुंब PIN सेट करा",
-    c_category: "कामाचा प्रकार", c_entry: "कसा प्रवेश मिळवावा", c_qual: "किमान पात्रता", c_income: "अपेक्षित उत्पन्न", chosen_on: "निवडले:",
+    expired: "तुमचे सत्र संपले. त्याच नंबर आणि PIN ने पुन्हा साइन इन करा.", c_category: "कामाचा प्रकार", c_entry: "कसा प्रवेश मिळवावा", c_qual: "किमान पात्रता", c_income: "अपेक्षित उत्पन्न", chosen_on: "निवडले:",
   },
 };
 
@@ -164,7 +164,7 @@ function PinManager({ studentToken }: { studentToken: string }) {
   );
 }
 
-function Dashboard({ token, studentName, onSignOut }: { token: string; studentName: string; onSignOut: () => void }) {
+function Dashboard({ token, studentName, onSignOut, onExpired }: { token: string; studentName: string; onSignOut: () => void; onExpired: () => void }) {
   const t = useText(T);
   const [data, setData] = useState<any>(null);
   const [err, setErr] = useState("");
@@ -173,7 +173,7 @@ function Dashboard({ token, studentName, onSignOut }: { token: string; studentNa
     fetch(`${API}/api/parent/summary`, { headers: { Authorization: `Bearer ${token}` } })
       .then((r) => r.ok ? r.json() : r.json().then((j: any) => Promise.reject(j)))
       .then(setData)
-      .catch(() => setErr(t("wrong")));
+      .catch(() => onExpired());
   }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (err) return <Card><p className="text-sm text-rose-500">{err}</p></Card>;
@@ -256,6 +256,7 @@ export default function ParentPage() {
   const { auth } = useApp();
   const [familyToken, setFamilyToken] = useState<string | null>(null);
   const [studentName, setStudentName] = useState("");
+  const [expired, setExpired] = useState(false);
 
   useEffect(() => {
     try { const s = localStorage.getItem(FAMILY_TOKEN_KEY); if (s) setFamilyToken(s); } catch {}
@@ -269,7 +270,7 @@ export default function ParentPage() {
   return (
     <Shell title={t("title")} publicPage>
       {familyToken
-        ? <Dashboard token={familyToken} studentName={studentName} onSignOut={signOut} />
+        ? <Dashboard token={familyToken} studentName={studentName} onSignOut={signOut} onExpired={() => { signOut(); setExpired(true); }} />
         : <>
             {auth?.token && auth.user.role === "student" && (
               <div className="mb-2">
@@ -277,7 +278,8 @@ export default function ParentPage() {
                 <PinManager studentToken={auth.token} />
               </div>
             )}
-            <SignInForm onToken={(tok, name) => { setFamilyToken(tok); setStudentName(name); }} />
+            {expired && <p className="mb-2 rounded-xl bg-amber-50 p-2 text-sm text-amber-900">{t("expired")}</p>}
+            <SignInForm onToken={(tok, name) => { setExpired(false); setFamilyToken(tok); setStudentName(name); }} />
           </>}
     </Shell>
   );
