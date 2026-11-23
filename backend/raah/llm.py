@@ -35,36 +35,42 @@ class LLMUnavailable(RuntimeError):
     pass
 
 
+def _env(name: str, default: str = "") -> str:
+    return os.environ.get(name, default).strip()
+
+
 def _providers() -> list[dict]:
     out = []
     for name in [p.strip() for p in os.environ.get("LLM_PROVIDERS", "openai,groq").split(",") if p.strip()]:
-        if name == "openai" and os.environ.get("OPENAI_API_KEY"):
+        if name == "openai" and _env("OPENAI_API_KEY"):
             out.append({"name": "openai", "url": "https://api.openai.com/v1/chat/completions",
                         "model": os.environ.get("OPENAI_MODEL", "gpt-4o-mini"),
-                        "headers": {"Authorization": f"Bearer {os.environ['OPENAI_API_KEY']}"}, "timeout": 30})
+                        "headers": {"Authorization": f"Bearer {_env('OPENAI_API_KEY')}"}, "timeout": 30})
         elif name == "ollama":
             out.append({"name": "ollama", "url": os.environ.get("OLLAMA_URL", "http://localhost:11434").rstrip("/") + "/v1/chat/completions",
                         "model": os.environ.get("OLLAMA_MODEL", "gemma4:12b"), "headers": {}, "timeout": 120})
-        elif name == "groq" and os.environ.get("GROQ_API_KEY"):
+        elif name == "groq" and _env("GROQ_API_KEY"):
             out.append({"name": "groq", "url": "https://api.groq.com/openai/v1/chat/completions",
                         "model": os.environ.get("GROQ_MODEL", "llama-3.3-70b-versatile"),
-                        "headers": {"Authorization": f"Bearer {os.environ['GROQ_API_KEY']}"}, "timeout": 30})
-        elif name == "sarvam" and os.environ.get("SARVAM_API_KEY"):
+                        "headers": {"Authorization": f"Bearer {_env('GROQ_API_KEY')}"}, "timeout": 30})
+        elif name == "sarvam" and _env("SARVAM_API_KEY"):
             out.append({"name": "sarvam", "url": "https://api.sarvam.ai/v1/chat/completions",
                         "model": os.environ.get("SARVAM_MODEL", "sarvam-105b"),
-                        "headers": {"api-subscription-key": os.environ["SARVAM_API_KEY"]}, "timeout": 30})
+                        "headers": {"api-subscription-key": _env("SARVAM_API_KEY")}, "timeout": 30})
     return out
 
 
 # remember providers that just failed so a dead local Ollama doesn't slow every request
 _down: dict[str, float] = {}
+_last_error: dict[str, str] = {}
 DOWN_SECONDS = 60
 
 
 def status() -> dict:
     ps = _providers()
     return {"configured": [p["name"] for p in ps],
-            "available": any(time.time() - _down.get(p["name"], 0) > DOWN_SECONDS for p in ps)}
+            "available": any(time.time() - _down.get(p["name"], 0) > DOWN_SECONDS for p in ps),
+            "last_error": dict(_last_error)}
 
 
 def chat(messages: list[dict], json_mode: bool = False, temperature: float = 0.3, max_tokens: int = 600) -> tuple[str, str]:
@@ -95,6 +101,7 @@ def chat(messages: list[dict], json_mode: bool = False, temperature: float = 0.3
         except Exception as e:  # network down, model missing, rate limit...
             _down[p["name"]] = time.time()
             errors.append(f"{p['name']}: {type(e).__name__} {str(e)[:80]}".strip())
+            _last_error[p["name"]] = errors[-1]
     raise LLMUnavailable("; ".join(errors) or "no LLM provider configured")
 
 
@@ -138,6 +145,7 @@ def chat_tools(messages: list[dict], tools: list[dict], temperature: float = 0.2
         except Exception as e:
             _down[p["name"]] = time.time()
             errors.append(f"{p['name']}: {type(e).__name__} {str(e)[:80]}".strip())
+            _last_error[p["name"]] = errors[-1]
     if not tried:
         raise ToolsUnsupported("no provider with tool calling is configured or up")
     raise ToolsUnsupported("; ".join(errors))
