@@ -40,8 +40,10 @@ TOKEN_TTL_SECONDS = int(os.environ.get("RAAH_TOKEN_TTL_DAYS", "30")) * 86400
 
 GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
 GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "")
-GOOGLE_REDIRECT_URI = os.environ.get("GOOGLE_REDIRECT_URI", "http://localhost:8000/api/auth/google/callback")
-FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:3000")
+# On Render the public address is always RENDER_EXTERNAL_URL, so it beats a hand-typed value that may be wrong
+PUBLIC_URL = os.environ.get("RENDER_EXTERNAL_URL", "").strip().rstrip("/")
+GOOGLE_REDIRECT_URI = (PUBLIC_URL + "/api/auth/google/callback") if PUBLIC_URL else os.environ.get("GOOGLE_REDIRECT_URI", "http://localhost:8000/api/auth/google/callback")
+FRONTEND_URL = PUBLIC_URL or os.environ.get("FRONTEND_URL", "http://localhost:3000")
 
 # state → role mapping for Google OAuth (in-memory; fine for a single-process server)
 _oauth_states: dict[str, str] = {}
