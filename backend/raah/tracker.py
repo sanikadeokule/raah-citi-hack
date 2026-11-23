@@ -87,7 +87,7 @@ def add_card(body: CardIn, user: dict = Depends(current_user)):
                 row = con.execute("SELECT * FROM applications WHERE id = ?", (existing["id"],)).fetchone()
                 return _fmt(row)
         con.execute(
-            "INSERT INTO applications (user_id, kind, ref_id, title, column, notes, deadline, created_at, updated_at) "
+            "INSERT INTO applications (user_id, kind, ref_id, title, \"column\", notes, deadline, created_at, updated_at) "
             "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (user["id"], body.kind, body.ref_id, body.title, body.column, body.notes, body.deadline, now, now),
         )
@@ -110,7 +110,7 @@ def update_card(card_id: int, body: CardPatch, user: dict = Depends(current_user
         if not updates:
             return _fmt(row)
         updates["updated_at"] = int(time.time())
-        set_clause = ", ".join(f"{k} = ?" for k in updates)
+        set_clause = ", ".join(f'"{k}" = ?' for k in updates)
         con.execute(f"UPDATE applications SET {set_clause} WHERE id = ?", (*updates.values(), card_id))
         row = con.execute("SELECT * FROM applications WHERE id = ?", (card_id,)).fetchone()
     return _fmt(row)
@@ -172,7 +172,7 @@ def seed(user: dict = Depends(current_user)):
             if existing:
                 continue
             con.execute(
-                "INSERT INTO applications (user_id, kind, ref_id, title, column, notes, deadline, created_at, updated_at) "
+                "INSERT INTO applications (user_id, kind, ref_id, title, \"column\", notes, deadline, created_at, updated_at) "
                 "VALUES (?, ?, ?, ?, 'researching', '', NULL, ?, ?)",
                 (user["id"], card["kind"], card["ref_id"], card["title"], now, now),
             )
