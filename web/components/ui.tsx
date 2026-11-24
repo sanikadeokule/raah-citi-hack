@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { LANGS, useApp } from "@/lib/store";
+import { ProfileMenu } from "@/components/profilemenu";
 import { BUILD_ROADMAP_HREF, ROADMAP_HREF, hasRoadmap, openBeforeRoadmap } from "@/lib/roadmap";
 import { cachedAudio, fetchAudio, micErrorKind, micProblem, pickVoice, startRecording, transcribe, voiceStatus, type Recording, type VoiceProblem } from "@/lib/audio";
 
@@ -46,12 +47,7 @@ export function Shell({ title, back = "/", role = "any", publicPage = false, fit
           className="h-8 rounded-full bg-white/15 px-2 text-sm font-semibold">
           {LANGS.map((l) => <option key={l.code} value={l.code} title={l.label} className="text-black">{l.short}</option>)}
         </select>
-        {auth && (
-          <button onClick={async () => { await signOut(); router.replace("/login/"); }} title={`${auth.user.name ?? ""} ${auth.user.phone} · ${t("logout")}`}
-            className="grid h-8 w-8 place-items-center rounded-full bg-white/15 text-sm font-bold" aria-label={t("logout")}>
-            {(auth.user.name || auth.user.role)[0].toUpperCase()}
-          </button>
-        )}
+        <ProfileMenu />
       </header>
       <div aria-hidden className="tricolour" />
       </div>

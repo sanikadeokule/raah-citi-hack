@@ -677,5 +677,15 @@
  "field_language": "Language",
  "field_school_type": "School",
  "field_domicile": "State",
- "field_has_bank_account": "Bank account"
+ "field_has_bank_account": "Bank account",
+ "menu_my_roadmap": "My Roadmap",
+ "menu_my_progress": "My Progress",
+ "menu_my_mentor": "My Mentor",
+ "try_premium": "Try Premium",
+ "settings": "Settings",
+ "appearance": "Appearance",
+ "theme_system": "Use device setting",
+ "theme_light": "Light",
+ "theme_dark": "Dark",
+ "profile_menu": "Profile menu"
 }
