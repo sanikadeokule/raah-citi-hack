@@ -5,12 +5,11 @@ import { categoryLabel } from "@/lib/labels";
 import { useEffect, useState } from "react";
 import { Card, Shell } from "@/components/ui";
 import { TeacherInbox } from "@/components/inbox";
-import { HomeStory } from "@/components/story";
 import { ProShelf } from "@/components/pro";
 import { getKV, setKV } from "@/lib/db";
 import { useApp } from "@/lib/store";
 import { placeLabel } from "@/lib/questions";
-import { BUILD_ROADMAP_HREF, hasRoadmap } from "@/lib/roadmap";
+import { BUILD_ROADMAP_HREF } from "@/lib/roadmap";
 
 const TILES = [
   { href: "/discover/", icon: "🗣️", key: "home_discover" },
@@ -72,7 +71,7 @@ export default function Home() {
   const isTeacher = auth?.user.role === "teacher";
   // greet the signed-in person by their registered name, never by a demo profile
   const greetName = auth?.user.name || (isTeacher ? null : profile?.name) || "";
-  const unlocked = hasRoadmap(profile, auth?.user.role);
+  const hasRoadmap = Boolean(profile?.roadmap_at);
   const details = profile ? [profile.class && t("class_n", { n: profile.class }), placeLabel(t, profile.taluka), categoryLabel(profile.category, lang)].filter(Boolean).join(" · ") : "";
   return (
     <Shell back={null} fit>
@@ -83,7 +82,7 @@ export default function Home() {
             <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[var(--brand-soft)] text-xl">{isTeacher ? "👩‍🏫" : "🙂"}</div>
             <div className="min-w-0 flex-1">
               <div className="truncate text-base font-semibold">{t("hello")}{greetName ? `, ${greetName}` : ""}</div>
-              {!isTeacher && unlocked && (details
+              {!isTeacher && (details
                 ? <div className="truncate text-xs text-[var(--muted)]">{details}</div>
                 : <Link href="/profile/" className="text-xs font-semibold text-[var(--brand)] underline">{t("my_details")}</Link>)}
             </div>
@@ -130,12 +129,18 @@ export default function Home() {
         <ProShelf />
         </>}
         </>
-      ) : !unlocked ? (
-        /* before a roadmap exists there is one thing to do: build it. A short story shows why. */
-        <HomeStory href={BUILD_ROADMAP_HREF} />
       ) : (
         <>
         <TeacherInbox />
+
+        {/* every feature is open from the start; until a roadmap is saved, building one stays one tap away */}
+        {!hasRoadmap && (
+          <Link href={BUILD_ROADMAP_HREF} className="flex items-center gap-3 rounded-2xl bg-[var(--card)] px-4 py-3 text-[var(--brand-ink)] shadow-sm ring-2 ring-[var(--accent)] active:scale-95">
+            <span className="text-2xl">🗺️</span>
+            <span className="min-w-0 flex-1 text-sm font-semibold">{t("home_build_roadmap")}</span>
+            <span aria-hidden>→</span>
+          </Link>
+        )}
 
         <Link href="/ask/" className="flex items-center gap-3 rounded-2xl border-b-4 border-[var(--accent)] bg-[var(--brand)] px-4 py-3 text-white shadow-sm active:scale-95">
           <span className="text-3xl">💬</span>
