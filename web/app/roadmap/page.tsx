@@ -48,6 +48,14 @@ function RoadmapView() {
   if (!careerId || !r) return <Card>{t("rm_not_added")}</Card>;
   const year0 = new Date().getFullYear();
   const isMine = profile?.roadmap_career === careerId;
+  // the page also previews a career before one is saved; only saving it unlocks the rest of the app
+  const saved = Boolean(profile?.roadmap_at);
+  const makeMine = () => {
+    // also sent to the server, so alerts (official notices for this roadmap's exams) reach the student
+    const next = { ...profile, roadmap_career: careerId, roadmap_at: new Date().toISOString() };
+    setProfile(next);
+    queueAction("profile", next);
+  };
   const tot = r.totals;
   const classLabel = (c: number) => (c >= 13 ? t("rm_12_pass") : t("rm_class_n", { n: c }));
   const journey = r.stages.filter((s: any) => s.months > 0);
@@ -72,6 +80,14 @@ function RoadmapView() {
           ))}
         </div>
       </section>
+
+      {!saved && (
+        <section className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-amber-950">
+          <h3 className="font-bold">💡 {t("rm_suggested_title")}</h3>
+          <p className="mt-1 text-sm">{t("rm_suggested_text")}</p>
+          <button onClick={makeMine} className="mt-3 w-full rounded-xl bg-[var(--brand)] py-3 font-semibold text-white">⭐ {t("rm_make_mine")}</button>
+        </section>
+      )}
 
       {/* this road, or the other careers that fit: side by side as tabs */}
       {(
@@ -225,12 +241,7 @@ function RoadmapView() {
           <div className="mt-3 rounded-xl bg-[var(--brand-soft)] p-3 text-center text-sm font-semibold text-[var(--brand-ink)]">🏁 {t("rm_finish", { y: year0 + Math.ceil(tot.months_to_job / 12) })}</div>
         </Card>
 
-        <button onClick={() => {
-          // also sent to the server, so alerts (official notices for this roadmap's exams) reach the student
-          const next = { ...profile, roadmap_career: careerId, roadmap_at: new Date().toISOString() };
-          setProfile(next);
-          queueAction("profile", next);
-        }}
+        <button onClick={makeMine}
           disabled={isMine}
           className={`w-full rounded-xl py-3 font-semibold ${isMine ? "bg-emerald-100 text-emerald-900" : "bg-[var(--brand)] text-white"}`}>
           {isMine ? `✓ ${t("rm_saved")}` : `⭐ ${t("rm_make_mine")}`}

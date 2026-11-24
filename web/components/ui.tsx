@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { LANGS, useApp } from "@/lib/store";
 import { ProfileMenu } from "@/components/profilemenu";
-import { BUILD_ROADMAP_HREF, ROADMAP_HREF, hasRoadmap, openBeforeRoadmap } from "@/lib/roadmap";
+import { ROADMAP_HREF } from "@/lib/roadmap";
 import { cachedAudio, fetchAudio, micErrorKind, micProblem, pickVoice, startRecording, transcribe, voiceStatus, type Recording, type VoiceProblem } from "@/lib/audio";
 
 /** `fit`: lay the page out to fill one screen (no bottom padding, main is a flex column) so it needs no scrolling. */
@@ -21,8 +21,6 @@ export function Shell({ title, back = "/", role = "any", publicPage = false, fit
   }, [needsLogin, path, role, router]);
   const wrongRole = !publicPage && auth && role === "teacher" && auth.user.role !== "teacher";
   const ready = publicPage || (authReady && auth);
-  // students build a roadmap first; the other features open after that
-  const locked = !publicPage && !!auth && !hasRoadmap(profile, auth.user.role) && !openBeforeRoadmap(path);
   const onRoadmap = (path.endsWith("/") ? path : `${path}/`) === ROADMAP_HREF;
   return (
     <div className={`mx-auto max-w-md bg-[var(--bg)] ${fit ? "flex min-h-[100dvh] flex-col" : "min-h-screen pb-24"}`}>
@@ -59,25 +57,12 @@ export function Shell({ title, back = "/", role = "any", publicPage = false, fit
             <button onClick={async () => { await signOut(); router.replace(`/login/?next=${encodeURIComponent(path)}&role=teacher`); }}
               className="mt-3 w-full rounded-xl bg-[var(--brand)] py-3 font-semibold text-white">{t("sign_in_teacher")}</button>
           </Card>
-        ) : locked ? <RoadmapFirst /> : data || publicPage ? children : <Loading />}
+        ) : data || publicPage ? children : <Loading />}
       </main>
       {toast && (
         <div role="status" className="fixed bottom-6 left-1/2 z-50 w-max max-w-[min(92vw,28rem)] -translate-x-1/2 rounded-2xl bg-black/85 px-5 py-3 text-center text-sm text-white shadow-lg">{toast}</div>
       )}
     </div>
-  );
-}
-
-/** Shown instead of a feature a student opens before building a roadmap. */
-function RoadmapFirst() {
-  const { t } = useApp();
-  return (
-    <Card className="text-center">
-      <div className="text-4xl">🗺️</div>
-      <h2 className="mt-2 text-lg font-bold">{t("roadmap_first_title")}</h2>
-      <p className="mt-1 text-sm text-[var(--muted)]">{t("roadmap_first_text")}</p>
-      <Link href={BUILD_ROADMAP_HREF} className="mt-4 block rounded-xl bg-[var(--brand)] py-3 font-semibold text-white">{t("home_build_roadmap")} →</Link>
-    </Card>
   );
 }
 
