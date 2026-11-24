@@ -677,5 +677,15 @@
  "field_language": "भाषा",
  "field_school_type": "स्कूल",
  "field_domicile": "राज्य",
- "field_has_bank_account": "बैंक खाता"
+ "field_has_bank_account": "बैंक खाता",
+ "menu_my_roadmap": "मेरा रोडमैप",
+ "menu_my_progress": "मेरी प्रगति",
+ "menu_my_mentor": "मेरे मेंटर",
+ "try_premium": "प्रीमियम आज़माएँ",
+ "settings": "सेटिंग्स",
+ "appearance": "दिखावट",
+ "theme_system": "फ़ोन की सेटिंग",
+ "theme_light": "लाइट",
+ "theme_dark": "डार्क",
+ "profile_menu": "प्रोफ़ाइल मेनू"
 }

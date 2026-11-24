@@ -1,6 +1,6 @@
 "use client";
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Badge, Card, Shell, Source } from "@/components/ui";
 import { inr, rankCareers } from "@/lib/engine";
 import { pickForCareers, tradeMatches, type CareerChoice } from "@/lib/listings";
@@ -27,6 +27,8 @@ export default function Opportunity() {
   const napsPg = usePaged(naps.items, PAGE, reset);
   const railPg = usePaged(rail.items, PAGE, reset);
   const [tab, setTab] = useState<"naps" | "rail" | "mentors">("naps");
+  // the profile menu's "My Mentor" links here with ?tab=mentors
+  useEffect(() => { if (new URLSearchParams(location.search).get("tab") === "mentors") setTab("mentors"); }, []);
   return (
     <Shell title={t("opportunities")}>
       <CareerFilter value={career} onChange={setCareer} />
