@@ -1,302 +1,294 @@
 "use client";
 /* eslint-disable @typescript-eslint/no-explicit-any */
+// Discover: the ikigai conversation. The student tells Raah two circles (what they love, what they are good at) by
+// tapping, typing or speaking. Raah checks the other two (what pays, what is needed near them) from the dataset, shows
+// the careers where the circles overlap, and checks "can you get there". The student confirms every tag: AI never decides alone.
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Card, MicButton, Shell, SpeakButton } from "@/components/ui";
 import { ChatInput } from "@/components/chatinput";
+import { Icon, Mark } from "@/components/icon";
+import { MicButton, Shell, SpeakButton } from "@/components/ui";
+import { inr } from "@/lib/engine";
+import { GOOD_CHIPS, LOVE_CHIPS, allTagsOf, extractTags, reachable, sweetSpots, type Circle, type Check, type Spot } from "@/lib/ikigai";
+import { tagLabel } from "@/lib/questions";
 import { useApp } from "@/lib/store";
-import { setKV } from "@/lib/db";
-import { aiAvailable, postAi, resetAiStatus } from "@/lib/ai";
-import { QUESTIONS, cleanPlace, firstMissing, sayGender, tagLabel, placeLabel, fieldLabel, type Opt, type Q, type T } from "@/lib/questions";
 
-// Two modes fill the same profile fields:
-// - AI chat: an open-source LLM (see backend/raah/llm.py) asks questions and returns the fields it understood;
-//   the server validates every field before it reaches the profile.
-// - Scripted questions (lib/questions.ts): the deterministic fallback from the spec, used offline, with no model, or on request.
-// Both use the same clear wording, example hints and answer chips, and the same checks on typed answers.
+type Screen = "intro" | "love" | "good" | "confirm" | "checking" | "sweet" | "reach";
+type Msg = { from: "raah" | "me"; text: string };
+const CIRCLES: Circle[] = ["love", "good", "pays", "needed"];
 
-// `tr` rebuilds a bubble in the language chosen now, so switching language re-translates the whole chat,
-// not only the newest question. `text` is the fallback (the model's own replies and typed answers), and
-// `lang` is the language that fallback text was written in, for read-aloud.
-type Msg = { from: "raah" | "me"; text: string; hint?: string; tr?: (t: T) => { text: string; hint?: string }; learned?: Record<string, any>; error?: boolean; lang?: string };
-type Say = string | ((t: T) => string);
-type Mode = "checking" | "ai" | "script";
+function Pills({ screen, t }: { screen: Screen; t: (k: string) => string }) {
+  const at = screen === "love" ? 0 : screen === "good" ? 1 : 2;
+  const items = [`1 ${t("ik_circle_love")}`, `2 ${t("ik_circle_good")}`, `3 ${t("ik_raah_checks")}`];
+  return (
+    <ol className="flex flex-wrap gap-1.5 text-xs font-bold" aria-label={t("ik_title")}>
+      {items.map((x, i) => (
+        <li key={x} aria-current={i === at ? "step" : undefined} className={`rounded-full px-3 py-1.5 ${i === at ? "bg-[var(--brand)] text-white" : i < at ? "bg-[var(--brand-soft)] text-[var(--brand-ink)]" : "bg-black/10 text-[var(--muted)]"}`}>
+          {i < at && <Icon name="check" size={12} className="mr-1 align-[-1px]" />}{x}
+        </li>
+      ))}
+    </ol>
+  );
+}
 
-const showValue = (v: any) => (Array.isArray(v) ? v.join(", ") : typeof v === "boolean" ? (v ? "✓" : "✗") : String(v));
+function Chip({ on, onClick, children }: { on?: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button onClick={onClick} aria-pressed={on} className={`rounded-full px-3.5 py-2 text-sm font-medium ring-1 ring-black/10 active:scale-95 ${on ? "bg-[var(--brand)] text-white" : "bg-[var(--card)]"}`}>{children}</button>
+  );
+}
+
+function Guide({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex items-start gap-3">
+      <span aria-hidden className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[var(--brand-soft)] text-[var(--brand)]"><Icon name="compass" size={24} /></span>
+      <div className="min-w-0 flex-1 rounded-2xl rounded-tl-sm bg-[var(--card)] p-3.5 text-[15px] leading-snug ring-1 ring-black/10">{children}</div>
+    </div>
+  );
+}
 
 export default function Discover() {
-  const { data, lang, setLang, t, profile, setProfile, queueAction, online, auth, authReady } = useApp();
-  // the registered name is already known, so the chat starts from the next question
-  const knownName = auth?.user.name || null;
-  const start = { language: lang, school_type: "government", domicile: "Maharashtra", has_bank_account: true, exams_passed: [], ...(knownName ? { name: knownName } : {}) };
-  const [step, setStep] = useState(() => firstMissing(start));
-  const [draft, setDraft] = useState<any>(start);
-  const [msgs, setMsgs] = useState<Msg[]>([]);
+  const { t, data, profile, setProfile, queueAction } = useApp();
+  const router = useRouter();
+  const [screen, setScreen] = useState<Screen>("intro");
+  const [love, setLove] = useState<string[]>(profile?.ikigai?.love ?? []);
+  const [good, setGood] = useState<string[]>(profile?.ikigai?.good_at ?? []);
   const [text, setText] = useState("");
-  const [multi, setMulti] = useState<string[]>([]);
-  const [consent, setConsent] = useState<"none" | "asking" | "done">("none");
-  const [otp, setOtp] = useState("");
-  const [mode, setMode] = useState<Mode>("checking");
-  const [aiMissing, setAiMissing] = useState<string[]>([]);
-  const [busy, setBusy] = useState(false);
-  // what the student actually tapped ("₹4.5 to 8 lakh"), shown in "Understood" instead of the single number stored for a band
-  const [labels, setLabels] = useState<Record<string, (t: T) => string>>({});
-  const dropLabels = (keys: string[]) => setLabels((l) => { const n = { ...l }; keys.forEach((k) => delete n[k]); return n; });
-  const [ready, setReady] = useState(false);
+  const [msgs, setMsgs] = useState<Msg[]>([]);
+  const [showAll, setShowAll] = useState(false);
+  const [done, setDone] = useState(0); // how many of the four checks Raah has finished showing
+  const [pick, setPick] = useState<Spot | null>(null);
   const end = useRef<HTMLDivElement>(null);
-  const finished = step >= QUESTIONS.length;
-  // in AI mode the quick-answer chips follow the first field the model still needs
-  const q = !ready || finished ? undefined : mode === "ai" ? (QUESTIONS.find((x) => x.key === aiMissing[0]) ?? QUESTIONS[firstMissing(draft)]) : mode === "script" ? QUESTIONS[step] : undefined;
-  // no chips while the model is thinking: they would belong to the question just answered, not the one coming next
-  const options: Opt[] = useMemo(() => (q?.options && data && !busy ? q.options(data, t, draft) : []), [q, data, t, draft, busy]);
-  const view = (m: Msg) => (m.tr ? m.tr(t) : { text: m.text, hint: m.hint });
-  /** A message from the locale files: stored as a key, so it follows the language switch. */
-  const say = (tr: (t: T) => string, error = false): Msg => ({ from: "raah", text: tr(t), tr: (tt) => ({ text: tr(tt) }), error });
-  const askMsg = (i: number, p: any): Msg => {
-    const name = knownName && msgs.length === 0 ? knownName : null;
-    const tr = (tt: T) => {
-      const { text: body, hint } = QUESTIONS[i].ask(tt, p);
-      return { text: (name ? `${tt("hello")}, ${name}! ` : "") + body, hint };
-    };
-    return { from: "raah", ...tr(t), tr };
-  };
-  /** Label(s) of the tapped chip(s), looked up again by position so they show in the current language. */
-  const chipLabel = (qq: Q, p: any, idx: number[]) => (tt: T) => {
-    const opts = qq.options?.(data, tt, p) ?? [];
-    return idx.map((i) => opts[i]?.label ?? "").join(", ");
-  };
+  const tags = useMemo(() => allTagsOf(data), [data]);
+  const missing = !profile?.class || !profile?.category || !profile?.family_income_annual;
+  const list = screen === "good" ? good : love;
+  const setList = screen === "good" ? setGood : setLove;
+  const chips = screen === "good" ? GOOD_CHIPS : LOVE_CHIPS;
 
-  useEffect(() => { aiAvailable().then((ok) => setMode(ok ? "ai" : "script")); }, []);
-  // the signed-in account loads from the phone's storage after the first render; wait for it so a
-  // registered student is greeted by name and never asked for it again
+  const spots = useMemo(() => (screen === "sweet" || screen === "checking" || screen === "reach") && data && profile ? sweetSpots(data, profile, love, good) : [], [screen, data, profile, love, good]);
+  const reach = useMemo(() => (pick && data && profile ? reachable(data, profile, pick) : null), [pick, data, profile]);
+  useEffect(() => { end.current?.scrollIntoView({ block: "nearest", behavior: "smooth" }); }, [msgs, screen]);
+
+  // Raah finishes its four checks one by one; people who asked for less motion see them at once
   useEffect(() => {
-    if (!authReady || ready) return;
-    if (knownName && !draft.name) {
-      const next = { ...draft, name: knownName };
-      setDraft(next);
-      setStep(firstMissing(next));
-    }
-    setReady(true);
-  }, [authReady]); // eslint-disable-line react-hooks/exhaustive-deps
-  // scripted mode asks each question; AI mode opens with the same greeting, then the model takes over
-  useEffect(() => {
-    if (!ready) return;
-    if (mode === "script" && QUESTIONS[step]) setMsgs((m) => [...m, askMsg(step, draft)]);
-    if (mode === "ai" && msgs.length === 0) setMsgs([askMsg(firstMissing(draft), draft)]);
-  }, [step, mode, ready]); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => { end.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs, consent]);
+    if (screen !== "checking") return;
+    setDone(0);
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) { setDone(4); return; }
+    const ids = [1, 2, 3, 4].map((n) => setTimeout(() => setDone(n), n * 650));
+    return () => ids.forEach(clearTimeout);
+  }, [screen]);
 
-  const finish = (next: any) => {
-    setStep(QUESTIONS.length);
-    setConsent(next.age && next.age < 18 ? "asking" : "done");
-    if (!(next.age < 18)) save(next);
-  };
+  const toggle = (tag: string) => setList((l) => (l.includes(tag) ? l.filter((x) => x !== tag) : [...l, tag]));
+  const say = (m: Msg) => setMsgs((x) => [...x, m]);
 
-  /** Hand over to the scripted questions for whatever is still missing. */
-  const toScript = (p: any) => {
-    const i = firstMissing(p);
-    setMode("script");
-    if (i >= QUESTIONS.length) finish(p);
-    else setStep(i);
-  };
-
-  const sendAi = async (raw: string, patch: Record<string, any> = {}, replyLang = lang) => {
-    if (!raw.trim() || busy) return;
-    const base = { ...draft, ...patch };
-    const history = [...msgs, { from: "me" as const, text: raw }];
-    setMsgs(history); setDraft(base); setText(""); setMulti([]); setBusy(true);
-    const j = await postAi("/api/chat/turn", {
-      lang: replyLang, profile: base,
-      messages: history.map((m) => ({ role: m.from === "me" ? "user" : "assistant", content: view(m).text })),
-    });
-    setBusy(false);
-    if (!j || j.fallback) {
-      resetAiStatus();
-      // say why the AI chat stopped, so it is clear whether the server, the model name or a timeout is the cause
-      const why = !j ? "the Raah server did not answer" : j.reason || "no model answered";
-      setMsgs((m) => [...m, say((tt) => `${tt("ai_fallback_note")} (${why})`, true)]);
-      toScript(base);
-      return;
-    }
-    const next = { ...base, ...j.profile };
-    dropLabels(Object.keys(j.learned || {}));
-    setDraft(next);
-    setAiMissing(j.missing || []);
-    if (j.done || !(j.missing || []).length) {
-      setMsgs((m) => [...m, { from: "raah", text: j.reply || "OK", learned: j.learned, lang: replyLang }]);
-      toScript(next);
-    } else {
-      setMsgs((m) => [...m, { from: "raah", text: j.reply, learned: j.learned, lang: replyLang }]);
-    }
-  };
-
-  /** Say what was wrong with a typed answer and keep the same question open. */
-  const retry = (shown: string, error: string, vars?: Record<string, string | number>) => {
-    setMsgs((m) => [...m, { from: "me", text: shown }, say((tt) => tt(error, vars), true)]);
-    setText("");
-  };
-
-  // tap: the answer came from a chip, so the next question is the app's own (same wording as the chips), not the model's.
-  // Letting the model reply to a tap could repeat the question just answered while the chips already show the next one.
-  const answer = (value: any, said: Say, learned?: Record<string, any>, extra: Record<string, any> = {}, tap = false, replyLang = lang) => {
-    if (!q) return;
-    const shown = typeof said === "string" ? said : said(t);
-    const tr = typeof said === "string" ? undefined : (tt: T) => ({ text: said(tt) });
-    if (tap && typeof said !== "string") setLabels((l) => ({ ...l, [q.key]: said })); else dropLabels([q.key]);
-    if (mode === "ai" && !tap) { sendAi(shown, { [q.key]: value, ...extra }, replyLang); return; }
-    const next = { ...draft, [q.key]: value, ...extra };
-    if (q.key === "taluka") {
-      const tk = data.talukas.find((x: any) => x.name === value);
-      if (tk) { next.lat = tk.lat; next.lon = tk.lon; }
-    }
-    setDraft(next);
-    setMsgs((m) => [...m, { from: "me", text: shown, tr, learned: tap && !learned ? { [q.key]: value } : learned }]);
-    setText(""); setMulti([]);
-    // always go to the first unanswered question: "fix my age" sends the student back to the age question
-    const n = firstMissing(next);
-    if (mode === "ai") {
-      setAiMissing([]);
-      if (n < QUESTIONS.length) setMsgs((m) => [...m, askMsg(n, next)]);
-    }
-    if (n < QUESTIONS.length) setStep(n);
-    else finish(next);
-  };
-
-  const submitText = async (raw: string, detectedLang?: string) => {
-    if (!raw.trim() || !q) return;
-    const replyLang = detectedLang || lang;
-    if (detectedLang) setLang(detectedLang);
-    // answers that need checking (age, exam marks) are checked here in both modes, so a 25/25 unit test never gets through
-    if (q.parse) {
-      const r = q.parse(raw);
-      if (!r.ok) { retry(raw, r.error, r.vars); return; }
-      const g = q.key === "age" && !draft.gender ? sayGender(raw) : undefined;
-      answer(r.value, raw, { [q.key]: r.value, ...(g ? { gender: g } : {}) }, { ...r.extra, ...(g ? { gender: g } : {}) }, false, replyLang);
-      return;
-    }
-    if (mode === "ai") { sendAi(raw, {}, replyLang); return; }
-    if (q.kind === "choice") {
-      const low = raw.toLowerCase();
-      const hit = options.find((o) => low.includes(String(o.label).toLowerCase()) || low.includes(String(o.v).toLowerCase()));
-      if (hit) answer(hit.v, raw, undefined, hit.patch, false, replyLang);
-      else if (q.free && cleanPlace(raw)) {
-        // a taluka we do not have on the map yet: keep it, and say centre distances will be missing
-        const place = cleanPlace(raw)!;
-        answer(place, raw, undefined, {}, false, replyLang);
-        setMsgs((m) => [...m, say((tt) => tt("q_taluka_not_listed", { taluka: place }))]);
-      } else retry(raw, "q_pick_one");
-    } else if (q.kind === "multi") {
-      const low = raw.toLowerCase();
-      const hits = options.filter((o) => low.includes(String(o.v).toLowerCase()) || low.includes(String(o.label).toLowerCase())).map((o) => o.v);
-      // interests said in the student's own words (any language) are mapped to the dataset's tags on the server
-      if (!hits.length && q.key === "interests" && online) {
-        const j = await postAi("/api/interests/match", { text: raw });
-        if (j?.tags?.length) { const tags = j.tags.map((x: any) => x.tag); answer(tags, raw, { interests: tags }, {}, false, replyLang); return; }
-      }
-      answer(hits.length ? hits : raw.split(/,|और|आणि|and/).map((s) => s.trim()).filter(Boolean), raw, undefined, {}, false, replyLang);
-    } else answer(raw.trim(), raw, undefined, {}, false, replyLang);
-  };
-
-  /** The one button: sends the chips ticked on a multi-choice question (plus anything typed), otherwise the typed answer. */
   const send = () => {
-    if (busy || !q) return;
-    if (q.kind === "multi" && multi.length && !text.trim()) {
-      const idx = options.flatMap((o, i) => (multi.includes(o.v) ? [i] : []));
-      answer(multi, chipLabel(q, draft, idx), undefined, {}, true);
-    } else submitText(text);
+    const found = extractTags(text, tags);
+    if (!text.trim() && !list.length) return;
+    if (text.trim()) say({ from: "me", text: text.trim() });
+    const merged = [...new Set([...list, ...found])];
+    setList(merged);
+    setText("");
+    say({ from: "raah", text: merged.length ? t("ik_heard", { tags: merged.map((x) => tagLabel(t, x)).join(", ") }) : t("ik_heard_none") });
   };
-  const canSend = !busy && (text.trim().length > 0 || (q?.kind === "multi" && multi.length > 0));
-
-  const save = async (p: any) => {
-    const prof = { ...p, id: undefined };
+  const next = () => {
+    if (screen === "love") { setMsgs([]); setScreen("good"); }
+    else if (screen === "good") setScreen("confirm");
+  };
+  const confirm = async () => {
+    // what the student confirmed is saved to the profile; interests is what the rest of the app already ranks by
+    const prof = { ...profile, interests: love, strengths: good, ikigai: { love, good_at: good, confirmed_at: new Date().toISOString() } };
     setProfile(prof);
     await queueAction("profile", prof);
+    setScreen("checking");
+  };
+  const startPath = async () => {
+    if (!pick) return;
+    const prof = { ...profile, roadmap_career: pick.career.id, roadmap_at: new Date().toISOString() };
+    setProfile(prof);
+    await queueAction("profile", prof);
+    router.push(`/roadmap/?career=${pick.career.id}`);
   };
 
-  const giveConsent = async () => {
-    if (otp !== "1234") return;
-    const record = { purpose: "Career guidance and scholarship matching", student: draft.name, by: "Parent (OTP sandbox)", at: new Date().toISOString(), lawful_basis: "DPDP Act 2023, verifiable parental consent (s.9)" };
-    await setKV("consent", record);
-    await queueAction("consent", record);
-    await save(draft);
-    setConsent("done");
+  const checkText = (c: Check, circle: Circle) => {
+    if (circle === "pays") return t(c.level === "unknown" ? "ik_pays_unknown" : `ik_pays_${c.level}`, { amount: inr(Number(c.vars?.amount)) });
+    if (circle === "needed") return c.level === "yes" && !c.vars?.n ? t("ik_needed_yes0") : t(`ik_needed_${c.level}`, { n: Number(c.vars?.n ?? 0) });
+    return t(`ik_${circle}_${c.level}`);
   };
+  const checkRow = (c: Check, circle: Circle) => (
+    <span key={circle} className="flex items-start gap-1.5 rounded-lg bg-[var(--bg)] px-2 py-1.5 text-xs">
+      <Mark kind={c.level === "yes" ? "yes" : c.level === "part" ? "warn" : c.level === "no" ? "no" : "unknown"} size={14} />
+      <span>{checkText(c, circle)}</span>
+    </span>
+  );
+
+  const question = screen === "good" ? { q: t("ik_q_good"), hint: t("ik_q_good_hint") } : { q: t("ik_q_love"), hint: t("ik_q_love_hint") };
+  const moreTags = tags.filter((x) => !chips.includes(x));
 
   return (
-    <Shell title={t("home_discover")}>
-      {mode !== "checking" && !finished && (
-        <div className="flex items-center justify-between text-xs text-[var(--muted)]">
-          <span>{mode === "ai" ? `${t("ai_chat_mode")}` : `${t("quick_mode")}`}</span>
-          {mode === "ai" && <button className="underline" onClick={() => toScript(draft)}>{t("use_quick_questions")}</button>}
-          <Link href="/ask/" className="underline"> {t("home_ask")}</Link>
-        </div>
-      )}
-      <div className="space-y-2">
-        {msgs.map((m, i) => { const v = view(m); return (
-          <div key={i} className={`flex ${m.from === "me" ? "justify-end" : "justify-start"}`}>
-            <div className={`max-w-[80%] rounded-2xl px-3 py-2 text-sm ${m.from === "me" ? "bg-[var(--brand)] text-white" : m.error ? "bg-amber-50 ring-1 ring-amber-300 text-amber-900" : "bg-[var(--card)] ring-1 ring-black/5"}`}>
-              {m.error && "! "}{v.text}
-              {v.hint && <div className="mt-1 text-xs text-[var(--muted)]">{v.hint}</div>}
-              {m.learned && Object.keys(m.learned).length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-1">
-                  <span className={`text-xs ${m.from === "me" ? "text-white/80" : "text-[var(--muted)]"}`}>{t("ai_understood")}:</span>
-                  {Object.entries(m.learned).map(([k, val]) => (
-                    <span key={k} className="rounded-full bg-[var(--brand-soft)] px-2 py-0.5 text-xs text-[var(--brand-ink)]">{fieldLabel(t, k)}: {labels[k]?.(t) ?? (k === "interests" && Array.isArray(val) ? val.map((x) => tagLabel(t, x)).join(", ") : k === "taluka" ? placeLabel(t, val) : showValue(val))}{k === "marks_pct" ? "%" : ""}</span>
-                  ))}
-                </div>
-              )}
-              {m.from === "raah" && i === msgs.length - 1 && <div className="mt-1"><SpeakButton text={v.hint ? `${v.text} ${v.hint}` : v.text} label="" lang={m.tr ? lang : m.lang} /></div>}
-            </div>
+    <Shell title={t("home_discover")} back={screen === "intro" ? "/" : null}>
+      {screen === "intro" && (
+        <div className="space-y-4">
+          <div>
+            <h2 className="text-2xl font-extrabold leading-tight text-[var(--brand-ink)]">{t("ik_intro_title")}</h2>
+            <p className="mt-1 text-sm text-[var(--muted)]">{t("ik_intro_body")}</p>
           </div>
-        ); })}
-        {busy && <div className="text-sm text-[var(--muted)]">{t("thinking")}</div>}
-        <div ref={end} />
-      </div>
-
-      {q && (
-        <Card className="sticky bottom-2">
-          {options.length > 0 && (
-            <div className="mb-2 flex flex-wrap gap-2">
-              {options.map((o, oi) => {
-                const on = multi.includes(o.v);
-                return (
-                  <button key={o.label} onClick={() => (q.kind === "multi" ? setMulti(on ? multi.filter((x) => x !== o.v) : [...multi, o.v]) : answer(o.v, chipLabel(q, draft, [oi]), undefined, o.patch, true))}
-                    className={`rounded-full px-3 py-2 text-sm ring-1 ring-black/10 ${on ? "bg-[var(--brand)] text-white" : "bg-[var(--bg)]"}`}>
-                    {o.label}
-                  </button>
-                );
+          {/* the four circles: solid = the student tells Raah, dashed = Raah checks from data */}
+          <svg viewBox="0 0 240 200" role="img" aria-label={`${t("ik_you_tell")}: ${t("ik_circle_love")}, ${t("ik_circle_good")}. ${t("ik_raah_checks")}: ${t("ik_circle_pays")}, ${t("ik_circle_needed")}.`} className="mx-auto w-full max-w-xs">
+            {[[85, 70, "love", false], [155, 70, "good", false], [85, 130, "pays", true], [155, 130, "needed", true]].map(([cx, cy, k, dashed]) => (
+              <circle key={k as string} cx={cx as number} cy={cy as number} r="52" fill={dashed ? "none" : "var(--brand)"} fillOpacity={dashed ? 0 : 0.12} stroke="var(--brand)" strokeWidth="2.5" strokeDasharray={dashed ? "6 5" : undefined} />
+            ))}
+            <g fontSize="9" fontWeight="700" fill="var(--ink)" textAnchor="middle">
+              {([[64, 66, "ik_circle_love"], [176, 66, "ik_circle_good"], [64, 138, "ik_circle_pays"], [176, 138, "ik_circle_needed"]] as const).map(([x, y, k]) => {
+                const w = t(k).split(" "); const cut = Math.ceil(w.length / 2);
+                return <text key={k} x={x} y={y - 5}><tspan x={x}>{w.slice(0, cut).join(" ")}</tspan><tspan x={x} dy="11">{w.slice(cut).join(" ")}</tspan></text>;
               })}
-              {q.kind === "multi" && q.key === "documents" && multi.length === 0 && (
-                <button onClick={() => answer([], (tt) => tt("opt_none_of_these"), undefined, { documents_none: true }, true)} className="rounded-full px-3 py-2 text-sm ring-1 ring-black/10 bg-[var(--bg)]">{t("opt_none_of_these")}</button>
-              )}
+            </g>
+          </svg>
+          <ul className="space-y-1 text-sm">
+            <li className="flex items-center gap-2"><span className="h-3 w-3 rounded-full bg-[var(--brand)]/30 ring-2 ring-[var(--brand)]" aria-hidden />{t("ik_you_tell")}</li>
+            <li className="flex items-center gap-2"><span className="h-3 w-3 rounded-full ring-2 ring-dashed ring-[var(--brand)]" aria-hidden />{t("ik_raah_checks")}</li>
+          </ul>
+          <p className="flex items-center gap-2 rounded-xl bg-[var(--brand-soft)] p-3 text-sm"><Icon name="mic" size={18} className="shrink-0 text-[var(--brand)]" />{t("ik_voice_note")}</p>
+          {missing && (
+            <div className="rounded-xl border-2 border-amber-400 bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-900/20 dark:text-amber-100">
+              <p>{t("ik_basics_missing")}</p>
+              <Link href="/discover/basics/" className="mt-2 inline-block font-bold underline">{t("ik_basics_go")}</Link>
             </div>
           )}
-          <div className="flex items-end gap-2">
-            <MicButton onText={(s, detectedLang) => submitText(s, detectedLang)} />
-            <ChatInput value={text} onChange={setText} onSend={() => { if (canSend) send(); }}
-              placeholder={t("type_answer")} inputMode={q.kind === "number" || q.key === "max_commute_km" ? "numeric" : "text"} />
-            <button onClick={send} disabled={!canSend} className="rounded-full bg-[var(--brand)] px-4 py-3 text-white disabled:opacity-40">{t("send")}</button>
-          </div>
-        </Card>
+          <button onClick={() => { setMsgs([]); setScreen("love"); }} className="w-full rounded-2xl bg-[var(--brand)] py-4 text-base font-bold text-white active:scale-[.98]">{t("ik_start")}</button>
+        </div>
       )}
 
-      {consent === "asking" && (
-        <Card>
-          <h2 className="text-lg font-bold">{t("consent_title")}</h2>
-          <p className="mt-1 text-sm">{t("consent_text", { name: draft.name })}</p>
-          <p className="mt-2 text-xs text-[var(--muted)]">{t("otp")}</p>
-          <div className="mt-2 flex gap-2">
-            <input value={otp} onChange={(e) => setOtp(e.target.value)} inputMode="numeric" maxLength={4} className="w-24 rounded-lg bg-[var(--bg)] p-2 text-center text-lg tracking-widest" />
-            <button onClick={giveConsent} disabled={otp !== "1234"} className="flex-1 rounded-lg bg-[var(--brand)] py-2 font-semibold text-white disabled:opacity-40">{t("verify")}</button>
+      {(screen === "love" || screen === "good") && (
+        <div className="flex flex-1 flex-col gap-3">
+          <Pills screen={screen} t={t} />
+          <Guide>
+            <p className="font-semibold">{question.q}</p>
+            <p className="mt-1 text-xs text-[var(--muted)]">{question.hint}</p>
+            <div className="mt-2"><SpeakButton text={`${question.q} ${question.hint}`} /></div>
+          </Guide>
+          <div className="flex flex-col gap-2" aria-live="polite">
+            {msgs.map((m, i) => m.from === "me"
+              ? <div key={i} className="max-w-[80%] self-end rounded-2xl rounded-tr-sm bg-[var(--brand)] px-3.5 py-2.5 text-sm text-white">{m.text}</div>
+              : <div key={i} className="max-w-[88%] self-start rounded-2xl rounded-tl-sm bg-[var(--card)] px-3.5 py-2.5 text-sm ring-1 ring-black/10">{m.text}</div>)}
           </div>
-        </Card>
+          <div className="flex flex-wrap gap-2">
+            {chips.filter((x) => tags.includes(x)).map((x) => <Chip key={x} on={list.includes(x)} onClick={() => toggle(x)}>{tagLabel(t, x)}</Chip>)}
+            {list.filter((x) => !chips.includes(x)).map((x) => <Chip key={x} on onClick={() => toggle(x)}>{tagLabel(t, x)}</Chip>)}
+            <button onClick={() => setShowAll((s) => !s)} aria-expanded={showAll} className="rounded-full px-3.5 py-2 text-sm font-semibold text-[var(--brand-ink)] underline">{t("ik_add_more")}</button>
+          </div>
+          {showAll && <div className="flex flex-wrap gap-2 rounded-2xl bg-[var(--brand-soft)] p-3">{moreTags.map((x) => <Chip key={x} on={list.includes(x)} onClick={() => toggle(x)}>{tagLabel(t, x)}</Chip>)}</div>}
+          <div ref={end} />
+          <div className="mt-auto space-y-2">
+            <div className="flex items-end gap-2">
+              <MicButton onText={(s) => setText((x) => `${x} ${s}`.trim())} />
+              <ChatInput value={text} onChange={setText} onSend={send} placeholder={t("ik_type")} />
+              <button onClick={send} disabled={!text.trim()} className="h-12 shrink-0 rounded-full bg-[var(--brand-soft)] px-4 text-sm font-bold text-[var(--brand-ink)] disabled:opacity-40">{t("ik_send")}</button>
+            </div>
+            <button onClick={() => { if (text.trim()) send(); next(); }} disabled={!list.length && !extractTags(text, tags).length}
+              className="w-full rounded-2xl bg-[var(--brand)] py-4 text-base font-bold text-white active:scale-[.98] disabled:opacity-40">{t("ik_next")}</button>
+          </div>
+        </div>
       )}
-      {consent === "done" && profile && (
-        <Card>
-          <p className="font-semibold">{t("consent_recorded")} · {t("saved")}</p>
-          <Link href="/careers/" className="mt-3 block rounded-xl bg-[var(--brand)] py-3 text-center font-semibold text-white">{t("shortlist")} →</Link>
-          <Link href="/profile/" className="mt-2 block text-center text-sm underline">{t("edit_profile")}</Link>
-        </Card>
+
+      {screen === "confirm" && (
+        <div className="space-y-4">
+          <div>
+            <h2 className="text-2xl font-extrabold text-[var(--brand-ink)]">{t("ik_confirm_title")}</h2>
+            <p className="mt-1 text-sm text-[var(--muted)]">{t("ik_confirm_hint")}</p>
+          </div>
+          {([["love", "ik_love_h", love, setLove], ["good", "ik_good_h", good, setGood]] as const).map(([k, h, items, set]) => (
+            <section key={k} className="rounded-2xl bg-[var(--card)] p-4 ring-1 ring-black/10">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--muted)]">{t(h)}</h3>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {items.length === 0 && <span className="text-sm text-[var(--muted)]">{t("ik_none_yet")}</span>}
+                {items.map((x) => (
+                  <span key={x} className="inline-flex items-center gap-1 rounded-full bg-[var(--brand-soft)] py-1.5 pl-3.5 pr-1.5 text-sm font-medium text-[var(--brand-ink)]">
+                    {tagLabel(t, x)}
+                    <button onClick={() => (set as any)((l: string[]) => l.filter((y) => y !== x))} aria-label={t("ik_remove", { tag: tagLabel(t, x) })} className="grid h-6 w-6 place-items-center rounded-full hover:bg-black/10"><Icon name="x" size={14} /></button>
+                  </span>
+                ))}
+              </div>
+            </section>
+          ))}
+          <div className="space-y-2">
+            <button onClick={confirm} disabled={!love.length && !good.length} className="w-full rounded-2xl bg-[var(--brand)] py-4 text-base font-bold text-white active:scale-[.98] disabled:opacity-40">{t("ik_looks_right")}</button>
+            <button onClick={() => { setMsgs([]); setScreen("love"); }} className="w-full py-2 text-sm font-semibold text-[var(--brand-ink)] underline">{t("ik_try_again")}</button>
+          </div>
+        </div>
+      )}
+
+      {screen === "checking" && (
+        <div className="space-y-4">
+          <Pills screen="checking" t={t} />
+          <Guide><p>{t("ik_checking_say")}</p></Guide>
+          <ul className="space-y-2" aria-live="polite">
+            {([["ik_chk_match", t("ik_chk_match_sub", { n: data?.careers?.length ?? 0 })], ["ik_chk_pay", t("ik_chk_pay_sub")], ["ik_chk_open", t("ik_chk_open_sub")], ["ik_chk_reach", t("ik_chk_reach_sub")]] as const).map(([k, sub], i) => (
+              <li key={k} className={`flex items-start gap-3 rounded-xl bg-[var(--card)] p-3.5 ring-1 ring-black/10 ${i >= done ? "opacity-50" : ""}`}>
+                <span aria-hidden className={`grid h-6 w-6 shrink-0 place-items-center rounded-full border-2 ${i < done ? "border-[var(--good)] text-[var(--good)]" : "border-dashed border-[var(--muted)] text-[var(--muted)]"}`}>{i < done ? <Icon name="check" size={14} /> : null}</span>
+                <span><span className="block text-sm font-bold">{t(k)}</span><span className="block text-xs text-[var(--muted)]">{sub}</span></span>
+                {i < done && <span className="sr-only">{t("ik_see_result")}</span>}
+              </li>
+            ))}
+          </ul>
+          <p className="text-center text-xs text-[var(--muted)]">{t("ik_checking_note")}</p>
+          {done >= 4 && <button onClick={() => setScreen("sweet")} className="w-full rounded-2xl bg-[var(--brand)] py-4 text-base font-bold text-white active:scale-[.98]">{t("ik_see_result")}</button>}
+        </div>
+      )}
+
+      {screen === "sweet" && (
+        <div className="space-y-3">
+          <div>
+            <h2 className="text-2xl font-extrabold text-[var(--brand-ink)]">{t("ik_sweet_title")}</h2>
+            <p className="mt-1 text-sm text-[var(--muted)]">{t("ik_sweet_sub")}</p>
+          </div>
+          {spots.length === 0 && <p className="rounded-2xl bg-[var(--card)] p-4 text-sm ring-1 ring-black/10">{t("ik_none_found")}</p>}
+          {spots.slice(0, 3).map((s, i) => (
+            <section key={s.career.id} className={`rounded-2xl bg-[var(--card)] p-4 ${i === 0 ? "ring-2 ring-[var(--brand)]" : "ring-1 ring-black/10"}`}>
+              <div className="flex items-baseline justify-between gap-2">
+                <h3 className="text-lg font-extrabold leading-snug">{s.career.name}</h3>
+                {i === 0 && <span className="shrink-0 rounded-full border-2 border-[var(--brand)] px-2 py-0.5 text-[11px] font-bold text-[var(--brand-ink)]">{t("ik_best")}</span>}
+              </div>
+              <div className="mt-2 grid gap-1.5">{CIRCLES.map((c) => checkRow(s.checks[c], c))}</div>
+              <button onClick={() => { setPick(s); setScreen("reach"); }} className={`mt-3 w-full rounded-xl py-3 text-sm font-bold active:scale-[.98] ${i === 0 ? "bg-[var(--brand)] text-white" : "bg-[var(--brand-soft)] text-[var(--brand-ink)]"}`}>{t("ik_see_reach", { career: s.career.name })}</button>
+            </section>
+          ))}
+          <p className="text-[11px] text-[var(--muted)]">{t("ik_estimates")}</p>
+          <button onClick={() => { setMsgs([]); setScreen("love"); }} className="w-full py-2 text-sm font-semibold text-[var(--brand-ink)] underline">{t("ik_try_again")}</button>
+        </div>
+      )}
+
+      {screen === "reach" && pick && (
+        <div className="space-y-3">
+          <h2 className="text-2xl font-extrabold text-[var(--brand-ink)]">{t("ik_reach_title")}</h2>
+          <p className="text-lg font-bold">{pick.career.name}</p>
+          {!reach && <p className="rounded-2xl bg-[var(--card)] p-4 text-sm ring-1 ring-black/10">{t("ik_no_plan")}</p>}
+          {reach && (
+            <>
+              <dl className="grid grid-cols-2 gap-2">
+                {([["ik_cost_total", inr(reach.total)], ["ik_family_pays", t("ik_per_month", { amount: inr(reach.perMonth) })], ["ik_scholarships", String(reach.schol)]] as const).map(([k, v]) => (
+                  <div key={k} className="rounded-xl bg-[var(--card)] p-3 ring-1 ring-black/10"><dt className="text-[11px] text-[var(--muted)]">{t(k)}</dt><dd className="text-lg font-extrabold">{v}</dd></div>
+                ))}
+                <div className="rounded-xl bg-[var(--card)] p-3 ring-1 ring-black/10"><dt className="text-[11px] text-[var(--muted)]">{t("ik_circle_pays")}</dt><dd className="text-lg font-extrabold">{pick.checks.pays.level === "unknown" ? "—" : inr(Number(pick.checks.pays.vars?.amount))}<span className="text-xs font-medium text-[var(--muted)]"> /{t("rm_month")}</span></dd></div>
+              </dl>
+              {reach.centre && (
+                <div className="flex items-center justify-between gap-2 rounded-xl bg-[var(--card)] p-3 ring-1 ring-black/10">
+                  <div><p className="text-sm font-bold">{t("ik_nearest")}</p><p className="text-xs text-[var(--muted)]">{reach.centre.name}{reach.centre.distance_km != null && reach.centre.distance_km >= 1 ? ` · ${t("ik_distance", { km: reach.centre.distance_km })}` : ""}</p></div>
+                  <Link href="/colleges/" className="shrink-0 rounded-lg border-2 border-black/15 px-3 py-2 text-xs font-bold">{t("home_colleges")}</Link>
+                </div>
+              )}
+              <section className="rounded-xl bg-[var(--card)] p-3 ring-1 ring-black/10">
+                <h3 className="text-sm font-bold">{t("ik_steps")}</h3>
+                <ol className="mt-1 list-decimal space-y-0.5 pl-5 text-sm">{reach.steps.map((s) => <li key={s}>{s}</li>)}</ol>
+              </section>
+            </>
+          )}
+          <p className="text-[11px] text-[var(--muted)]">{t("ik_estimates")}</p>
+          <div className="space-y-2">
+            <button onClick={startPath} className="w-full rounded-2xl bg-[var(--brand)] py-4 text-base font-bold text-white active:scale-[.98]">{t("ik_start_path")}</button>
+            <button onClick={() => setScreen("sweet")} className="w-full rounded-2xl border-2 border-black/15 py-3 text-sm font-bold">{t("ik_pick_another")}</button>
+          </div>
+        </div>
       )}
     </Shell>
   );

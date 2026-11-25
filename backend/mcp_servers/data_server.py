@@ -242,15 +242,70 @@ def get_notifications(user_id: int, unread_only: bool = False) -> dict:
     return {"notifications": items[:10], "unread": sum(1 for i in items if not i["read"])}
 
 
+# What the student says about themselves in Discover or Ask Raah. A model may add to these. It may not change what
+# decides eligibility (class, category, income, marks) or the career the student saved: those are the student's own.
+LEARNED_KEYS = ("interests", "strengths", "ikigai", "documents", "max_commute_km", "can_stay_hostel")
+_READ_KEYS = PROFILE_KEYS + ("strengths", "ikigai", "roadmap_career", "reminder_channel", "reminder_frequency")
+
+
+def _stored_profile(user_id: int) -> dict:
+    with db.connect() as con:
+        row = con.execute("SELECT data FROM profiles WHERE user_id = ?", (int(user_id),)).fetchone()
+    return json.loads(row["data"]) if row else {}
+
+
+def get_student_profile(user_id: int) -> dict:
+    """What Raah knows about the signed-in student: class, category, income band, taluka, interests, strengths and
+    their ikigai answers (what they love and are good at). Read this before advising, so answers fit the student."""
+    p = _stored_profile(user_id)
+    return {"profile": {k: p[k] for k in _READ_KEYS if p.get(k) not in (None, "", [])} or None}
+
+
+def _tags(v, limit: int = 20) -> list[str] | None:
+    if not isinstance(v, list):
+        return None
+    out = [str(x).strip().lower()[:40] for x in v if isinstance(x, (str, int)) and str(x).strip()]
+    return list(dict.fromkeys(out))[:limit]
+
+
+def save_student_profile(user_id: int, learned: dict) -> dict:
+    """Remember something the student told Raah. Allowed keys: interests (what they love), strengths (what they are
+    good at), documents they hold, max_commute_km, can_stay_hostel. Other fields are the student's own and are ignored."""
+    stored = _stored_profile(user_id)
+    saved, ignored = [], []
+    for key, value in (learned or {}).items():
+        new = None
+        if key in ("interests", "strengths", "documents"):
+            new = _tags(value)
+        elif key == "max_commute_km" and isinstance(value, (int, float)) and not isinstance(value, bool) and 0 <= value <= 200:
+            new = round(float(value))
+        elif key == "can_stay_hostel" and isinstance(value, bool):
+            new = value
+        elif key == "ikigai" and isinstance(value, dict):
+            love, good = _tags(value.get("love")), _tags(value.get("good_at"))
+            if love is not None and good is not None:
+                new = {"love": love, "good_at": good, "confirmed_at": stored.get("ikigai", {}).get("confirmed_at")}
+        if new is None or key not in LEARNED_KEYS:
+            ignored.append(key)
+            continue
+        stored[key] = new
+        saved.append(key)
+    if saved:
+        from raah.auth import save_profile
+        save_profile(int(user_id), stored)
+    return {"saved": saved, "ignored": ignored}
+
+
 TOOLS = [search_dataset, rank_careers, compute_plan, check_eligibility, get_scholarships, nearest_centres,
-         get_colleges, list_exams, get_notifications]
+         get_colleges, list_exams, get_notifications, get_student_profile, save_student_profile]
 
 # shown on the Ask page while each tool runs
 LABELS = {"search_dataset": "Searching Raah's data", "rank_careers": "Ranking careers",
           "compute_plan": "Working out cost and payback", "check_eligibility": "Checking eligibility",
           "get_scholarships": "Finding scholarships", "nearest_centres": "Finding training centres near you",
           "get_colleges": "Looking for colleges near you", "list_exams": "Checking exam dates",
-          "get_notifications": "Reading your notifications"}
+          "get_notifications": "Reading your notifications", "get_student_profile": "Reading what you told Raah",
+          "save_student_profile": "Remembering what you told Raah"}
 
 
 def build_server():
