@@ -21,7 +21,7 @@ const CIRCLES: Circle[] = ["love", "good", "pays", "needed"];
 
 function Pills({ screen, t }: { screen: Screen; t: (k: string) => string }) {
   const at = screen === "love" ? 0 : screen === "good" ? 1 : 2;
-  const items = [`1 ${t("ik_circle_love")}`, `2 ${t("ik_circle_good")}`, `3 ${t("ik_raah_checks")}`];
+  const items = [`1 ${t("ik_p_love")}`, `2 ${t("ik_p_good")}`, `3 ${t("ik_raah_checks")}`];
   return (
     <ol className="flex flex-wrap gap-1.5 text-xs font-bold" aria-label={t("ik_title")}>
       {items.map((x, i) => (
@@ -59,7 +59,10 @@ export default function Discover() {
   const [busy, setBusy] = useState(false);
   const [text, setText] = useState("");
   const [msgs, setMsgs] = useState<Msg[]>([]);
-  const [showAll, setShowAll] = useState(false);
+  const [turn, setTurn] = useState(0); // 0: the open question, 1: the follow-up
+  const [voice, setVoice] = useState(false);
+  const [adding, setAdding] = useState<"love" | "good" | null>(null);
+  const [sel, setSel] = useState(0);
   const [done, setDone] = useState(0); // how many of the four checks Raah has finished showing
   const [pick, setPick] = useState<Spot | null>(null);
   const end = useRef<HTMLDivElement>(null);
@@ -69,7 +72,12 @@ export default function Discover() {
   const setList = screen === "good" ? setGood : setLove;
   const words = screen === "good" ? goodWords : loveWords;
   const setWords = screen === "good" ? setGoodWords : setLoveWords;
-  const chips = screen === "good" ? GOOD_CHIPS : LOVE_CHIPS;
+  const stage = screen === "good" ? "good" : "love";
+  const chips = (stage === "good" ? GOOD_CHIPS : LOVE_CHIPS).filter((x) => tags.includes(x)).slice(0, 5);
+  // reply chips for the follow-up: each one stands for topics the dataset knows
+  const followUp: { k: string; tags: string[] }[] = stage === "good"
+    ? [{ k: "ik_fc_hands", tags: ["hands-on", "fixing things"] }, { k: "ik_fc_head", tags: ["maths", "reading"] }, { k: "ik_fc_both", tags: ["hands-on", "maths"] }]
+    : [{ k: "ik_fc_make", tags: ["design", "hands-on"] }, { k: "ik_fc_people", tags: ["helping people", "talking to people"] }, { k: "ik_fc_both", tags: ["design", "helping people"] }];
 
   const spots = useMemo(() => (screen === "sweet" || screen === "checking" || screen === "reach") && data && profile ? sweetSpots(data, profile, love, good) : [], [screen, data, profile, love, good]);
   const reach = useMemo(() => (pick && data && profile ? reachable(data, profile, pick) : null), [pick, data, profile]);
@@ -89,31 +97,32 @@ export default function Discover() {
 
   // Whatever the student says is kept. Raah maps it to topics it can check (the model when reachable, keywords otherwise);
   // words that map to no topic stay as the student's own phrases and are shown back and saved.
-  const send = async () => {
-    const said = text.trim();
+  // Each stage is two turns, as in the wireframe: the open question, then one follow-up with reply chips.
+  const submit = async (said: string, forced: string[] = []) => {
+    said = said.trim();
     if (!said || busy) return;
     say({ from: "me", text: said });
     setText("");
     setBusy(true);
-    const local = extractTags(said, tags);
+    const local = [...new Set([...extractTags(said, tags), ...forced.filter((x) => tags.includes(x))])];
     let found = local, reply = "";
-    if (await aiAvailable()) {
-      const r = await postAi("/api/chat/ikigai", { stage: screen === "good" ? "good" : "love", text: said, lang, have: list });
+    if (!forced.length && (await aiAvailable())) {
+      const r = await postAi("/api/chat/ikigai", { stage, text: said, lang, have: list });
       if (r && !r.fallback) { found = [...new Set([...local, ...(r.tags ?? [])])]; reply = r.reply || ""; }
     }
-    const merged = [...new Set([...list, ...found])];
-    setList(merged);
-    const loose = phrasesOf(said).filter((p) => extractTags(p, tags).length === 0 && !found.some((f) => p.toLowerCase().includes(f)));
+    setList((l) => [...new Set([...l, ...found])]);
+    const loose = forced.length ? [] : phrasesOf(said).filter((w) => extractTags(w, tags).length === 0 && !found.some((f) => w.toLowerCase().includes(f)));
     if (loose.length && !(reply && found.length)) setWords((w) => [...new Set([...w, ...loose])]);
-    say({ from: "raah", text: reply || (found.length
-      ? t("ik_heard", { tags: found.map((x) => tagLabel(t, x)).join(", ") }) + ". " + t("ik_more")
-      : t("ik_noted", { words: loose.join(", ") || said })) });
+    if (turn === 0) {
+      say({ from: "raah", text: `${reply || t("ik_nice")} ${t(stage === "good" ? "ik_f_good" : "ik_f_love")}` });
+      setTurn(1);
+    } else {
+      setTurn(0); setMsgs([]);
+      setScreen(stage === "love" ? "good" : "confirm");
+    }
     setBusy(false);
   };
-  const next = () => {
-    if (screen === "love") { setMsgs([]); setScreen("good"); }
-    else if (screen === "good") setScreen("confirm");
-  };
+  const send = () => submit(text);
   const confirm = async () => {
     // what the student confirmed is saved to the profile; interests is what the rest of the app already ranks by
     const prof = { ...profile, interests: love, strengths: good, ikigai: { love, good_at: good, love_words: loveWords, good_words: goodWords, confirmed_at: new Date().toISOString() } };
@@ -145,102 +154,112 @@ export default function Discover() {
   const moreTags = tags.filter((x) => !chips.includes(x));
 
   return (
-    <Shell title={t("home_discover")} back={screen === "intro" ? "/" : null}>
+    <Shell fit title={screen === "sweet" ? t("ik_sweet_title") : t("home_discover")} back={screen === "intro" ? "/" : null}>
       {screen === "intro" && (
-        <div className="space-y-4">
+        <div className="flex flex-1 flex-col gap-4">
           <div>
             <h2 className="text-2xl font-extrabold leading-tight text-[var(--brand-ink)]">{t("ik_intro_title")}</h2>
             <p className="mt-1 text-sm text-[var(--muted)]">{t("ik_intro_body")}</p>
           </div>
           {/* the four circles: solid = the student tells Raah, dashed = Raah checks from data */}
-          <svg viewBox="0 0 240 200" role="img" aria-label={`${t("ik_you_tell")}: ${t("ik_circle_love")}, ${t("ik_circle_good")}. ${t("ik_raah_checks")}: ${t("ik_circle_pays")}, ${t("ik_circle_needed")}.`} className="mx-auto w-full max-w-xs">
-            {[[85, 70, "love", false], [155, 70, "good", false], [85, 130, "pays", true], [155, 130, "needed", true]].map(([cx, cy, k, dashed]) => (
-              <circle key={k as string} cx={cx as number} cy={cy as number} r="52" fill={dashed ? "none" : "var(--brand)"} fillOpacity={dashed ? 0 : 0.12} stroke="var(--brand)" strokeWidth="2.5" strokeDasharray={dashed ? "6 5" : undefined} />
+          <svg viewBox="0 0 300 290" role="img" aria-label={`${t("ik_you_tell")}: ${t("ik_circle_love")}, ${t("ik_circle_good")}. ${t("ik_raah_checks")}: ${t("ik_circle_pays")}, ${t("ik_circle_needed")}.`} className="mx-auto w-full max-w-xs">
+            {[[150, 78, "love", false], [88, 152, "good", false], [212, 152, "needed", true], [150, 214, "pays", true]].map(([cx, cy, k, dashed]) => (
+              <circle key={k as string} cx={cx as number} cy={cy as number} r="64" fill={dashed ? "none" : "var(--brand)"} fillOpacity={dashed ? 0 : 0.14} stroke="var(--brand)" strokeWidth="2.5" strokeDasharray={dashed ? "7 6" : undefined} />
             ))}
-            <g fontSize="9" fontWeight="700" fill="var(--ink)" textAnchor="middle">
-              {([[64, 66, "ik_circle_love"], [176, 66, "ik_circle_good"], [64, 138, "ik_circle_pays"], [176, 138, "ik_circle_needed"]] as const).map(([x, y, k]) => {
-                const w = t(k).split(" "); const cut = Math.ceil(w.length / 2);
-                return <text key={k} x={x} y={y - 5}><tspan x={x}>{w.slice(0, cut).join(" ")}</tspan><tspan x={x} dy="11">{w.slice(cut).join(" ")}</tspan></text>;
+            <g fontSize="9.5" fontWeight="700" fill="var(--ink)" textAnchor="middle">
+              {([[150, 46, "ik_circle_love"], [52, 142, "ik_circle_good"], [252, 142, "ik_circle_needed"], [150, 246, "ik_circle_pays"]] as const).map(([x, y, k]) => {
+                const w = t(k).split(" "); const lines: string[] = [];
+                for (let i = 0; i < w.length; i += 2) lines.push(w.slice(i, i + 2).join(" "));
+                return <text key={k} x={x} y={y}>{lines.map((l, i) => <tspan key={i} x={x} dy={i ? 11 : 0}>{l}</tspan>)}</text>;
               })}
             </g>
+            <rect x="96" y="132" width="108" height="26" rx="13" fill="var(--card)" stroke="var(--brand)" strokeWidth="2" />
+            <text x="150" y="149" textAnchor="middle" fontSize="11" fontWeight="800" fill="var(--ink)">{t("ik_sweet_title")}</text>
           </svg>
-          <ul className="space-y-1 text-sm">
-            <li className="flex items-center gap-2"><span className="h-3 w-3 rounded-full bg-[var(--brand)]/30 ring-2 ring-[var(--brand)]" aria-hidden />{t("ik_you_tell")}</li>
-            <li className="flex items-center gap-2"><span className="h-3 w-3 rounded-full ring-2 ring-dashed ring-[var(--brand)]" aria-hidden />{t("ik_raah_checks")}</li>
+          <ul className="flex justify-center gap-5 text-sm">
+            <li className="flex items-center gap-2"><span className="h-4 w-4 rounded-full border-2 border-[var(--brand)] bg-[var(--brand)]/15" aria-hidden />{t("ik_you_tell")}</li>
+            <li className="flex items-center gap-2"><span className="h-4 w-4 rounded-full border-2 border-dashed border-[var(--brand)]" aria-hidden />{t("ik_i_check")}</li>
           </ul>
-          <p className="flex items-center gap-2 rounded-xl bg-[var(--brand-soft)] p-3 text-sm"><Icon name="mic" size={18} className="shrink-0 text-[var(--brand)]" />{t("ik_voice_note")}</p>
           {missing && (
             <div className="rounded-xl border-2 border-amber-400 bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-900/20 dark:text-amber-100">
               <p>{t("ik_basics_missing")}</p>
               <Link href="/discover/basics/" className="mt-2 inline-block font-bold underline">{t("ik_basics_go")}</Link>
             </div>
           )}
-          <button onClick={() => { setMsgs([]); setScreen("love"); }} className="w-full rounded-2xl bg-[var(--brand)] py-4 text-base font-bold text-white active:scale-[.98]">{t("ik_start")}</button>
+          <div className="mt-auto space-y-2">
+            <button onClick={() => { setMsgs([]); setTurn(0); setVoice(false); setScreen("love"); }} className="w-full rounded-2xl bg-[var(--brand)] py-4 text-base font-bold text-white active:scale-[.98]">{t("ik_start")}</button>
+            <button onClick={() => { setMsgs([]); setTurn(0); setVoice(true); setScreen("love"); }} className="flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-black/15 py-3.5 text-base font-bold active:scale-[.98]"><Icon name="mic" size={18} />{t("ik_voice_instead")}</button>
+          </div>
         </div>
       )}
 
       {(screen === "love" || screen === "good") && (
         <div className="flex flex-1 flex-col gap-3">
           <Pills screen={screen} t={t} />
-          <Guide>
-            <p className="font-semibold">{question.q}</p>
-            <p className="mt-1 text-xs text-[var(--muted)]">{question.hint}</p>
-            <div className="mt-2"><SpeakButton text={`${question.q} ${question.hint}`} /></div>
-          </Guide>
-          <div className="flex flex-col gap-2" aria-live="polite">
+          {screen === "good" && (love.length > 0 || loveWords.length > 0) && (
+            <div>
+              <p className="mb-1 text-xs text-[var(--muted)]">{t("ik_heard_love")}</p>
+              <div className="flex flex-wrap gap-2">{[...love.map((x) => tagLabel(t, x)), ...loveWords].map((x) => <span key={x} className="rounded-full border-2 border-black/15 px-3 py-1 text-sm font-medium">{x}</span>)}</div>
+            </div>
+          )}
+          <div className="flex flex-col gap-2.5" aria-live="polite">
+            <Guide>
+              <p className="font-semibold">{stage === "good" ? t("ik_q_good") : t("ik_q_love")}</p>
+              <div className="mt-1"><SpeakButton text={stage === "good" ? t("ik_q_good") : t("ik_q_love")} /></div>
+            </Guide>
             {msgs.map((m, i) => m.from === "me"
-              ? <div key={i} className="max-w-[80%] self-end rounded-2xl rounded-tr-sm bg-[var(--brand)] px-3.5 py-2.5 text-sm text-white">{m.text}</div>
-              : <div key={i} className="max-w-[88%] self-start rounded-2xl rounded-tl-sm bg-[var(--card)] px-3.5 py-2.5 text-sm ring-1 ring-black/10">{m.text}</div>)}
+              ? <div key={i} className="max-w-[85%] self-end rounded-2xl rounded-tr-sm bg-[var(--brand)] px-3.5 py-2.5 text-[15px] text-white">{m.text}</div>
+              : <Guide key={i}><p>{m.text}</p></Guide>)}
           </div>
-          <div className="flex flex-wrap gap-2">
-            {chips.filter((x) => tags.includes(x)).map((x) => <Chip key={x} on={list.includes(x)} onClick={() => toggle(x)}>{tagLabel(t, x)}</Chip>)}
-            {list.filter((x) => !chips.includes(x)).map((x) => <Chip key={x} on onClick={() => toggle(x)}>{tagLabel(t, x)}</Chip>)}
-            {words.map((x) => <Chip key={`w-${x}`} on onClick={() => setWords((w) => w.filter((y) => y !== x))}>{x}</Chip>)}
-            <button onClick={() => setShowAll((s) => !s)} aria-expanded={showAll} className="rounded-full px-3.5 py-2 text-sm font-semibold text-[var(--brand-ink)] underline">{t("ik_add_more")}</button>
-          </div>
-          {showAll && <div className="flex flex-wrap gap-2 rounded-2xl bg-[var(--brand-soft)] p-3">{moreTags.map((x) => <Chip key={x} on={list.includes(x)} onClick={() => toggle(x)}>{tagLabel(t, x)}</Chip>)}</div>}
           <div ref={end} />
           <div className="mt-auto space-y-2">
+            {voice && <p className="flex items-center gap-2 rounded-xl bg-[var(--brand-soft)] p-3 text-sm"><Icon name="mic" size={18} className="shrink-0 text-[var(--brand)]" />{t("ik_voice_note")}</p>}
+            <div className="flex flex-wrap gap-2">
+              {turn === 0
+                ? chips.map((x) => <Chip key={x} onClick={() => submit(tagLabel(t, x), [x])}>{tagLabel(t, x)}</Chip>)
+                : followUp.map((f) => <Chip key={f.k} onClick={() => submit(t(f.k), f.tags)}>{t(f.k)}</Chip>)}
+            </div>
             <div className="flex items-end gap-2">
               <MicButton onText={(s) => setText((x) => `${x} ${s}`.trim())} />
               <ChatInput value={text} onChange={setText} onSend={send} placeholder={t("ik_type")} />
               <button onClick={send} disabled={!text.trim() || busy} className="h-12 shrink-0 rounded-full bg-[var(--brand-soft)] px-4 text-sm font-bold text-[var(--brand-ink)] disabled:opacity-40">{t("ik_send")}</button>
             </div>
-            <button onClick={async () => { if (text.trim()) await send(); next(); }} disabled={!list.length && !words.length && !text.trim()}
-              className="w-full rounded-2xl bg-[var(--brand)] py-4 text-base font-bold text-white active:scale-[.98] disabled:opacity-40">{t("ik_next")}</button>
           </div>
         </div>
       )}
 
       {screen === "confirm" && (
-        <div className="space-y-4">
-          <div>
-            <h2 className="text-2xl font-extrabold text-[var(--brand-ink)]">{t("ik_confirm_title")}</h2>
-            <p className="mt-1 text-sm text-[var(--muted)]">{t("ik_confirm_hint")}</p>
-          </div>
+        <div className="flex flex-1 flex-col gap-4">
+          <div><h2 className="text-2xl font-extrabold text-[var(--brand-ink)]">{t("ik_confirm_title")}</h2><p className="mt-1 text-sm text-[var(--muted)]">{t("ik_confirm_hint")}</p></div>
           {([["love", "ik_love_h", love, setLove, loveWords, setLoveWords], ["good", "ik_good_h", good, setGood, goodWords, setGoodWords]] as const).map(([k, h, items, set, ws, setWs]) => (
-            <section key={k} className="rounded-2xl bg-[var(--card)] p-4 ring-1 ring-black/10">
+            <section key={k} className="rounded-2xl bg-[var(--card)] p-4 ring-2 ring-black/10">
               <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--muted)]">{t(h)}</h3>
               <div className="mt-2 flex flex-wrap gap-2">
-                {items.length + ws.length === 0 && <span className="text-sm text-[var(--muted)]">{t("ik_none_yet")}</span>}
                 {items.map((x) => (
-                  <span key={x} className="inline-flex items-center gap-1 rounded-full bg-[var(--brand-soft)] py-1.5 pl-3.5 pr-1.5 text-sm font-medium text-[var(--brand-ink)]">
+                  <span key={x} className="inline-flex items-center gap-1 rounded-full border-2 border-black/15 py-1 pl-3.5 pr-1.5 text-sm font-medium">
                     {tagLabel(t, x)}
                     <button onClick={() => (set as any)((l: string[]) => l.filter((y) => y !== x))} aria-label={t("ik_remove", { tag: tagLabel(t, x) })} className="grid h-6 w-6 place-items-center rounded-full hover:bg-black/10"><Icon name="x" size={14} /></button>
                   </span>
                 ))}
                 {ws.map((x) => (
-                  <span key={`w-${x}`} className="inline-flex items-center gap-1 rounded-full bg-[var(--brand-soft)] py-1.5 pl-3.5 pr-1.5 text-sm font-medium text-[var(--brand-ink)]">
+                  <span key={`w-${x}`} className="inline-flex items-center gap-1 rounded-full border-2 border-black/15 py-1 pl-3.5 pr-1.5 text-sm font-medium">
                     {x}
                     <button onClick={() => (setWs as any)((l: string[]) => l.filter((y) => y !== x))} aria-label={t("ik_remove", { tag: x })} className="grid h-6 w-6 place-items-center rounded-full hover:bg-black/10"><Icon name="x" size={14} /></button>
                   </span>
                 ))}
+                <button onClick={() => setAdding(adding === k ? null : k)} aria-expanded={adding === k} className="rounded-full border-2 border-dashed border-black/30 px-3.5 py-1.5 text-sm font-semibold">{t("ik_add")}</button>
               </div>
+              {adding === k && (
+                <div className="mt-3 flex flex-wrap gap-2 rounded-xl bg-[var(--brand-soft)] p-3">
+                  {tags.filter((x) => !items.includes(x)).map((x) => <Chip key={x} onClick={() => (set as any)((l: string[]) => [...l, x])}>{tagLabel(t, x)}</Chip>)}
+                </div>
+              )}
             </section>
           ))}
-          <div className="space-y-2">
+          <p className="text-xs text-[var(--muted)]">{t("ik_confirm_next")}</p>
+          <div className="mt-auto space-y-2">
             <button onClick={confirm} disabled={!love.length && !good.length} className="w-full rounded-2xl bg-[var(--brand)] py-4 text-base font-bold text-white active:scale-[.98] disabled:opacity-40">{t("ik_looks_right")}</button>
-            <button onClick={() => { setMsgs([]); setScreen("love"); }} className="w-full py-2 text-sm font-semibold text-[var(--brand-ink)] underline">{t("ik_try_again")}</button>
+            <button onClick={() => { setMsgs([]); setTurn(0); setScreen("love"); }} className="w-full rounded-2xl border-2 border-black/15 py-3.5 text-base font-bold">{t("ik_try_again")}</button>
           </div>
         </div>
       )}
@@ -248,6 +267,7 @@ export default function Discover() {
       {screen === "checking" && (
         <div className="space-y-4">
           <Pills screen="checking" t={t} />
+          <h2 className="text-2xl font-extrabold text-[var(--brand-ink)]">{t("ik_checking_title")}</h2>
           <Guide><p>{t("ik_checking_say")}</p></Guide>
           <ul className="space-y-2" aria-live="polite">
             {([["ik_chk_match", t("ik_chk_match_sub", { n: data?.careers?.length ?? 0 })], ["ik_chk_pay", t("ik_chk_pay_sub")], ["ik_chk_open", t("ik_chk_open_sub")], ["ik_chk_reach", t("ik_chk_reach_sub")]] as const).map(([k, sub], i) => (
@@ -264,56 +284,52 @@ export default function Discover() {
       )}
 
       {screen === "sweet" && (
-        <div className="space-y-3">
-          <div>
-            <h2 className="text-2xl font-extrabold text-[var(--brand-ink)]">{t("ik_sweet_title")}</h2>
-            <p className="mt-1 text-sm text-[var(--muted)]">{t("ik_sweet_sub")}</p>
-          </div>
+        <div className="flex flex-1 flex-col gap-3">
+          <p className="text-sm text-[var(--muted)]">{t("ik_sweet_sub")}</p>
           {spots.length === 0 && <p className="rounded-2xl bg-[var(--card)] p-4 text-sm ring-1 ring-black/10">{t("ik_none_found")}</p>}
           {spots.slice(0, 3).map((s, i) => (
-            <section key={s.career.id} className={`rounded-2xl bg-[var(--card)] p-4 ${i === 0 ? "ring-2 ring-[var(--brand)]" : "ring-1 ring-black/10"}`}>
-              <div className="flex items-baseline justify-between gap-2">
-                <h3 className="text-lg font-extrabold leading-snug">{s.career.name}</h3>
-                {i === 0 && <span className="shrink-0 rounded-full border-2 border-[var(--brand)] px-2 py-0.5 text-[11px] font-bold text-[var(--brand-ink)]">{t("ik_best")}</span>}
-              </div>
-              <div className="mt-2 grid gap-1.5">{CIRCLES.map((c) => checkRow(s.checks[c], c))}</div>
-              <button onClick={() => { setPick(s); setScreen("reach"); }} className={`mt-3 w-full rounded-xl py-3 text-sm font-bold active:scale-[.98] ${i === 0 ? "bg-[var(--brand)] text-white" : "bg-[var(--brand-soft)] text-[var(--brand-ink)]"}`}>{t("ik_see_reach", { career: s.career.name })}</button>
-            </section>
+            <button key={s.career.id} onClick={() => setSel(i)} aria-pressed={sel === i} className={`rounded-2xl bg-[var(--card)] p-4 text-left ${sel === i ? "ring-[3px] ring-[var(--brand)]" : "ring-2 ring-black/10"}`}>
+              <span className="flex items-baseline justify-between gap-2">
+                <span className="text-lg font-extrabold leading-snug">{s.career.name}</span>
+                {i === 0 && <span className="shrink-0 rounded-full border-2 border-[var(--brand)] px-2 py-0.5 text-[11px] font-bold uppercase text-[var(--brand-ink)]">{t("ik_best")}</span>}
+              </span>
+              <span className="mt-2 grid grid-cols-2 gap-1.5">{CIRCLES.map((c) => checkRow(s.checks[c], c))}</span>
+            </button>
           ))}
           <p className="text-[11px] text-[var(--muted)]">{t("ik_estimates")}</p>
-          <button onClick={() => { setMsgs([]); setScreen("love"); }} className="w-full py-2 text-sm font-semibold text-[var(--brand-ink)] underline">{t("ik_try_again")}</button>
+          {spots[sel] && <button onClick={() => { setPick(spots[sel]); setScreen("reach"); }} className="mt-auto w-full rounded-2xl bg-[var(--brand)] py-4 text-base font-bold text-white active:scale-[.98]">{t("ik_see_reach", { career: spots[sel].career.name })}</button>}
         </div>
       )}
 
       {screen === "reach" && pick && (
-        <div className="space-y-3">
+        <div className="flex flex-1 flex-col gap-3">
           <h2 className="text-2xl font-extrabold text-[var(--brand-ink)]">{t("ik_reach_title")}</h2>
-          <p className="text-lg font-bold">{pick.career.name}</p>
+          <p className="text-lg font-bold leading-snug">{pick.career.name}</p>
+          <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--muted)]">{t("ik_cost_way")}</h3>
           {!reach && <p className="rounded-2xl bg-[var(--card)] p-4 text-sm ring-1 ring-black/10">{t("ik_no_plan")}</p>}
           {reach && (
             <>
               <dl className="grid grid-cols-2 gap-2">
-                {([["ik_cost_total", inr(reach.total)], ["ik_family_pays", t("ik_per_month", { amount: inr(reach.perMonth) })], ["ik_scholarships", String(reach.schol)]] as const).map(([k, v]) => (
+                {([["ik_cost_total", inr(reach.total)], ["ik_family_pays", t("ik_per_month", { amount: inr(reach.perMonth) })], ["ik_scholarships", String(reach.schol)], ["ik_paid_back", reach.payback ? t(reach.payback === 1 ? "ik_month_1" : "ik_months", { n: reach.payback }) : "—"]] as const).map(([k, v]) => (
                   <div key={k} className="rounded-xl bg-[var(--card)] p-3 ring-1 ring-black/10"><dt className="text-[11px] text-[var(--muted)]">{t(k)}</dt><dd className="text-lg font-extrabold">{v}</dd></div>
                 ))}
-                <div className="rounded-xl bg-[var(--card)] p-3 ring-1 ring-black/10"><dt className="text-[11px] text-[var(--muted)]">{t("ik_circle_pays")}</dt><dd className="text-lg font-extrabold">{pick.checks.pays.level === "unknown" ? "—" : inr(Number(pick.checks.pays.vars?.amount))}<span className="text-xs font-medium text-[var(--muted)]"> /{t("rm_month")}</span></dd></div>
               </dl>
               {reach.centre && (
-                <div className="flex items-center justify-between gap-2 rounded-xl bg-[var(--card)] p-3 ring-1 ring-black/10">
+                <div className="flex items-center justify-between gap-2 rounded-xl bg-[var(--card)] p-3 ring-2 ring-black/10">
                   <div><p className="text-sm font-bold">{t("ik_nearest")}</p><p className="text-xs text-[var(--muted)]">{reach.centre.name}{reach.centre.distance_km != null && reach.centre.distance_km >= 1 ? ` · ${t("ik_distance", { km: reach.centre.distance_km })}` : ""}</p></div>
-                  <Link href="/colleges/" className="shrink-0 rounded-lg border-2 border-black/15 px-3 py-2 text-xs font-bold">{t("home_colleges")}</Link>
+                  <Link href="/colleges/" className="shrink-0 rounded-lg border-2 border-black/15 px-3 py-2 text-xs font-bold uppercase">{t("ik_map")}</Link>
                 </div>
               )}
-              <section className="rounded-xl bg-[var(--card)] p-3 ring-1 ring-black/10">
+              <section className="rounded-xl bg-[var(--card)] p-3 ring-2 ring-black/10">
                 <h3 className="text-sm font-bold">{t("ik_steps")}</h3>
-                <ol className="mt-1 list-decimal space-y-0.5 pl-5 text-sm">{reach.steps.map((s) => <li key={s}>{s}</li>)}</ol>
+                <ol className="mt-1 list-decimal space-y-0.5 pl-5 text-sm">{reach.steps.map((x) => <li key={x}>{x}</li>)}</ol>
               </section>
             </>
           )}
           <p className="text-[11px] text-[var(--muted)]">{t("ik_estimates")}</p>
-          <div className="space-y-2">
+          <div className="mt-auto space-y-2">
             <button onClick={startPath} className="w-full rounded-2xl bg-[var(--brand)] py-4 text-base font-bold text-white active:scale-[.98]">{t("ik_start_path")}</button>
-            <button onClick={() => setScreen("sweet")} className="w-full rounded-2xl border-2 border-black/15 py-3 text-sm font-bold">{t("ik_pick_another")}</button>
+            <button onClick={() => setScreen("sweet")} className="w-full rounded-2xl border-2 border-black/15 py-3.5 text-base font-bold">{t("ik_pick_another")}</button>
           </div>
         </div>
       )}

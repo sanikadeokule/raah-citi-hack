@@ -113,5 +113,7 @@ export function reachable(data: any, profile: any, spot: Spot) {
   const r = computePlan(data, profile, plan.id);
   const months = Math.max(plan.course_months || 0, 1);
   const schol = eligibility(data, profile, plan).filter((s: any) => s.status === "eligible" || s.status === "eligible_missing_docs").length;
-  return { total: r.costs.total, net: r.net_cost, perMonth: Math.round(r.family_gap / months), schol, centre: r.centres?.[0] ?? null, steps: plan.steps as string[], planId: plan.id };
+  const gain = (r.income?.median || 0) - (r.baseline_monthly || 0);
+  const payback = gain > 0 ? Math.max(1, Math.ceil((r.net_cost || 0) / gain)) : 0;
+  return { payback, total: r.costs.total, net: r.net_cost, perMonth: Math.round(r.family_gap / months), schol, centre: r.centres?.[0] ?? null, steps: plan.steps as string[], planId: plan.id };
 }

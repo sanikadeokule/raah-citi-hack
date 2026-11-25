@@ -336,7 +336,7 @@ def ikigai_turn(body: IkigaiTurn):
         f"in one or two short, simple sentences. The student is telling you {ask}. "
         "Accept their words as they are. Pick every topic from this list that fits what they said "
         "(a phrase can fit more than one): " + ", ".join(tags) + ". "
-        "Say back what you understood in their own words, then ask one short follow-up that helps them add more. "
+        "Say back, in a few words, what you understood. Do not ask a question. "
         'Never say you could not understand. Answer as JSON: {"reply": str, "tags": [str]}.'
     )
     try:
