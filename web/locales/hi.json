@@ -845,5 +845,10 @@
  "ik_paid_back": "वापस मिलने में",
  "ik_month_1": "1 महीना",
  "ik_months": "{n} महीने",
- "ik_map": "नक्शा"
+ "ik_map": "नक्शा",
+ "ik_short_love": "पसंद",
+ "ik_short_good": "काबिलियत",
+ "ik_short_pays": "कमाई",
+ "ik_short_needed": "ज़रूरत",
+ "ik_pct_how": "मेल = पसंद 20%, काबिलियत 20%, कमाई 40%, ज़रूरत 20%।"
 }

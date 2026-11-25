@@ -845,5 +845,10 @@
  "ik_paid_back": "परत मिळण्यास",
  "ik_month_1": "1 महिना",
  "ik_months": "{n} महिने",
- "ik_map": "नकाशा"
+ "ik_map": "नकाशा",
+ "ik_short_love": "आवड",
+ "ik_short_good": "क्षमता",
+ "ik_short_pays": "कमाई",
+ "ik_short_needed": "गरज",
+ "ik_pct_how": "जुळणी = आवड 20%, क्षमता 20%, कमाई 40%, गरज 20%."
 }

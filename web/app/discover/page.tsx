@@ -11,7 +11,7 @@ import { ChatInput } from "@/components/chatinput";
 import { Icon, Mark } from "@/components/icon";
 import { MicButton, Shell, SpeakButton } from "@/components/ui";
 import { inr } from "@/lib/engine";
-import { GOOD_CHIPS, LOVE_CHIPS, allTagsOf, extractTags, phrasesOf, reachable, sweetSpots, type Circle, type Check, type Spot } from "@/lib/ikigai";
+import { GOOD_CHIPS, LOVE_CHIPS, IKIGAI_WEIGHTS, allTagsOf, extractTags, phrasesOf, reachable, sweetSpots, type Circle, type Check, type Spot } from "@/lib/ikigai";
 import { tagLabel } from "@/lib/questions";
 import { useApp } from "@/lib/store";
 
@@ -104,11 +104,11 @@ export default function Discover() {
     say({ from: "me", text: said });
     setText("");
     setBusy(true);
-    const local = [...new Set([...extractTags(said, tags), ...forced.filter((x) => tags.includes(x))])];
+    const local = [...new Set([...extractTags(said, tags), ...forced.filter((x) => tags.includes(x))])].slice(0, 4);
     let found = local, reply = "";
     if (!forced.length && (await aiAvailable())) {
       const r = await postAi("/api/chat/ikigai", { stage, text: said, lang, have: list });
-      if (r && !r.fallback) { found = [...new Set([...local, ...(r.tags ?? [])])]; reply = r.reply || ""; }
+      if (r && !r.fallback) { found = [...new Set([...local, ...(r.tags ?? [])])].slice(0, 4); reply = r.reply || ""; }
     }
     setList((l) => [...new Set([...l, ...found])]);
     const loose = forced.length ? [] : phrasesOf(said).filter((w) => extractTags(w, tags).length === 0 && !found.some((f) => w.toLowerCase().includes(f)));
@@ -199,7 +199,14 @@ export default function Discover() {
           {screen === "good" && (love.length > 0 || loveWords.length > 0) && (
             <div>
               <p className="mb-1 text-xs text-[var(--muted)]">{t("ik_heard_love")}</p>
-              <div className="flex flex-wrap gap-2">{[...love.map((x) => tagLabel(t, x)), ...loveWords].map((x) => <span key={x} className="rounded-full border-2 border-black/15 px-3 py-1 text-sm font-medium">{x}</span>)}</div>
+              <div className="flex flex-wrap gap-2">
+                {[...love.map((x) => ({ k: x, label: tagLabel(t, x), word: false })), ...loveWords.map((x) => ({ k: x, label: x, word: true }))].map((c) => (
+                  <span key={`${c.word}-${c.k}`} className="inline-flex items-center gap-1 rounded-full border-2 border-black/15 py-0.5 pl-3 pr-1 text-sm font-medium">
+                    {c.label}
+                    <button onClick={() => (c.word ? setLoveWords((l) => l.filter((y) => y !== c.k)) : setLove((l) => l.filter((y) => y !== c.k)))} aria-label={t("ik_remove", { tag: c.label })} className="grid h-7 w-7 place-items-center rounded-full hover:bg-black/10"><Icon name="x" size={14} /></button>
+                  </span>
+                ))}
+              </div>
             </div>
           )}
           <div className="flex flex-col gap-2.5" aria-live="polite">
@@ -287,16 +294,24 @@ export default function Discover() {
         <div className="flex flex-1 flex-col gap-3">
           <p className="text-sm text-[var(--muted)]">{t("ik_sweet_sub")}</p>
           {spots.length === 0 && <p className="rounded-2xl bg-[var(--card)] p-4 text-sm ring-1 ring-black/10">{t("ik_none_found")}</p>}
-          {spots.slice(0, 3).map((s, i) => (
+          {spots.slice(0, 5).map((s, i) => (
             <button key={s.career.id} onClick={() => setSel(i)} aria-pressed={sel === i} className={`rounded-2xl bg-[var(--card)] p-4 text-left ${sel === i ? "ring-[3px] ring-[var(--brand)]" : "ring-2 ring-black/10"}`}>
               <span className="flex items-baseline justify-between gap-2">
                 <span className="text-lg font-extrabold leading-snug">{s.career.name}</span>
-                {i === 0 && <span className="shrink-0 rounded-full border-2 border-[var(--brand)] px-2 py-0.5 text-[11px] font-bold uppercase text-[var(--brand-ink)]">{t("ik_best")}</span>}
+                <span className="shrink-0 text-right"><span className="block text-2xl font-extrabold leading-none text-[var(--brand-ink)]">{s.pct}%</span>{i === 0 && <span className="mt-1 inline-block rounded-full border-2 border-[var(--brand)] px-2 py-0.5 text-[11px] font-bold uppercase text-[var(--brand-ink)]">{t("ik_best")}</span>}</span>
+              </span>
+              <span className="mt-3 grid grid-cols-4 gap-2" aria-label={t("ik_pct_how")}>
+                {CIRCLES.map((c) => (
+                  <span key={c} className="block text-[10px] font-semibold leading-tight text-[var(--muted)]">
+                    <span className="block h-1.5 overflow-hidden rounded-full bg-black/10"><span className="block h-full rounded-full bg-[var(--brand)]" style={{ width: `${Math.round(s.parts[c] * 100)}%` }} /></span>
+                    <span className="mt-1 block">{t(`ik_short_${c}`)} {Math.round(IKIGAI_WEIGHTS[c] * 100)}%</span>
+                  </span>
+                ))}
               </span>
               <span className="mt-2 grid grid-cols-2 gap-1.5">{CIRCLES.map((c) => checkRow(s.checks[c], c))}</span>
             </button>
           ))}
-          <p className="text-[11px] text-[var(--muted)]">{t("ik_estimates")}</p>
+          <p className="text-[11px] text-[var(--muted)]">{t("ik_pct_how")} {t("ik_estimates")}</p>
           {spots[sel] && <button onClick={() => { setPick(spots[sel]); setScreen("reach"); }} className="mt-auto w-full rounded-2xl bg-[var(--brand)] py-4 text-base font-bold text-white active:scale-[.98]">{t("ik_see_reach", { career: spots[sel].career.name })}</button>}
         </div>
       )}

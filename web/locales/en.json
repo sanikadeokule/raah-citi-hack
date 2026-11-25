@@ -845,5 +845,10 @@
  "ik_paid_back": "Paid back in",
  "ik_month_1": "1 month",
  "ik_months": "{n} months",
- "ik_map": "Map"
+ "ik_map": "Map",
+ "ik_short_love": "Love",
+ "ik_short_good": "Good at",
+ "ik_short_pays": "Pays",
+ "ik_short_needed": "Needed",
+ "ik_pct_how": "Match = love 20%, good at 20%, pays 40%, needed 20%."
 }

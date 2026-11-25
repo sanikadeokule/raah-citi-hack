@@ -11,7 +11,11 @@ import { tradeMatches } from "@/lib/listings";
 export type Level = "yes" | "part" | "no" | "unknown";
 export type Circle = "love" | "good" | "pays" | "needed";
 export interface Check { level: Level; text: string; vars?: Record<string, string | number>; key: string }
-export interface Spot { career: any; plan: any; checks: Record<Circle, Check>; score: number }
+export interface Spot { career: any; plan: any; checks: Record<Circle, Check>; score: number; parts: Record<Circle, number>; pct: number }
+
+/** How much each circle counts towards the match percentage (love 20, good at 20, pays 40, needed 20). */
+export const IKIGAI_WEIGHTS: Record<Circle, number> = { love: 0.2, good: 0.2, pays: 0.4, needed: 0.2 };
+const levelOf = (x: number): Level => (x >= 0.6 ? "yes" : x >= 0.3 ? "part" : "no");
 
 /** Tags offered as quick answers; any of the dataset's tags can still be typed, spoken or added. */
 export const LOVE_CHIPS = ["helping people", "machines", "computers", "animals", "farming", "art", "sports", "teaching", "business", "beauty", "clothes", "travel"];
@@ -75,35 +79,45 @@ export function sweetSpots(data: any, profile: any, love: string[], good: string
   const lovers = byId(love.length ? rankCareers(data, { ...profile, interests: love }, n) : []);
   const goods = byId(good.length ? rankCareers(data, { ...profile, interests: good }, n) : []);
   const spots: Spot[] = [];
+  // pay and openings are scored against the best in the dataset, so no figure is typed in here
+  const plansOf = new Map<string, any>();
+  let maxPay = 0, maxOpen = 0;
   for (const career of data.careers ?? []) {
     const plan = (data.plans ?? []).find((p: any) => p.career_id === career.id) ?? null;
-    const lv = lovers.get(career.id), gd = goods.get(career.id);
-    const loveL = fitLevel(lv?.fit), goodL = fitLevel(gd?.fit);
-    // what it pays: the typical first salary against what the student could earn without the course
-    let pays: Check = { level: "unknown", key: "ik_pays_unknown", text: "ik_pays_unknown" };
     let r: any = null;
     if (plan) { try { r = computePlan(data, profile, plan.id); } catch { r = null; } }
+    const openings = [...(data.naps ?? []), ...(data.railway ?? [])].filter((x: any) => tradeMatches(x, career)).length;
+    plansOf.set(career.id, { plan, r, openings });
+    maxPay = Math.max(maxPay, r?.income?.median || 0);
+    maxOpen = Math.max(maxOpen, openings);
+  }
+  for (const career of data.careers ?? []) {
+    const { plan, r, openings } = plansOf.get(career.id);
+    const lv = lovers.get(career.id), gd = goods.get(career.id);
+    // how much of what the student said this career covers (0 to 1); a related career counts for less
+    const loveP = Math.min(1, lv?.breakdown?.interest ?? 0), goodP = Math.min(1, gd?.breakdown?.interest ?? 0);
+    let pays: Check = { level: "unknown", key: "ik_pays_unknown", text: "ik_pays_unknown" };
+    let paysP = 0;
     if (r?.income?.median) {
       const base = r.baseline_monthly || 0;
       const level: Level = r.income.low > base ? "yes" : r.income.median > base ? "part" : "no";
+      paysP = (r.income.median / (maxPay || 1)) * (r.income.median > base ? 1 : 0.5);
       pays = { level, key: "ik_pays", text: "ik_pays", vars: { amount: Math.round(r.income.median) } };
     }
-    // needed near you: real listings for this trade (NAPS, Railway), else how much demand the dataset records
-    const openings = [...(data.naps ?? []), ...(data.railway ?? [])].filter((x: any) => tradeMatches(x, career)).length;
-    const demand = Number(career.demand) || 0;
-    const needed: Check = openings >= 3 || demand >= 4 ? { level: "yes", key: "ik_needed", text: "ik_needed", vars: { n: openings } }
-      : openings >= 1 || demand === 3 ? { level: "part", key: "ik_needed", text: "ik_needed", vars: { n: openings } }
-      : { level: "no", key: "ik_needed", text: "ik_needed", vars: { n: openings } };
+    const demand = (Number(career.demand) || 0) / 5;
+    const neededP = Math.max(demand, maxOpen ? Math.min(1, openings / maxOpen) : 0);
+    const needed: Check = { level: levelOf(neededP), key: "ik_needed", text: "ik_needed", vars: { n: openings } };
     const checks: Record<Circle, Check> = {
-      love: { level: loveL, key: "ik_love", text: "ik_love", vars: { tags: (lv?.matched ?? []).slice(0, 2).join(", ") } },
-      good: { level: goodL, key: "ik_good", text: "ik_good", vars: { tags: (gd?.matched ?? []).slice(0, 2).join(", ") } },
+      love: { level: loveP > 0 ? fitLevel(lv?.fit) : "no", key: "ik_love", text: "ik_love", vars: { tags: (lv?.matched ?? []).slice(0, 2).join(", ") } },
+      good: { level: goodP > 0 ? fitLevel(gd?.fit) : "no", key: "ik_good", text: "ik_good", vars: { tags: (gd?.matched ?? []).slice(0, 2).join(", ") } },
       pays, needed,
     };
-    spots.push({ career, plan, checks, score: (Object.values(checks) as Check[]).reduce((s, c) => s + pts(c.level), 0) });
+    const parts: Record<Circle, number> = { love: loveP, good: goodP, pays: Math.min(1, paysP), needed: neededP };
+    const pct = Math.round(100 * (Object.keys(parts) as Circle[]).reduce((sum, c) => sum + IKIGAI_WEIGHTS[c] * parts[c], 0));
+    spots.push({ career, plan, checks, parts, pct, score: (Object.values(checks) as Check[]).reduce((sum, c) => sum + pts(c.level), 0) });
   }
-  // best overlap first; a career that matches nothing the student said is not a sweet spot
-  return spots.filter((s) => s.checks.love.level !== "no" || s.checks.good.level !== "no")
-    .sort((a, b) => b.score - a.score || (b.checks.love.level === "yes" ? 1 : 0) - (a.checks.love.level === "yes" ? 1 : 0));
+  // a career that matches nothing the student said is not a sweet spot; the rest go by match percentage
+  return spots.filter((s) => s.parts.love > 0 || s.parts.good > 0).sort((a, b) => b.pct - a.pct || b.score - a.score);
 }
 
 /** Can you get there: cost, what the family pays a month, scholarships, nearest centre and the steps. */

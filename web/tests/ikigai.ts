@@ -18,7 +18,10 @@ assert.deepEqual(extractTags("zzz qqq", tags), []);
 const profile = { class: 10, marks_pct: 68, category: "OBC", family_income_annual: 180000, taluka: "Haveli", gender: "F", interests: [] };
 const spots = sweetSpots(d, profile, ["helping people", "health"], ["talking to people"]);
 assert.ok(spots.length > 0, "something matches");
-assert.ok(spots.every((s, i) => i === 0 || spots[i - 1].score >= s.score), "best overlap first");
+assert.ok(spots.every((s, i) => i === 0 || spots[i - 1].pct >= s.pct), "best match percentage first");
+assert.ok(spots.every((s) => s.pct >= 0 && s.pct <= 100), "percentages are 0 to 100");
+// pays counts double: with equal love and good at, a career that pays more never ranks below one that pays less
+console.log("top 5:", spots.slice(0, 5).map((s) => `${s.career.name} ${s.pct}%`).join(" | "));
 for (const s of spots) {
   for (const c of ["love", "good", "pays", "needed"] as const) assert.ok(["yes", "part", "no", "unknown"].includes(s.checks[c].level));
   assert.ok(s.checks.love.level !== "no" || s.checks.good.level !== "no", "never a career that matches nothing said");
