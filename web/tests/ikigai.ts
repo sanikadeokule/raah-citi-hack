@@ -30,3 +30,11 @@ const withPlan = spots.find((s) => s.plan)!;
 const r = reachable(d, profile, withPlan)!;
 assert.ok(r.total > 0 && r.perMonth >= 0 && Array.isArray(r.steps) && r.steps.length > 0);
 console.log("ikigai ok");
+
+// free text: the student's own words map to tags where they can ("logical things, medicine, house hold work")
+{
+  const tg = allTagsOf(JSON.parse(require("fs").readFileSync(process.argv[2], "utf8")));
+  const got = extractTags("logical things, medicine, house hold work", tg);
+  for (const w of ["maths", "health", "organising"]) if (!got.includes(w)) { console.error("FAIL free text missing", w, got); process.exit(1); }
+  console.log("ok free text", got.join(","));
+}

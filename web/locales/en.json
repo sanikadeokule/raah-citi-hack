@@ -822,5 +822,8 @@
  "ik_start_path": "Start this path",
  "ik_pick_another": "Pick another career",
  "ik_no_plan": "We do not have a cost plan for this career yet.",
- "ik_distance": "{km} km from you"
+ "ik_distance": "{km} km from you",
+ "ik_more": "Tell me more, or tap Next when you are ready.",
+ "ik_noted": "Got it, I have noted: {words}. Anything else? Or tap Next when you are ready.",
+ "ik_words_note": "Your own words are saved too and shown to your mentor."
 }

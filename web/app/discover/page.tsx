@@ -4,13 +4,14 @@
 // tapping, typing or speaking. Raah checks the other two (what pays, what is needed near them) from the dataset, shows
 // the careers where the circles overlap, and checks "can you get there". The student confirms every tag: AI never decides alone.
 import Link from "next/link";
+import { postAi, aiAvailable } from "@/lib/ai";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ChatInput } from "@/components/chatinput";
 import { Icon, Mark } from "@/components/icon";
 import { MicButton, Shell, SpeakButton } from "@/components/ui";
 import { inr } from "@/lib/engine";
-import { GOOD_CHIPS, LOVE_CHIPS, allTagsOf, extractTags, reachable, sweetSpots, type Circle, type Check, type Spot } from "@/lib/ikigai";
+import { GOOD_CHIPS, LOVE_CHIPS, allTagsOf, extractTags, phrasesOf, reachable, sweetSpots, type Circle, type Check, type Spot } from "@/lib/ikigai";
 import { tagLabel } from "@/lib/questions";
 import { useApp } from "@/lib/store";
 
@@ -48,11 +49,14 @@ function Guide({ children }: { children: React.ReactNode }) {
 }
 
 export default function Discover() {
-  const { t, data, profile, setProfile, queueAction } = useApp();
+  const { t, lang, data, profile, setProfile, queueAction } = useApp();
   const router = useRouter();
   const [screen, setScreen] = useState<Screen>("intro");
   const [love, setLove] = useState<string[]>(profile?.ikigai?.love ?? []);
   const [good, setGood] = useState<string[]>(profile?.ikigai?.good_at ?? []);
+  const [loveWords, setLoveWords] = useState<string[]>(profile?.ikigai?.love_words ?? []);
+  const [goodWords, setGoodWords] = useState<string[]>(profile?.ikigai?.good_words ?? []);
+  const [busy, setBusy] = useState(false);
   const [text, setText] = useState("");
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [showAll, setShowAll] = useState(false);
@@ -63,6 +67,8 @@ export default function Discover() {
   const missing = !profile?.class || !profile?.category || !profile?.family_income_annual;
   const list = screen === "good" ? good : love;
   const setList = screen === "good" ? setGood : setLove;
+  const words = screen === "good" ? goodWords : loveWords;
+  const setWords = screen === "good" ? setGoodWords : setLoveWords;
   const chips = screen === "good" ? GOOD_CHIPS : LOVE_CHIPS;
 
   const spots = useMemo(() => (screen === "sweet" || screen === "checking" || screen === "reach") && data && profile ? sweetSpots(data, profile, love, good) : [], [screen, data, profile, love, good]);
@@ -81,14 +87,28 @@ export default function Discover() {
   const toggle = (tag: string) => setList((l) => (l.includes(tag) ? l.filter((x) => x !== tag) : [...l, tag]));
   const say = (m: Msg) => setMsgs((x) => [...x, m]);
 
-  const send = () => {
-    const found = extractTags(text, tags);
-    if (!text.trim() && !list.length) return;
-    if (text.trim()) say({ from: "me", text: text.trim() });
+  // Whatever the student says is kept. Raah maps it to topics it can check (the model when reachable, keywords otherwise);
+  // words that map to no topic stay as the student's own phrases and are shown back and saved.
+  const send = async () => {
+    const said = text.trim();
+    if (!said || busy) return;
+    say({ from: "me", text: said });
+    setText("");
+    setBusy(true);
+    const local = extractTags(said, tags);
+    let found = local, reply = "";
+    if (await aiAvailable()) {
+      const r = await postAi("/api/chat/ikigai", { stage: screen === "good" ? "good" : "love", text: said, lang, have: list });
+      if (r && !r.fallback) { found = [...new Set([...local, ...(r.tags ?? [])])]; reply = r.reply || ""; }
+    }
     const merged = [...new Set([...list, ...found])];
     setList(merged);
-    setText("");
-    say({ from: "raah", text: merged.length ? t("ik_heard", { tags: merged.map((x) => tagLabel(t, x)).join(", ") }) : t("ik_heard_none") });
+    const loose = phrasesOf(said).filter((p) => extractTags(p, tags).length === 0 && !found.some((f) => p.toLowerCase().includes(f)));
+    if (loose.length && !(reply && found.length)) setWords((w) => [...new Set([...w, ...loose])]);
+    say({ from: "raah", text: reply || (found.length
+      ? t("ik_heard", { tags: found.map((x) => tagLabel(t, x)).join(", ") }) + ". " + t("ik_more")
+      : t("ik_noted", { words: loose.join(", ") || said })) });
+    setBusy(false);
   };
   const next = () => {
     if (screen === "love") { setMsgs([]); setScreen("good"); }
@@ -96,7 +116,7 @@ export default function Discover() {
   };
   const confirm = async () => {
     // what the student confirmed is saved to the profile; interests is what the rest of the app already ranks by
-    const prof = { ...profile, interests: love, strengths: good, ikigai: { love, good_at: good, confirmed_at: new Date().toISOString() } };
+    const prof = { ...profile, interests: love, strengths: good, ikigai: { love, good_at: good, love_words: loveWords, good_words: goodWords, confirmed_at: new Date().toISOString() } };
     setProfile(prof);
     await queueAction("profile", prof);
     setScreen("checking");
@@ -175,6 +195,7 @@ export default function Discover() {
           <div className="flex flex-wrap gap-2">
             {chips.filter((x) => tags.includes(x)).map((x) => <Chip key={x} on={list.includes(x)} onClick={() => toggle(x)}>{tagLabel(t, x)}</Chip>)}
             {list.filter((x) => !chips.includes(x)).map((x) => <Chip key={x} on onClick={() => toggle(x)}>{tagLabel(t, x)}</Chip>)}
+            {words.map((x) => <Chip key={`w-${x}`} on onClick={() => setWords((w) => w.filter((y) => y !== x))}>{x}</Chip>)}
             <button onClick={() => setShowAll((s) => !s)} aria-expanded={showAll} className="rounded-full px-3.5 py-2 text-sm font-semibold text-[var(--brand-ink)] underline">{t("ik_add_more")}</button>
           </div>
           {showAll && <div className="flex flex-wrap gap-2 rounded-2xl bg-[var(--brand-soft)] p-3">{moreTags.map((x) => <Chip key={x} on={list.includes(x)} onClick={() => toggle(x)}>{tagLabel(t, x)}</Chip>)}</div>}
@@ -183,9 +204,9 @@ export default function Discover() {
             <div className="flex items-end gap-2">
               <MicButton onText={(s) => setText((x) => `${x} ${s}`.trim())} />
               <ChatInput value={text} onChange={setText} onSend={send} placeholder={t("ik_type")} />
-              <button onClick={send} disabled={!text.trim()} className="h-12 shrink-0 rounded-full bg-[var(--brand-soft)] px-4 text-sm font-bold text-[var(--brand-ink)] disabled:opacity-40">{t("ik_send")}</button>
+              <button onClick={send} disabled={!text.trim() || busy} className="h-12 shrink-0 rounded-full bg-[var(--brand-soft)] px-4 text-sm font-bold text-[var(--brand-ink)] disabled:opacity-40">{t("ik_send")}</button>
             </div>
-            <button onClick={() => { if (text.trim()) send(); next(); }} disabled={!list.length && !extractTags(text, tags).length}
+            <button onClick={async () => { if (text.trim()) await send(); next(); }} disabled={!list.length && !words.length && !text.trim()}
               className="w-full rounded-2xl bg-[var(--brand)] py-4 text-base font-bold text-white active:scale-[.98] disabled:opacity-40">{t("ik_next")}</button>
           </div>
         </div>
@@ -197,15 +218,21 @@ export default function Discover() {
             <h2 className="text-2xl font-extrabold text-[var(--brand-ink)]">{t("ik_confirm_title")}</h2>
             <p className="mt-1 text-sm text-[var(--muted)]">{t("ik_confirm_hint")}</p>
           </div>
-          {([["love", "ik_love_h", love, setLove], ["good", "ik_good_h", good, setGood]] as const).map(([k, h, items, set]) => (
+          {([["love", "ik_love_h", love, setLove, loveWords, setLoveWords], ["good", "ik_good_h", good, setGood, goodWords, setGoodWords]] as const).map(([k, h, items, set, ws, setWs]) => (
             <section key={k} className="rounded-2xl bg-[var(--card)] p-4 ring-1 ring-black/10">
               <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--muted)]">{t(h)}</h3>
               <div className="mt-2 flex flex-wrap gap-2">
-                {items.length === 0 && <span className="text-sm text-[var(--muted)]">{t("ik_none_yet")}</span>}
+                {items.length + ws.length === 0 && <span className="text-sm text-[var(--muted)]">{t("ik_none_yet")}</span>}
                 {items.map((x) => (
                   <span key={x} className="inline-flex items-center gap-1 rounded-full bg-[var(--brand-soft)] py-1.5 pl-3.5 pr-1.5 text-sm font-medium text-[var(--brand-ink)]">
                     {tagLabel(t, x)}
                     <button onClick={() => (set as any)((l: string[]) => l.filter((y) => y !== x))} aria-label={t("ik_remove", { tag: tagLabel(t, x) })} className="grid h-6 w-6 place-items-center rounded-full hover:bg-black/10"><Icon name="x" size={14} /></button>
+                  </span>
+                ))}
+                {ws.map((x) => (
+                  <span key={`w-${x}`} className="inline-flex items-center gap-1 rounded-full bg-[var(--brand-soft)] py-1.5 pl-3.5 pr-1.5 text-sm font-medium text-[var(--brand-ink)]">
+                    {x}
+                    <button onClick={() => (setWs as any)((l: string[]) => l.filter((y) => y !== x))} aria-label={t("ik_remove", { tag: x })} className="grid h-6 w-6 place-items-center rounded-full hover:bg-black/10"><Icon name="x" size={14} /></button>
                   </span>
                 ))}
               </div>

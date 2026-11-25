@@ -18,7 +18,17 @@ export const LOVE_CHIPS = ["helping people", "machines", "computers", "animals",
 export const GOOD_CHIPS = ["talking to people", "fixing things", "maths", "organising", "teamwork", "reading", "leadership", "hands-on", "typing", "languages", "discipline", "precision"];
 
 // words people say that are not the dataset's own tag
-const SAYS: Record<string, string> = {
+const SAYS: Record<string, string | string[]> = {
+  logical: ["maths", "science"], logic: ["maths", "science"], puzzle: "maths", puzzles: "maths", calculation: "maths", thinking: "research", think: "research",
+  medicine: ["health", "biology"], medical: ["health", "biology"], medicines: ["health", "biology"], hospital: "health", patient: "helping people", patients: "helping people",
+  household: ["organising", "hands-on"], housework: ["organising", "hands-on"], home: ["organising", "hands-on"], kitchen: "hands-on", cleaning: "organising",
+  cooking: "hands-on", baby: "helping people", children: ["teaching", "helping people"], kids: ["teaching", "helping people"], elders: "helping people",
+  social: "community", village: "community", friends: "talking to people", chat: "talking to people", speaking: "talking to people",
+  gadgets: "electronics", internet: "computers", games: "computers", gaming: "computers", video: "technology", tech: "technology",
+  chemistry: "science", physics: "science", plants: "farming", garden: "farming", nature: "environment", trees: "environment",
+  police: "government job", army: "government job", railway: "government job", clerk: "office", bank: "accounts", money: "accounts", shopping: "sales",
+  construction: "building", music: "art", singing: "art", dancing: "art", stitching: "clothes", fashion: "clothes",
+  running: "sports", fitness: "sports", exercise: "sports", honest: "discipline", punctual: "discipline", careful: "precision",
   fix: "fixing things", repair: "fixing things", repairing: "fixing things", mechanic: "machines", mobile: "phones", phone: "phones",
   computer: "computers", coding: "programming", code: "programming", cook: "hands-on", stitch: "clothes", sewing: "clothes", tailor: "clothes",
   draw: "art", drawing: "art", paint: "art", sing: "art", dance: "art", help: "helping people", doctor: "health", nurse: "health", nursing: "health",
@@ -30,7 +40,7 @@ const SAYS: Record<string, string> = {
 };
 
 const LOCALES: Record<string, Record<string, string>> = { en, hi, mr };
-const norm = (s: string) => s.toLowerCase().replace(/[.,!?;:()]/g, " ").replace(/\s+/g, " ").trim();
+const norm = (s: string) => s.toLowerCase().replace(/[.,!?;:()]/g, " ").replace(/\bhouse hold\b/g, "household").replace(/\s+/g, " ").trim();
 
 /** Tags a typed or spoken answer mentions: the tag in any of the three languages, or a common word for it. */
 export function extractTags(raw: string, allTags: string[]): string[] {
@@ -45,10 +55,13 @@ export function extractTags(raw: string, allTags: string[]): string[] {
   }
   for (const w of text.trim().split(" ")) {
     const hit = SAYS[w] ?? SAYS[w.replace(/(ing|s)$/, "")];
-    if (hit && allTags.includes(hit)) found.add(hit);
+    for (const h of ([] as string[]).concat(hit ?? [])) if (allTags.includes(h)) found.add(h);
   }
   return [...found];
 }
+
+/** A typed answer split into the phrases the student gave ("logical things, medicine" is two). */
+export const phrasesOf = (raw: string): string[] => raw.split(/[,;\n]|\band\b|\baur\b|\bआणि\b|\bऔर\b/i).map((x) => x.trim()).filter((x) => x.length > 1);
 
 export const allTagsOf = (data: any): string[] => [...new Set<string>((data?.careers ?? []).flatMap((c: any) => c.tags ?? []))].sort();
 
