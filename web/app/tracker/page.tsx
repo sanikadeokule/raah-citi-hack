@@ -4,6 +4,7 @@
 // Students can move cards between columns, add notes and deadlines, and add new cards.
 // The board is seeded from the student's roadmap on first load.
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { Icon } from "@/components/icon";
 import { useEffect, useRef, useState } from "react";
 import { Badge, Card, Shell } from "@/components/ui";
 import { ProBadge, ProGate, useText } from "@/components/pro";
@@ -54,7 +55,7 @@ interface AppCard {
 }
 
 function KindBadge({ kind }: { kind: string }) {
-  return <Badge tone={kind === "college" ? "blue" : "green"}>{kind === "college" ? "🏫" : "🏆"} {kind}</Badge>;
+  return <Badge tone={kind === "college" ? "blue" : "green"}>{kind === "college" ? "" : ""} {kind}</Badge>;
 }
 
 function CardItem({ card, colIndex, totalCols, onMove, onEdit }: {
@@ -70,14 +71,14 @@ function CardItem({ card, colIndex, totalCols, onMove, onEdit }: {
         <span className="text-sm font-semibold leading-snug">{card.title}</span>
         <KindBadge kind={card.kind} />
       </div>
-      {card.deadline && <p className="mt-1 text-[11px] text-[var(--muted)]">📅 {card.deadline}</p>}
+      {card.deadline && <p className="mt-1 text-[11px] text-[var(--muted)]">{card.deadline}</p>}
       {card.notes && <p className="mt-1 text-[11px] text-[var(--muted)] line-clamp-2">{card.notes}</p>}
       <div className="mt-2 flex items-center gap-1">
         {colIndex > 0 && <button onClick={() => onMove(card.id, -1)}
           className="rounded-lg bg-[var(--bg)] px-2 py-1 text-[11px]">{t("move_back")}</button>}
         {colIndex < totalCols - 1 && <button onClick={() => onMove(card.id, 1)}
           className="rounded-lg bg-[var(--brand)] px-2 py-1 text-[11px] text-white">{t("move")}</button>}
-        <button onClick={() => onEdit(card)} className="ml-auto rounded-lg bg-[var(--bg)] px-2 py-1 text-[11px]">✏️</button>
+        <button onClick={() => onEdit(card)} aria-label="Edit" className="ml-auto rounded-lg bg-[var(--bg)] px-2 py-1 text-[11px]"><Icon name="pencil" size={14} /></button>
       </div>
     </div>
   );
@@ -219,11 +220,11 @@ function Board() {
         <div className="flex items-center gap-1 text-xs text-[var(--muted)]"><ProBadge />{t("title")}</div>
         <button onClick={seed} disabled={seeding}
           className="ml-auto rounded-lg bg-amber-100 px-3 py-1.5 text-xs font-semibold text-amber-900 disabled:opacity-50 dark:bg-amber-900/30 dark:text-amber-200">
-          {seeding ? t("seeding") : `🌱 ${t("seed")}`}</button>
+          {seeding ? t("seeding") : `${t("seed")}`}</button>
       </div>
       {seedMsg && <p className="text-xs text-[var(--good)]">{seedMsg}</p>}
       <details open={!cards.length} className="rounded-xl bg-[var(--card)] p-3 text-sm ring-1 ring-[var(--border)]">
-        <summary className="cursor-pointer font-semibold">ℹ️ {t("how")}</summary>
+        <summary className="cursor-pointer font-semibold">{t("how")}</summary>
         <ol className="mt-2 list-decimal space-y-1.5 pl-5 text-[13px] leading-snug">
           <li>{t("how1")}</li>
           <li>{t("how2")}</li>

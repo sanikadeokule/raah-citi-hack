@@ -1,5 +1,6 @@
 "use client";
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { Icon } from "@/components/icon";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useMemo, useState } from "react";
@@ -12,11 +13,11 @@ import { useApp } from "@/lib/store";
 
 // One colour and icon per kind of stage, so the road reads at a glance.
 const KIND: Record<string, { icon: string; color: string }> = {
-  school: { icon: "🏫", color: "#3b82f6" },
-  exam: { icon: "📝", color: "#8b5cf6" },
-  course: { icon: "🎓", color: "#f28c28" },
-  earn: { icon: "🛠️", color: "#16a34a" },
-  job: { icon: "💼", color: "#0f766e" },
+  school: { icon: "school", color: "#2563eb" },
+  exam: { icon: "clipboard", color: "#1e40af" },
+  course: { icon: "graduation", color: "#f28c28" },
+  earn: { icon: "wrench", color: "#0f766e" },
+  job: { icon: "briefcase", color: "#138808" },
 };
 const CLASSES = [9, 10, 11, 12, 13];
 
@@ -65,7 +66,7 @@ function RoadmapView() {
     <>
       {/* hero: where you are, where this road ends */}
       <section className="overflow-hidden rounded-2xl bg-[var(--brand)] p-4 text-white shadow">
-        <div className="text-xs uppercase tracking-wide opacity-80">🗺️ {t("rm_title")}</div>
+        <div className="text-xs uppercase tracking-wide opacity-80">{t("rm_title")}</div>
         <h2 className="mt-1 text-xl font-bold leading-snug">{r.career.name}</h2>
         <p className="mt-1 text-sm opacity-90">
           {t("rm_summary", { from: classLabel(startClass), y: duration(t, tot.months_to_job) || t("rm_now") })}
@@ -83,16 +84,16 @@ function RoadmapView() {
 
       {!saved && (
         <section className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-amber-950">
-          <h3 className="font-bold">💡 {t("rm_suggested_title")}</h3>
+          <h3 className="font-bold">{t("rm_suggested_title")}</h3>
           <p className="mt-1 text-sm">{t("rm_suggested_text")}</p>
-          <button onClick={makeMine} className="mt-3 w-full rounded-xl bg-[var(--brand)] py-3 font-semibold text-white">⭐ {t("rm_make_mine")}</button>
+          <button onClick={makeMine} className="mt-3 w-full rounded-xl bg-[var(--brand)] py-3 font-semibold text-white">{t("rm_make_mine")}</button>
         </section>
       )}
 
       {/* this road, or the other careers that fit: side by side as tabs */}
       {(
         <div role="tablist" className={`grid gap-1 rounded-xl bg-[var(--card)] p-1 ring-1 ring-black/5 ${others.length > 0 ? "grid-cols-3" : "grid-cols-2"}`}>
-          {([["road", `🗺️ ${t("rm_tab_this")}`], ["start", `🚀 ${t("rm_tab_start")}`], ...(others.length > 0 ? [["other", `🛣️ ${t("rm_other_roads")} (${others.length})`]] : [])] as [typeof tab, string][]).map(([k, label]) => (
+          {([["road", `${t("rm_tab_this")}`], ["start", `${t("rm_tab_start")}`], ...(others.length > 0 ? [["other", `${t("rm_other_roads")} (${others.length})`]] : [])] as [typeof tab, string][]).map(([k, label]) => (
             <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)}
               className={`rounded-lg px-1 py-2 text-sm font-semibold leading-tight ${tab === k ? "bg-[var(--brand)] text-white" : "text-[var(--muted)]"}`}>
               {label}
@@ -120,10 +121,10 @@ function RoadmapView() {
                     <b className="leading-snug">{s.career.name}</b>
                     <span className="shrink-0 text-xs text-[var(--muted)]">{Math.round(s.score * 100)}%</span>
                   </span>
-                  {mine && <span className="mt-1 inline-block"><Badge tone="green">⭐ {t("rm_saved")}</Badge></span>}
+                  {mine && <span className="mt-1 inline-block"><Badge tone="green"> {t("rm_saved")}</Badge></span>}
                   {s.why && <span className="mt-1 block text-sm">{s.why}</span>}
                   <span className="mt-2 flex items-center justify-between rounded-lg bg-[var(--bg)] px-3 py-2 text-sm font-semibold text-[var(--brand-ink)]">
-                    🗺️ {t("rm_see_this_road")} <span aria-hidden>›</span>
+                     {t("rm_see_this_road")} <span aria-hidden>›</span>
                   </span>
                 </Link>
               </li>
@@ -140,7 +141,7 @@ function RoadmapView() {
               ))}
             </div>
             <div className="mt-1 flex justify-between text-xs text-[var(--muted)]">
-              <span>{year0}</span><span>💼 {year0 + Math.ceil(tot.months_to_job / 12)}</span>
+              <span>{year0}</span><span>{year0 + Math.ceil(tot.months_to_job / 12)}</span>
             </div>
             <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs">
               {Object.entries(KIND).filter(([k]) => r.stages.some((s: any) => s.kind === k)).map(([k, v]) => (
@@ -175,7 +176,7 @@ function RoadmapView() {
             </div>
           )}
           <p className="mt-2 text-xs text-[var(--muted)]">{t("rm_cost_note")}</p>
-          {tot.estimated_stages > 0 && <p className="mt-1"><Badge tone="amber">⚠️ {t("rm_estimates", { n: tot.estimated_stages })}</Badge></p>}
+          {tot.estimated_stages > 0 && <p className="mt-1"><Badge tone="amber"> {t("rm_estimates", { n: tot.estimated_stages })}</Badge></p>}
         </Card>
 
         {/* the road itself */}
@@ -189,10 +190,10 @@ function RoadmapView() {
               return (
                 <li key={i} className="relative flex gap-3 pb-5 last:pb-0">
                   {!last && <span aria-hidden className="absolute left-[19px] top-10 bottom-0 w-1 rounded-full" style={{ background: `linear-gradient(${k.color}, ${KIND[r.stages[i + 1].kind]?.color})` }} />}
-                  <span className={`relative z-10 grid h-10 w-10 shrink-0 place-items-center rounded-full text-lg shadow ${s.now ? "ring-4 ring-amber-300" : ""}`} style={{ background: k.color }}>{k.icon}</span>
+                  <span className={`relative z-10 grid h-10 w-10 shrink-0 place-items-center rounded-full text-lg shadow ${s.now ? "ring-4 ring-amber-300" : ""}`} style={{ background: k.color }}><Icon name={k.icon} size={20} className="text-white" /></span>
                   <div className="min-w-0 flex-1 rounded-xl bg-[var(--bg)] p-3">
                     <div className="flex flex-wrap items-center gap-1.5 text-xs text-[var(--muted)]">
-                      {s.now && <span className="rounded-full bg-amber-300 px-2 py-0.5 font-bold text-black">📍 {t("rm_you_are_here")}</span>}
+                      {s.now && <span className="rounded-full bg-amber-300 px-2 py-0.5 font-bold text-black">{t("rm_you_are_here")}</span>}
                       <span>{t("rm_step", { n: i + 1 })}</span>
                       {s.kind !== "job" && <span>· {y1 === y2 ? y1 : `${y1}–${y2}`}</span>}
                       {s.months > 0 && <span>· {duration(t, s.months)}</span>}
@@ -202,29 +203,29 @@ function RoadmapView() {
                     <div className="mt-1.5 flex flex-wrap gap-1.5 text-xs">
                       {s.kind !== "job" && s.kind !== "earn" && (
                         <span className="rounded-full bg-[var(--card)] px-2 py-0.5 font-semibold ring-1 ring-black/10">
-                          💰 {s.fee_high ? range(s.fee_low, s.fee_high) : t("rm_free")}
+                           {s.fee_high ? range(s.fee_low, s.fee_high) : t("rm_free")}
                         </span>
                       )}
                       {s.stipend_per_month > 0 && (
                         <span className="rounded-full bg-emerald-100 px-2 py-0.5 font-semibold text-emerald-900">+{inr(s.stipend_per_month)}/{t("rm_month")} {t("rm_stipend_short")}</span>
                       )}
                       {s.scholarship && (
-                        <span className="rounded-full bg-sky-100 px-2 py-0.5 font-semibold text-sky-900">🎓 {t("rm_scholarship_upto", { v: inr(s.scholarship.value) })}</span>
+                        <span className="rounded-full bg-sky-100 px-2 py-0.5 font-semibold text-sky-900">{t("rm_scholarship_upto", { v: inr(s.scholarship.value) })}</span>
                       )}
                       {s.estimate && s.kind !== "job" && <Badge tone="amber">{t("estimate")}</Badge>}
                     </div>
 
                     {s.kind === "job" && r.income && (
                       <div className="mt-2 rounded-lg bg-emerald-50 p-2 text-sm text-emerald-900 dark:bg-emerald-950 dark:text-emerald-100">
-                        💼 <b>{inr(r.income.median)}</b>/{t("rm_month")} {r.income.low !== r.income.high && <span className="text-xs">({range(r.income.low, r.income.high)})</span>}
+                         <b>{inr(r.income.median)}</b>/{t("rm_month")} {r.income.low !== r.income.high && <span className="text-xs">({range(r.income.low, r.income.high)})</span>}
                         <div className="text-xs opacity-80">{r.career.income_text}</div>
                       </div>
                     )}
 
                     <p className="mt-2 text-sm">{s.what}</p>
-                    {s.scholarship && <p className="mt-1 text-xs text-[var(--muted)]">🎓 {s.scholarship.names.join(", ")}</p>}
+                    {s.scholarship && <p className="mt-1 text-xs text-[var(--muted)]">{s.scholarship.names.join(", ")}</p>}
                     {s.exams.map((e: any) => (
-                      <p key={e.id} className="mt-1 text-xs text-[var(--muted)]">📅 {e.name}: {e.timing}{e.fee !== null ? ` · ${t("rm_fee")} ${inr(e.fee)}` : ""}
+                      <p key={e.id} className="mt-1 text-xs text-[var(--muted)]">{e.name}: {e.timing}{e.fee !== null ? ` · ${t("rm_fee")} ${inr(e.fee)}` : ""}
                         {e.site && <> · <a className="underline" href={e.site} target="_blank" rel="noreferrer">{t("rm_apply")}</a></>}</p>
                     ))}
                     {s.stipend_text && <p className="mt-1 text-xs text-[var(--muted)]">{s.stipend_text}</p>}
@@ -238,13 +239,13 @@ function RoadmapView() {
               );
             })}
           </ol>
-          <div className="mt-3 rounded-xl bg-[var(--brand-soft)] p-3 text-center text-sm font-semibold text-[var(--brand-ink)]">🏁 {t("rm_finish", { y: year0 + Math.ceil(tot.months_to_job / 12) })}</div>
+          <div className="mt-3 rounded-xl bg-[var(--brand-soft)] p-3 text-center text-sm font-semibold text-[var(--brand-ink)]">{t("rm_finish", { y: year0 + Math.ceil(tot.months_to_job / 12) })}</div>
         </Card>
 
         <button onClick={makeMine}
           disabled={isMine}
           className={`w-full rounded-xl py-3 font-semibold ${isMine ? "bg-emerald-100 text-emerald-900" : "bg-[var(--brand)] text-white"}`}>
-          {isMine ? `✓ ${t("rm_saved")}` : `⭐ ${t("rm_make_mine")}`}
+          {isMine ? `✓ ${t("rm_saved")}` : `${t("rm_make_mine")}`}
         </button>
 
       </>)}

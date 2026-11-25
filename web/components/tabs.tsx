@@ -2,7 +2,7 @@
 // A row (or grid) of tabs, so a long page shows one group at a time instead of everything stacked.
 
 export function Tabs<K extends string>({ tabs, value, onChange, cols }: {
-  tabs: { key: K; label: string; count?: number }[]; value: K; onChange: (k: K) => void; cols?: number;
+  tabs: { key: K; label: React.ReactNode; count?: number }[]; value: K; onChange: (k: K) => void; cols?: number;
 }) {
   return (
     <div role="tablist" className="grid gap-1 rounded-xl bg-[var(--card)] p-1 ring-1 ring-black/5"

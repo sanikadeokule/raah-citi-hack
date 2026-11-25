@@ -13,7 +13,7 @@ export default function DataPage() {
   return (
     <Shell title={t("home_data")} publicPage>
       <Card>
-        <h2 className="font-bold">📊 {t("live_data")}</h2>
+        <h2 className="font-bold">{t("live_data")}</h2>
         <p className="mt-1 text-sm">{data?.version.file} · saved {data && new Date(data.version.modified).toLocaleString()}</p>
         <p className="text-xs text-[var(--muted)]">Edit and save the spreadsheet: this app checks every few seconds and recalculates every number. Nothing from the dataset is typed into the code.</p>
         <button onClick={refresh} className="mt-2 rounded-full bg-[var(--brand-soft)] px-3 py-1 text-sm">↻ Reload now</button>
@@ -22,11 +22,11 @@ export default function DataPage() {
         </div>
       </Card>
       <Card>
-        <h2 className="font-bold">⚠️ {t("warnings")} <Badge>{data?.warnings.length}</Badge></h2>
+        <h2 className="font-bold">{t("warnings")} <Badge>{data?.warnings.length}</Badge></h2>
         <ul className="mt-1 list-disc pl-5 text-sm">{data?.warnings.map((w: string, i: number) => <li key={i}>{w}</li>)}</ul>
       </Card>
       <Card>
-        <h2 className="font-bold">🧮 {t("assumptions")}</h2>
+        <h2 className="font-bold">{t("assumptions")}</h2>
         <table className="mt-2 w-full text-sm"><tbody>
           {data && Object.entries(data.assumptions).map(([k, a]: any) => (
             <tr key={k} className="border-b border-black/5 align-top">
@@ -38,7 +38,7 @@ export default function DataPage() {
         </tbody></table>
       </Card>
       <Card>
-        <h2 className="font-bold">📒 README</h2>
+        <h2 className="font-bold"> README</h2>
         <ul className="mt-1 space-y-1 text-xs text-[var(--muted)]">{data?.readme.map((r: string, i: number) => <li key={i}>{r}</li>)}</ul>
       </Card>
     </Shell>

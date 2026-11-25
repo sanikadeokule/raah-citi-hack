@@ -5,14 +5,14 @@
   --card: #ffffff;
   --ink: #14213d;
   --muted: #5b6474;
-  --brand: #1b3a6b;
-  --brand-ink: #12294d;
-  --brand-soft: #e8eef7;
+  --brand: #2563eb;
+  --brand-ink: #1e40af;
+  --brand-soft: #eaf1ff;
   --accent: #f28c28;
   --good: #138808;
   --bad: #c62828;
-  /* indigo-navy app bar with saffron and India green, as on government portals (india.gov.in, MyGov) */
-  --header-bg: #1b3a6b;
+  /* bright blue app bar (white text is 5.2:1) with the saffron accent and India green; blue + saffron stay the only two brand colours */
+  --header-bg: #2563eb;
   --saffron: #ff9933;
   --india-green: #138808;
 }
@@ -22,20 +22,20 @@
     --card: #18202b;
     --ink: #e8edf5;
     --muted: #9aa5b5;
-    --brand: #3d6bb3;
+    --brand: #3a70de;
     --brand-ink: #bfd3f2;
     --brand-soft: #1c2a40;
     --accent: #f5a04f;
     --good: #4cc36a;
     --bad: #ff7b72;
-    /* the same indigo-navy bar in dark mode: deep enough not to glare on the dark page */
-    --header-bg: #1b3a6b;
+    /* a deeper blue bar in dark mode so it does not glare on the dark page */
+    --header-bg: #1e40af;
   }
 }
 :root[data-theme="dark"] {
   --bg: #0f141c; --card: #18202b; --ink: #e8edf5; --muted: #9aa5b5;
-  --brand: #3d6bb3; --brand-ink: #bfd3f2; --brand-soft: #1c2a40; --accent: #f5a04f; --good: #4cc36a; --bad: #ff7b72;
-  --header-bg: #1b3a6b;
+  --brand: #3a70de; --brand-ink: #bfd3f2; --brand-soft: #1c2a40; --accent: #f5a04f; --good: #4cc36a; --bad: #ff7b72;
+  --header-bg: #1e40af;
 }
 
 /* thin tricolour strip under the app bar */

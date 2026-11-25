@@ -50,8 +50,8 @@ def tool_specs(signed_in: bool) -> list[dict]:
     """MCP tools as OpenAI function specs, without the arguments the server fills in itself."""
     out = []
     for t in mcp_client.tools():
-        if t["name"] == "get_notifications" and not signed_in:
-            continue
+        if "user_id" in t["input_schema"].get("properties", {}) and not signed_in:
+            continue  # tools about the signed-in student need a signed-in student
         schema = json.loads(json.dumps(t["input_schema"]))
         for k in INJECTED:
             schema.get("properties", {}).pop(k, None)
@@ -119,16 +119,16 @@ def _first_source(result) -> str:
 
 def run_tool(name: str, args: dict, profile: dict, user_id: int | None) -> dict:
     args = {k: v for k, v in (args or {}).items() if k not in INJECTED}
-    if name == "get_notifications":
+    tool = next((t for t in mcp_client.tools() if t["name"] == name), None)
+    if tool is None:
+        return {"error": f"unknown tool {name}"}
+    props = tool["input_schema"].get("properties", {})
+    if "user_id" in props:
         if not user_id:
             return {"error": "the student is not signed in"}
         args["user_id"] = user_id
-    else:
-        tool = next((t for t in mcp_client.tools() if t["name"] == name), None)
-        if tool is None:
-            return {"error": f"unknown tool {name}"}
-        if "profile" in tool["input_schema"].get("properties", {}):
-            args["profile"] = profile
+    if "profile" in props:
+        args["profile"] = profile
     return mcp_client.call(name, args)
 
 

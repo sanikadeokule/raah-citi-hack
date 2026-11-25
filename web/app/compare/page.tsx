@@ -50,11 +50,11 @@ function CompareView() {
         </table>
       </Card>
       <Card>
-        <h2 className="mb-1 font-bold">📈 {t("cumulative")}</h2>
+        <h2 className="mb-1 font-bold">{t("cumulative")}</h2>
         <CashChart results={rs} height={280} />
       </Card>
       <Card>
-        <h2 className="mb-2 font-bold">🔀 {t("what_if")}</h2>
+        <h2 className="mb-2 font-bold">{t("what_if")}</h2>
         <label className="flex items-center justify-between py-1"><span>{t("scholarship_toggle")}</span>
           <input type="checkbox" className="h-6 w-6" checked={opts.scholarships === undefined || opts.scholarships === null}
             onChange={(e) => setOpts({ ...opts, scholarships: e.target.checked ? null : [] })} /></label>

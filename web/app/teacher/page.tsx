@@ -23,7 +23,7 @@ function ResetStudentPin() {
   };
   return (
     <Card className="space-y-2">
-      <h2 className="font-bold">🔑 {t("reset_pin_title")}</h2>
+      <h2 className="font-bold">{t("reset_pin_title")}</h2>
       <p className="text-xs text-[var(--muted)]">{t("reset_pin_help")}</p>
       <div className="flex gap-2">
         <input value={phone} onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))} inputMode="numeric"
@@ -66,7 +66,7 @@ function StudentCard({ s }: { s: any }) {
         </span>
         <span className="flex shrink-0 flex-col items-end gap-1">
           <Badge tone={riskTone}>{Math.round(s.dropout_risk * 100)}% {t("risk")}</Badge>
-          {s.talent && <Badge tone="green">⭐ {t("talent")}</Badge>}
+          {s.talent && <Badge tone="green"> {t("talent")}</Badge>}
         </span>
         <span aria-hidden className="text-lg text-[var(--muted)] transition-transform group-open:rotate-90">›</span>
       </summary>
@@ -74,7 +74,7 @@ function StudentCard({ s }: { s: any }) {
         {s.risk_level !== "low" && s.reasons?.length > 0 && (
           <div className="rounded-xl bg-rose-50 p-2.5 text-xs leading-snug text-rose-900 dark:bg-rose-900/20 dark:text-rose-200">⚠ {s.reasons.join("; ")}</div>
         )}
-        {s.talent && <div className="rounded-xl bg-emerald-50 p-2.5 text-xs leading-snug text-emerald-900 dark:bg-emerald-900/20 dark:text-emerald-200">⭐ {s.talent_reason}</div>}
+        {s.talent && <div className="rounded-xl bg-emerald-50 p-2.5 text-xs leading-snug text-emerald-900 dark:bg-emerald-900/20 dark:text-emerald-200">{s.talent_reason}</div>}
         <ul className="space-y-1 text-sm">
           {rows.map(([k, v]) => (
             <li key={k} className="flex gap-2"><span className="text-[var(--muted)]">•</span>
@@ -132,7 +132,7 @@ export default function Teacher() {
         <Stat label={t("talent")} value={String(st.filter((s: any) => s.talent).length)} tone="text-[var(--good)]" />
       </div>
       <div role="tablist" className="grid grid-cols-3 gap-1 rounded-xl bg-[var(--card)] p-1 ring-1 ring-black/5">
-        {([["students", `👥 ${t("students")}`], ["modules", `📚 ${t("my_modules")}`], ["notices", `🛰️ ${t("teacher_tab_notices")}`]] as const).map(([k, label]) => (
+        {([["students", `${t("students")}`], ["modules", `${t("my_modules")}`], ["notices", `${t("teacher_tab_notices")}`]] as const).map(([k, label]) => (
           <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)}
             className={`rounded-lg py-2 text-sm font-semibold ${tab === k ? "bg-[var(--brand)] text-white" : "text-[var(--muted)]"}`}>
             {label}
@@ -141,7 +141,7 @@ export default function Teacher() {
       </div>
       {tab === "modules" ? <TeacherModules /> : tab === "notices" ? <TeacherNotices /> : (<>
       <Card>
-        <h2 className="font-bold">📣 {t("recommend_all")}</h2>
+        <h2 className="font-bold">{t("recommend_all")}</h2>
         <div className="mt-2 grid gap-2">
           <select value={scheme} onChange={(e) => setScheme(e.target.value)} className="w-full min-w-0 rounded-lg bg-[var(--bg)] p-2 text-sm">
             {data.scholarships.filter((s: any) => s.rules.length).map((s: any) => <option key={s.id} value={s.id}>{s.id} · {s.name}</option>)}
@@ -156,7 +156,7 @@ export default function Teacher() {
         </button>
         {eligible?.students?.length > 0 && (
           <p className="mt-2 text-xs text-[var(--muted)]">{eligible.students.filter((s: any) => s.status === "eligible_missing_docs").length} of them still need a document (mostly income certificate).
-            {" "}📱 {t("sent_to_app", { n: eligible.students.filter((s: any) => s.real).length })}</p>
+            {" "} {t("sent_to_app", { n: eligible.students.filter((s: any) => s.real).length })}</p>
         )}
       </Card>
       <Card>

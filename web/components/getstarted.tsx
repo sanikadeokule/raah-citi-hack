@@ -11,7 +11,7 @@ export function CentresCard({ centres }: { centres: any[] }) {
   if (!centres.length) return null;
   return (
     <Card>
-      <h2 className="mb-2 text-lg font-bold">📍 {t("nearest_centres")}</h2>
+      <h2 className="mb-2 text-lg font-bold">{t("nearest_centres")}</h2>
       <CentreMap centres={centres} home={{ lat: profile?.lat, lon: profile?.lon, label: placeLabel(t, profile?.taluka) || t("your_profile") }} />
       <ul className="space-y-2">
         {centres.map((c: any, i: number) => (
@@ -32,7 +32,7 @@ export function CoursesCard({ courses }: { courses: any[] }) {
   if (!courses.length) return null;
   return (
     <Card>
-      <h2 className="mb-2 text-lg font-bold">📚 {t("courses")}</h2>
+      <h2 className="mb-2 text-lg font-bold">{t("courses")}</h2>
       <ul className="space-y-2 text-sm">
         {courses.map((c: any) => (
           <li key={c.id}><a className="font-medium underline" href={c.source} target="_blank" rel="noreferrer">{c.title}</a>

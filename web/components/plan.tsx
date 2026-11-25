@@ -1,5 +1,6 @@
 "use client";
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { Icon } from "@/components/icon";
 import { applyUrl } from "@/lib/helpers";
 import { Area, CartesianGrid, ComposedChart, Legend, Line, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Badge, Card, Source, SpeakButton, Stat, STATUS_TONE, docLabel } from "./ui";
@@ -38,7 +39,7 @@ export function PaybackCard({ r }: { r: any }) {
   return (
     <Card>
       <div className="mb-2 flex items-center justify-between">
-        <h2 className="text-lg font-bold">💰 {t("total_cost")} → {t("payback")}</h2>
+        <h2 className="text-lg font-bold">{t("total_cost")} → {t("payback")}</h2>
         {est && <Badge tone="amber">{t("estimate")}</Badge>}
       </div>
       <div className="divide-y divide-black/5">
@@ -83,7 +84,7 @@ export function WhatIf({ r, opts, setOpts }: { r: any; opts: PlanOptions; setOpt
   const anyOn = r.scholarship.chosen.length > 0;
   return (
     <Card>
-      <h2 className="mb-3 text-lg font-bold">🔀 {t("what_if")}</h2>
+      <h2 className="mb-3 text-lg font-bold">{t("what_if")}</h2>
       <label className="flex items-center justify-between py-2">
         <span>{t("scholarship_toggle")}</span>
         <input type="checkbox" className="h-6 w-6" checked={anyOn} disabled={!r.scholarship.options.length}
@@ -178,7 +179,7 @@ export function SchemeResult({ e, open = false, tag, hideStatus = false, onPage 
 }) {
   const { t, data } = useApp();
   const scheme = data.scholarships.find((s: any) => s.id === e.id);
-  const icon: Record<string, string> = { pass: "✅", fail: "❌", unknown: "❔", missing_doc: "📄" };
+  const icon: Record<string, string> = { pass: "check", fail: "x", unknown: "question", missing_doc: "doc" };
   // not eligible / need info: say plainly which rules fail, instead of showing the scheme text
   const failed = e.rules.filter((r: any) => r.status === "fail").map((r: any) => r.label);
   const unknown = e.rules.filter((r: any) => r.status === "unknown").map((r: any) => r.label);
@@ -199,18 +200,18 @@ export function SchemeResult({ e, open = false, tag, hideStatus = false, onPage 
         {/* the amount can run long: one line while closed, all of it once opened */}
         {reasons ? (
           <div className="mt-1.5 rounded-lg bg-rose-50 p-2 text-xs leading-snug text-rose-900 dark:bg-rose-900/20 dark:text-rose-200"><b>{reasons.head}:</b> {reasons.list}</div>
-        ) : <div className="mt-0.5 line-clamp-1 text-xs text-[var(--muted)] group-open:line-clamp-none">💰 {e.amount_text}</div>}
+        ) : <div className="mt-0.5 line-clamp-1 text-xs text-[var(--muted)] group-open:line-clamp-none">{e.amount_text}</div>}
       </summary>
       <ul className="mt-2 space-y-1 text-sm">
         {e.rules.map((r: any, i: number) => (
-          <li key={i} className="flex gap-2"><span>{icon[r.status]}</span>
+          <li key={i} className="flex gap-2"><Icon name={icon[r.status]} size={16} className={r.status === "pass" ? "text-[var(--good)]" : r.status === "fail" ? "text-[var(--bad)]" : "text-[var(--muted)]"} />
             <span>{r.label}{r.status === "missing_doc" && r.doc ? <span className="text-[var(--muted)]"> · {docLabel(r.doc)}</span> : null}</span></li>
         ))}
       </ul>
       {e.missing_docs.length > 0 && (
         <div className="mt-2 rounded-lg bg-amber-50 p-2 text-sm text-amber-950">
           {e.missing_docs.map((m: any) => (
-            <div key={m.doc}>📄 <b>{t("missing_document")}:</b> {docLabel(m.doc)} · <b>{t("where_to_get")}:</b> {m.where}</div>
+            <div key={m.doc}> <b>{t("missing_document")}:</b> {docLabel(m.doc)} · <b>{t("where_to_get")}:</b> {m.where}</div>
           ))}
         </div>
       )}
@@ -260,12 +261,12 @@ export function ParentNote({ r }: { r: any }) {
   const msg = parentMessage(lang, profile, r, data);
   return (
     <Card>
-      <h2 className="mb-2 text-lg font-bold">👪 {t("parent_message")}</h2>
+      <h2 className="mb-2 text-lg font-bold">{t("parent_message")}</h2>
       <p className="rounded-xl bg-[var(--bg)] p-3 text-sm leading-relaxed">{msg}</p>
       <div className="mt-3 flex gap-2">
         <SpeakButton text={msg} />
         <a className="inline-flex items-center gap-1 rounded-full bg-[#25D366] px-3 py-1.5 text-sm font-medium text-white"
-          href={`https://wa.me/?text=${encodeURIComponent(msg)}`} target="_blank" rel="noreferrer">💬 {t("share_whatsapp")}</a>
+          href={`https://wa.me/?text=${encodeURIComponent(msg)}`} target="_blank" rel="noreferrer"> {t("share_whatsapp")}</a>
       </div>
       <VoiceNote text={msg} name={profile?.name} />
     </Card>
@@ -301,12 +302,12 @@ export function RoadmapParentNote({ r }: { r: any }) {
   const msg = roadmapMessage(lang, profile, r);
   return (
     <Card>
-      <h2 className="mb-2 text-lg font-bold">👪 {t("parent_message")}</h2>
+      <h2 className="mb-2 text-lg font-bold">{t("parent_message")}</h2>
       <p className="rounded-xl bg-[var(--bg)] p-3 text-sm leading-relaxed">{msg}</p>
       <div className="mt-3 flex gap-2">
         <SpeakButton text={msg} />
         <a className="inline-flex items-center gap-1 rounded-full bg-[#25D366] px-3 py-1.5 text-sm font-medium text-white"
-          href={`https://wa.me/?text=${encodeURIComponent(msg)}`} target="_blank" rel="noreferrer">💬 {t("share_whatsapp")}</a>
+          href={`https://wa.me/?text=${encodeURIComponent(msg)}`} target="_blank" rel="noreferrer"> {t("share_whatsapp")}</a>
       </div>
       <VoiceNote text={msg} name={profile?.name} />
     </Card>

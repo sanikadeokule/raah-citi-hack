@@ -1,5 +1,6 @@
 "use client";
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { Icon, Mark } from "@/components/icon";
 import { useEffect, useMemo, useState } from "react";
 import { Card, MicButton, Shell, SpeakButton } from "@/components/ui";
 import { ChatInput } from "@/components/chatinput";
@@ -77,10 +78,10 @@ export default function Learn() {
   return (
     <Shell title={t("home_learn")}>
       <Tabs value={tab} onChange={setTab} tabs={[
-        { key: "lessons", label: `🎧 ${t("learn_tab_lessons")}`, count: ls.length },
-        { key: "courses", label: `🇮🇳 ${t("learn_tab_courses")}` },
-        { key: "modules", label: `👩‍🏫 ${t("learn_tab_modules")}` },
-        { key: "quiz", label: `📝 ${t("quiz")}`, count: qs.length },
+        { key: "lessons", label: `${t("learn_tab_lessons")}`, count: ls.length },
+        { key: "courses", label: `${t("learn_tab_courses")}` },
+        { key: "modules", label: `${t("learn_tab_modules")}` },
+        { key: "quiz", label: `${t("quiz")}`, count: qs.length },
       ]} />
 
       {/* one topic drives both the lessons and the quiz built from them */}
@@ -89,7 +90,7 @@ export default function Learn() {
           {t("lesson_topic")}
           <select value={topic} onChange={(e) => pickTopic(e.target.value)}
             className="mt-1 block w-full rounded-lg bg-[var(--card)] px-3 py-2 text-base ring-1 ring-black/10">
-            {mine.length > 0 && <option value={FOR_YOU}>⭐ {t("lesson_for_you")} ({mine.length})</option>}
+            {mine.length > 0 && <option value={FOR_YOU}> {t("lesson_for_you")} ({mine.length})</option>}
             {topics.map((tp: any) => <option key={tp.id} value={tp.id}>{tp.name} ({all.filter((l) => l.topic === tp.id).length})</option>)}
           </select>
           {topic === FOR_YOU && <span className="mt-1 block text-xs font-normal text-[var(--muted)]">{t("lesson_for_you_note")}</span>}
@@ -104,7 +105,7 @@ export default function Learn() {
         {voice ? (
           <button onClick={saveAll} disabled={saving || savedCount === ls.length}
             className="mb-3 w-full rounded-lg bg-[var(--brand-soft)] py-2 text-sm font-semibold text-[var(--brand-ink)] disabled:opacity-60">
-            {savedCount === ls.length ? `✅ ${t("audio_saved")}` : saving ? "…" : `⬇️ ${t("save_audio_offline")} (${savedCount}/${ls.length})`}
+            {savedCount === ls.length ? `${t("audio_saved")}` : saving ? "…" : `${t("save_audio_offline")} (${savedCount}/${ls.length})`}
           </button>
         ) : (
           <p className="mb-3 text-xs text-[var(--muted)]">{t("device_voice_note")}</p>
@@ -115,7 +116,7 @@ export default function Learn() {
             <li key={l.id}>
               <details className="group rounded-xl bg-[var(--bg)]">
                 <summary className="flex cursor-pointer list-none items-center justify-between gap-2 p-3">
-                  <b className="leading-snug">{done.includes(l.id) ? "✅ " : ""}{l.title}{saved[l.id] ? " 💾" : ""}</b>
+                  <b className="leading-snug">{done.includes(l.id) && <><Mark kind="yes" size={14} /> </>}{l.title}{saved[l.id] ? <> <Icon name="download" size={14} className="align-[-2px]" /></> : null}</b>
                   <span aria-hidden className="shrink-0 text-lg text-[var(--muted)] transition-transform group-open:rotate-90">›</span>
                 </summary>
                 <div className="space-y-2 px-3 pb-3">
@@ -153,7 +154,7 @@ export default function Learn() {
       </Card>}
 
       <Card>
-        <h2 className="font-bold">💬 {t("learn_ask_title")}</h2>
+        <h2 className="font-bold">{t("learn_ask_title")}</h2>
         <p className="mt-1 text-xs text-[var(--muted)]">{t("learn_ask_hint")}</p>
         {learnTurns.map((turn, i) => (
           <div key={`${i}-${turn.question}`} className="mt-3 space-y-2 text-sm">

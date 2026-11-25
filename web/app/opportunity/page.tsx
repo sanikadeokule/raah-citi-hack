@@ -5,6 +5,7 @@ import { Badge, Card, Shell, Source } from "@/components/ui";
 import { inr, rankCareers } from "@/lib/engine";
 import { pickForCareers, tradeMatches, type CareerChoice } from "@/lib/listings";
 import { useApp } from "@/lib/store";
+import { myCareer } from "@/lib/tailor";
 import { Mentors } from "@/components/mentors";
 import { CareerFilter, RelatedNote } from "@/components/careerfilter";
 import { Pager, usePaged } from "@/components/pager";
@@ -17,7 +18,9 @@ export default function Opportunity() {
   const [q, setQ] = useState("");
   const top = useMemo(() => (data && profile ? rankCareers(data, profile, 5).map((s: any) => s.career.id) : []), [data, profile]);
   const [picked, setCareer] = useState<CareerChoice | null>(null);
-  const career: CareerChoice = picked ?? (top.length ? "top" : "all");
+  // the rule from lib/tailor.ts: the saved career, else the best match; "All" stays in the dropdown
+  const mc = myCareer(data, profile);
+  const career: CareerChoice = picked ?? (mc ? mc.career.id : top.length ? "top" : "all");
   const match = (s: string) => String(s || "").toLowerCase().includes(q.toLowerCase());
   // the career dropdown picks the rows, the search box narrows them further
   const searched = (p: { items: any[]; related: any[] | null }, keep: (n: any) => boolean) => ({ ...p, items: p.items.filter(keep) });
@@ -34,14 +37,14 @@ export default function Opportunity() {
       <CareerFilter value={career} onChange={setCareer} />
       <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Electrician, Fitter, Chakan…" className="w-full rounded-xl bg-[var(--card)] p-3 ring-1 ring-black/10" />
       <Tabs value={tab} onChange={setTab} tabs={[
-        { key: "naps", label: `🏭 ${t("opp_tab_naps")}`, count: naps.items.length },
-        { key: "rail", label: `🚆 ${t("opp_tab_rail")}`, count: rail.items.length },
-        { key: "mentors", label: `🤝 ${t("opp_tab_mentors")}` },
+        { key: "naps", label: `${t("opp_tab_naps")}`, count: naps.items.length },
+        { key: "rail", label: `${t("opp_tab_rail")}`, count: rail.items.length },
+        { key: "mentors", label: `${t("opp_tab_mentors")}` },
       ]} />
       {tab === "mentors" && <Mentors career={career} top={top} />}
       {tab === "naps" && <Card>
         <div ref={napsPg.top} />
-        <h2 className="mb-2 font-bold">🏭 NAPS apprenticeships · Pune <Badge>{naps.items.length}</Badge></h2>
+        <h2 className="mb-2 font-bold">NAPS apprenticeships · Pune <Badge>{naps.items.length}</Badge></h2>
         {!q && <RelatedNote picked={naps} />}
         <ul className="divide-y divide-black/5">
           {napsPg.pageItems.map((n: any) => (
@@ -57,7 +60,7 @@ export default function Opportunity() {
       </Card>}
       {tab === "rail" && <Card>
         <div ref={railPg.top} />
-        <h2 className="mb-2 font-bold">🚆 Central Railway (Pune cluster) <Badge>{rail.items.length}</Badge></h2>
+        <h2 className="mb-2 font-bold">Central Railway (Pune cluster) <Badge>{rail.items.length}</Badge></h2>
         {!q && <RelatedNote picked={rail} />}
         <ul className="divide-y divide-black/5">
           {railPg.pageItems.map((n: any) => (

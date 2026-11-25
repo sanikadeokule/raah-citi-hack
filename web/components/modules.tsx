@@ -3,6 +3,7 @@
 // Prices are set by the teacher; the teacher's share and per-completion payout come from
 // the Assumptions sheet on the server. Payments are simulated (sandbox).
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { Icon, Mark } from "@/components/icon";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { Badge, Card, SpeakButton, Stat } from "./ui";
@@ -62,7 +63,7 @@ export function StudentModules({ emptyText }: { emptyText?: string } = {}) {
         key: j.key_id, amount: j.order.amount, currency: j.order.currency,
         name: j.name, description: j.description, order_id: j.order.id,
         prefill: { name: auth?.user.name || "", contact: auth?.user.phone ? `+91${auth.user.phone}` : "" },
-        theme: { color: "#1b3a6b" },
+        theme: { color: "#2563eb" },
         handler: async (response: any) => {
           try {
             const verified = await authFetch(`/api/modules/${m.id}/payment/verify`, {
@@ -95,7 +96,7 @@ export function StudentModules({ emptyText }: { emptyText?: string } = {}) {
 
   return (
     <Card>
-      <h2 className="mb-2 text-lg font-bold">👩‍🏫 {t("teacher_modules")}</h2>
+      <h2 className="mb-2 text-lg font-bold">{t("teacher_modules")}</h2>
       <ul className="space-y-2">
         {mods.map((m) => {
           const res = result[m.id];
@@ -103,7 +104,7 @@ export function StudentModules({ emptyText }: { emptyText?: string } = {}) {
           return (
             <li key={m.id} className="rounded-xl bg-[var(--bg)] p-3 text-sm">
               <div className="flex items-start justify-between gap-2">
-                <div><b>{m.enrolment?.completed ? "✅ " : ""}{m.title}</b><div className="text-xs text-[var(--muted)]">{m.teacher_name || t("your_teacher")} · {m.lang.toUpperCase()}</div></div>
+                <div><b>{m.enrolment?.completed && <><Mark kind="yes" size={14} /> </>}{m.title}</b><div className="text-xs text-[var(--muted)]">{m.teacher_name || t("your_teacher")} · {m.lang.toUpperCase()}</div></div>
                 <Badge tone={m.price_model === "free" ? "green" : "blue"}>{priceText(m, t)}</Badge>
               </div>
               {!m.enrolment ? (
@@ -183,14 +184,14 @@ export function ModuleBuilder({ onSaved }: { onSaved: () => void }) {
   const input = "w-full min-w-0 rounded-lg bg-[var(--bg)] p-2 text-sm";
   return (
     <Card>
-      <h2 className="font-bold">🧩 {t("module_builder")}</h2>
+      <h2 className="font-bold">{t("module_builder")}</h2>
       <div className="mt-2 grid gap-2">
         <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t("module_title")} className={input} />
         <select value={mlang} onChange={(e) => setMlang(e.target.value)} className={input}>
           <option value="mr">मराठी</option><option value="hi">हिन्दी</option><option value="en">English</option>
         </select>
         <textarea value={lesson} onChange={(e) => setLesson(e.target.value)} rows={4} placeholder={t("module_lesson")} className={input} />
-        <p className="text-xs text-[var(--muted)]">🔊 {t("module_audio_note")}</p>
+        <p className="text-xs text-[var(--muted)]">{t("module_audio_note")}</p>
         {quiz.map((q, i) => (
           <div key={i} className="rounded-lg bg-[var(--bg)] p-2">
             <input value={q.q} onChange={(e) => setQ(i, { q: e.target.value })} placeholder={`${t("question")} ${i + 1}`} className="w-full rounded bg-[var(--card)] p-2 text-sm" />
@@ -242,7 +243,7 @@ export function TeacherModules() {
   return (
     <>
       <Link href="/teacher/builder/" className="flex items-center gap-3 rounded-2xl border-b-4 border-[var(--accent)] bg-[var(--brand)] px-4 py-3 text-white shadow-sm active:scale-95">
-        <span className="text-3xl">🧩</span>
+        <Icon name="puzzle" size={28} />
         <span className="min-w-0 flex-1">
           <span className="block text-base font-semibold">{t("new_module")}</span>
           <span className="block truncate text-xs text-white/80">{t("new_module_sub")}</span>
@@ -250,7 +251,7 @@ export function TeacherModules() {
         <span aria-hidden className="text-2xl">›</span>
       </Link>
       <Card>
-        <h2 className="font-bold">📚 {t("my_modules")}</h2>
+        <h2 className="font-bold">{t("my_modules")}</h2>
         {mods.length === 0 ? <p className="mt-2 text-sm text-[var(--muted)]">{t("no_modules_yet")}</p> : (
           <ul className="mt-2 divide-y divide-black/5">
             {mods.map((m) => (
@@ -269,16 +270,16 @@ export function TeacherModules() {
       </Card>
       {earn && (
         <Card>
-          <h2 className="font-bold">💰 {t("earnings")}</h2>
+          <h2 className="font-bold">{t("earnings")}</h2>
           <div className="mt-2 grid grid-cols-3 gap-2">
             <Stat label={t("module_sales")} value={inr(earn.sales_share)} />
             <Stat label={t("completions_label", { n: earn.completions })} value={inr(earn.completion_payouts)} />
             <Stat label={t("unpaid")} value={inr(earn.unpaid)} tone="text-[var(--good)]" />
           </div>
           <p className="mt-2 text-xs text-[var(--muted)]">{t("earnings_rule", { pct: Math.round(earn.share_of_sales * 100), p: inr(earn.payout_per_completion) })}</p>
-          <button onClick={payOut} disabled={earn.unpaid <= 0} className="mt-2 w-full rounded-xl bg-[var(--brand)] py-2 font-semibold text-white disabled:opacity-40">🏦 {t("pay_out")} {inr(earn.unpaid)}</button>
+          <button onClick={payOut} disabled={earn.unpaid <= 0} className="mt-2 w-full rounded-xl bg-[var(--brand)] py-2 font-semibold text-white disabled:opacity-40"> {t("pay_out")} {inr(earn.unpaid)}</button>
           <Link href="/teacher/payouts/" className="mt-2 block text-center text-sm font-semibold text-[var(--brand-ink)] underline">View payout history →</Link>
-          {payout && <p className="mt-2 text-xs">pain.001 {payout.msg_id} · {payout.validation.valid ? "✅" : "❌"} {payout.validation.method}</p>}
+          {payout && <p className="mt-2 text-xs">pain.001 {payout.msg_id} · <Mark kind={payout.validation.valid ? "yes" : "no"} size={14} /> {payout.validation.method}</p>}
         </Card>
       )}
     </>
@@ -313,7 +314,7 @@ export function TeacherModuleDetail({ id }: { id: number }) {
         </div>
       </Card>
       <Card className="space-y-2">
-        <h3 className="font-bold">📖 {t("lesson")}</h3>
+        <h3 className="font-bold">{t("lesson")}</h3>
         <p className="whitespace-pre-line text-sm leading-relaxed">{m.lesson}</p>
         <SpeakButton text={m.lesson} />
       </Card>
@@ -326,7 +327,7 @@ export function TeacherModuleDetail({ id }: { id: number }) {
               <ul className="mt-1 space-y-1">
                 {q.options.map((o: string, j: number) => (
                   <li key={j} className={`rounded-lg px-3 py-1.5 ${j === q.answer ? "bg-emerald-200 font-semibold text-black" : "bg-[var(--bg)]"}`}>
-                    {j === q.answer ? "✅ " : ""}{o}
+                    {j === q.answer && <><Mark kind="yes" size={14} /> </>}{o}
                   </li>
                 ))}
               </ul>
@@ -345,7 +346,7 @@ export function MentorRequests() {
   if (!rows.length) return null;
   return (
     <Card>
-      <h2 className="font-bold">🤝 {t("mentor_connections")}</h2>
+      <h2 className="font-bold">{t("mentor_connections")}</h2>
       <ul className="mt-2 divide-y divide-black/5 text-sm">
         {rows.map((r, i) => (
           <li key={i} className="py-1.5">{r.student.first_name || "—"} (Class {r.student.class ?? "?"}, {r.student.taluka ?? "?"}) → <b>{r.mentor}</b>

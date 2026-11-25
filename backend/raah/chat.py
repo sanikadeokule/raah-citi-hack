@@ -317,6 +317,39 @@ def turn(body: Turn):
             "done": bool(out.get("done")) and len(missing) <= 2}
 
 
+class IkigaiTurn(BaseModel):
+    stage: Literal["love", "good"]
+    text: str = Field(max_length=500)
+    lang: str = "en"
+    have: list[str] = []
+
+
+@router.post("/ikigai")
+def ikigai_turn(body: IkigaiTurn):
+    """Maps whatever the student says to the dataset's tags and answers like a person.
+    Only tags that exist in the dataset are returned; the reply is the model's own words."""
+    d = dataset.get()
+    tags = sorted({t for c in d["careers"] for t in c["tags"]})
+    ask = "what they love doing or learning about" if body.stage == "love" else "what they are good at"
+    system = (
+        f"You are Raah, a warm career guide for a rural Indian student. Reply in {LANG_NAME.get(body.lang, 'English')}, "
+        f"in one or two short, simple sentences. The student is telling you {ask}. "
+        "Accept their words as they are. Pick every topic from this list that fits what they said "
+        "(a phrase can fit more than one): " + ", ".join(tags) + ". "
+        "Say back, in a few words, what you understood. Do not ask a question. "
+        'Never say you could not understand. Answer as JSON: {"reply": str, "tags": [str]}.'
+    )
+    try:
+        text, provider = llm.chat([{"role": "system", "content": system},
+                                   {"role": "user", "content": body.text[:500]}], json_mode=True)
+        out = llm.parse_json(text)
+    except (llm.LLMUnavailable, ValueError, json.JSONDecodeError) as e:
+        return {"fallback": True, "reason": str(e)}
+    picked = [t for t in (out.get("tags") or []) if isinstance(t, str) and t in tags]
+    return {"fallback": False, "provider": provider, "reply": str(out.get("reply") or "")[:400],
+            "tags": list(dict.fromkeys(picked))}
+
+
 # ------------------------------------------------------------------ grounded explanations
 
 class Explain(BaseModel):

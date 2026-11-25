@@ -4,6 +4,9 @@ import Link from "next/link";
 import { categoryLabel } from "@/lib/labels";
 import { useEffect, useState } from "react";
 import { Card, Shell } from "@/components/ui";
+import { Icon } from "@/components/icon";
+import { todaysStep } from "@/lib/todaysstep";
+import { myCareer } from "@/lib/tailor";
 import { TeacherInbox } from "@/components/inbox";
 import { ProShelf } from "@/components/pro";
 import { getKV, setKV } from "@/lib/db";
@@ -11,17 +14,26 @@ import { useApp } from "@/lib/store";
 import { placeLabel } from "@/lib/questions";
 import { BUILD_ROADMAP_HREF } from "@/lib/roadmap";
 
+// icon values are names from components/icon.tsx
 const TILES = [
-  { href: "/discover/", icon: "🗣️", key: "home_discover" },
-  { href: "/careers/", icon: "🧭", key: "home_careers" },
-  { href: "/colleges/", icon: "🎓", key: "home_colleges" },
-  { href: "/learn/", icon: "🎧", key: "home_learn" },
-  { href: "/opportunity/", icon: "🛠️", key: "home_opportunity" },
-  { href: "/eligibility/", icon: "📋", key: "home_eligibility" },
-  { href: "/compare/", icon: "⚖️", key: "home_compare" },
-  { href: "/notifications/", icon: "🔔", key: "home_notifications" },
+  { href: "/discover/", icon: "chat", key: "home_discover" },
+  { href: "/careers/", icon: "compass", key: "home_careers" },
+  { href: "/colleges/", icon: "graduation", key: "home_colleges" },
+  { href: "/learn/", icon: "book", key: "home_learn" },
+  { href: "/opportunity/", icon: "briefcase", key: "home_opportunity" },
+  { href: "/eligibility/", icon: "clipboard", key: "home_eligibility" },
+  { href: "/compare/", icon: "scales", key: "home_compare" },
+  { href: "/notifications/", icon: "bell", key: "home_notifications" },
 ];
-const STUDENT_TILES = [...TILES, { href: "/progress/", icon: "📈", key: "home_progress" }];
+// the student home has six tiles; alerts live in the top bar, progress/roadmap/mentor in the profile menu
+const STUDENT_TILES = [
+  { href: "/careers/", icon: "compass", key: "home_careers" },
+  { href: "/colleges/", icon: "graduation", key: "home_colleges" },
+  { href: "/eligibility/", icon: "rupee", key: "home_eligibility" },
+  { href: "/exams/", icon: "clipboard", key: "home_exams" },
+  { href: "/learn/", icon: "book", key: "home_learn" },
+  { href: "/opportunity/", icon: "briefcase", key: "home_opportunity" },
+];
 // A teacher's main job is the class: one big card to the class dashboard with the headline numbers.
 function ClassDashboardCard() {
   const { t, auth, authFetch, online, data } = useApp();
@@ -44,7 +56,7 @@ function ClassDashboardCard() {
   return (
     <Link href="/teacher/" className="block rounded-2xl border-b-4 border-[var(--accent)] bg-[var(--brand)] px-4 py-3.5 text-white shadow-sm active:scale-[.98]">
       <span className="flex items-center gap-3">
-        <span className="text-3xl leading-none">👩‍🏫</span>
+        <Icon name="users" size={32} />
         <span className="min-w-0 flex-1">
           <span className="block text-lg font-bold leading-tight">{t("tab_class")}</span>
           <span className="block text-xs leading-snug text-white/85">{t("home_class_dash_sub")}</span>
@@ -71,7 +83,8 @@ export default function Home() {
   const isTeacher = auth?.user.role === "teacher";
   // greet the signed-in person by their registered name, never by a demo profile
   const greetName = auth?.user.name || (isTeacher ? null : profile?.name) || "";
-  const hasRoadmap = Boolean(profile?.roadmap_at);
+  const step = todaysStep(data, profile);
+  const mine = myCareer(data, profile);
   const details = profile ? [profile.class && t("class_n", { n: profile.class }), placeLabel(t, profile.taluka), categoryLabel(profile.category, lang)].filter(Boolean).join(" · ") : "";
   return (
     <Shell back={null} fit>
@@ -79,7 +92,7 @@ export default function Home() {
       {auth && (
         <Card className="space-y-2 !p-3">
           <div className="flex items-center gap-3">
-            <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[var(--brand-soft)] text-xl">{isTeacher ? "👩‍🏫" : "🙂"}</div>
+            <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[var(--brand-soft)] text-xl"><Icon name="user" size={22} /></div>
             <div className="min-w-0 flex-1">
               <div className="truncate text-base font-semibold">{t("hello")}{greetName ? `, ${greetName}` : ""}</div>
               {!isTeacher && (details
@@ -99,11 +112,11 @@ export default function Home() {
         <div className="grid grid-cols-2 gap-2">
           <button onClick={() => setTTab(tTab === "tools" ? "class" : "tools")} aria-pressed={tTab === "tools"}
             className={`flex flex-col items-center justify-center rounded-2xl border-b-4 border-[var(--accent)] px-1 py-5 text-center shadow-sm active:scale-95 ${tTab === "tools" ? "bg-[var(--brand)] text-white" : "bg-[var(--card)] text-[var(--brand-ink)]"}`}>
-            <span className="text-4xl leading-none">🧑‍🎓</span>
+            <Icon name="graduation" size={36} />
             <span className="mt-2 text-sm font-semibold leading-tight">{t("tab_student")}</span>
           </button>
           <Link href="/money/" className="flex flex-col items-center justify-center rounded-2xl border-b-4 border-[var(--accent)] bg-[var(--card)] px-1 py-5 text-center text-[var(--brand-ink)] shadow-sm active:scale-95">
-            <span className="text-4xl leading-none">🏦</span>
+            <Icon name="bank" size={36} />
             <span className="mt-2 text-sm font-semibold leading-tight">{t("home_money")}</span>
           </Link>
         </div>
@@ -120,9 +133,9 @@ export default function Home() {
           </div>
         )}
         <div className="grid grid-cols-3 gap-2">
-          {[{ href: "/ask/", icon: "💬", key: "home_ask" }, ...TILES, { href: "/exams/", icon: "📝", key: "home_exams" }].map((x) => (
+          {[{ href: "/ask/", icon: "chat", key: "home_ask" }, ...TILES, { href: "/exams/", icon: "clipboard", key: "home_exams" }].map((x) => (
             <Link key={x.href} href={x.href} className="flex flex-col items-center rounded-xl bg-[var(--card)] px-1 py-2.5 text-center text-xs leading-tight ring-1 ring-black/5 active:scale-95">
-              <span className="text-2xl">{x.icon}</span>{t(x.key)}
+              <Icon name={x.icon} size={24} className="mb-1" />{t(x.key)}
             </Link>
           ))}
         </div>
@@ -133,34 +146,42 @@ export default function Home() {
         <>
         <TeacherInbox />
 
-        {/* every feature is open from the start; until a roadmap is saved, building one stays one tap away */}
-        {!hasRoadmap && (
-          <Link href={BUILD_ROADMAP_HREF} className="flex items-center gap-3 rounded-2xl bg-[var(--card)] px-4 py-3 text-[var(--brand-ink)] shadow-sm ring-2 ring-[var(--accent)] active:scale-95">
-            <span className="text-2xl">🗺️</span>
-            <span className="min-w-0 flex-1 text-sm font-semibold">{t("home_build_roadmap")}</span>
-            <span aria-hidden>→</span>
-          </Link>
-        )}
+        {/* one step chosen for the student today, with the reason and the source */}
+        <section aria-labelledby="step-h" className="rounded-2xl border-2 border-[var(--brand)] bg-[var(--card)] p-4 shadow-sm">
+          <h2 id="step-h" className="text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">{t("step_title")}</h2>
+          <p className="mt-1 text-base font-bold leading-snug">{t(step.key, step.vars)}</p>
+          <p className="mt-1 text-xs text-[var(--muted)]">{t(`${step.key}_why`, step.vars)}</p>
+          {step.source && <p className="mt-1 truncate text-[11px] text-[var(--muted)]">{t("source")}: <a href={step.source.split(" ; ")[0]} target="_blank" rel="noreferrer" className="underline">{step.source.split(" ; ")[0].replace(/^https?:\/\/(www\.)?/, "")}</a></p>}
+          <Link href={step.href} className="mt-3 inline-block rounded-xl bg-[var(--brand)] px-4 py-2.5 text-sm font-bold text-white active:scale-95">{t("step_do_it")}</Link>
+        </section>
 
-        <Link href="/ask/" className="flex items-center gap-3 rounded-2xl border-b-4 border-[var(--accent)] bg-[var(--brand)] px-4 py-3 text-white shadow-sm active:scale-95">
-          <span className="text-3xl">💬</span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-base font-semibold">{t("home_ask")}</span>
-            <span className="block truncate text-xs text-white/80">{t("ask_ex1")}</span>
-          </span>
-        </Link>
+        {mine && (
+          <div className="flex items-center gap-2 rounded-xl bg-[var(--brand-soft)] px-3 py-2.5 text-sm">
+            <span className="min-w-0 flex-1">{t("your_career")}: <b>{mine.career.name}</b>{!mine.saved && <span className="block text-[11px] text-[var(--muted)]">{t("best_match_note")}</span>}</span>
+            <Link href={BUILD_ROADMAP_HREF} className="shrink-0 text-sm font-semibold text-[var(--brand-ink)] underline">{t("change")}</Link>
+          </div>
+        )}
 
         {/* tiles grow to fill the free height on tall screens and shrink (never below a big tap target) on short ones */}
         <div className="grid max-h-[30rem] min-h-[14rem] flex-1 grid-cols-3 gap-2">
           {STUDENT_TILES.map((x) => (
-            <Link key={x.href} href={x.href} className="flex flex-col items-center justify-center rounded-2xl border-b-4 border-[var(--accent)] bg-[var(--card)] px-1 py-2 text-center text-[var(--brand-ink)] shadow-sm ring-1 ring-black/5 active:scale-95">
-              <span className="text-4xl leading-none">{x.icon}</span>
+            <Link key={x.href} href={x.href} className="flex flex-col items-center justify-center rounded-2xl bg-[var(--card)] px-1 py-2 text-center text-[var(--brand-ink)] shadow-sm ring-1 ring-black/10 active:scale-95">
+              <Icon name={x.icon} size={36} className="text-[var(--brand)]" />
               <span className="mt-2 font-semibold leading-tight text-sm">{t(x.key)}</span>
             </Link>
           ))}
         </div>
 
         <ProShelf />
+
+        <Link href="/ask/" className="flex items-center gap-3 rounded-2xl bg-[var(--brand)] px-4 py-3 text-white shadow-sm active:scale-95">
+          <Icon name="chat" size={28} />
+          <span className="min-w-0 flex-1">
+            <span className="block text-base font-semibold">{t("home_ask")}</span>
+            <span className="block truncate text-xs text-white/80">{t("ask_ex1")}</span>
+          </span>
+          <Icon name="mic" size={20} />
+        </Link>
 
         </>
       )}

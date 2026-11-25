@@ -102,7 +102,7 @@ export default function AskPage() {
           <p className="text-sm">{t("ask_intro")}</p>
           <div className="mt-3 flex flex-col gap-2">
             {EXAMPLES.map((k) => (
-              <button key={k} onClick={() => ask(t(k))} className="rounded-xl bg-[var(--bg)] px-3 py-2 text-left text-sm ring-1 ring-black/10">💬 {t(k)}</button>
+              <button key={k} onClick={() => ask(t(k))} className="rounded-xl bg-[var(--bg)] px-3 py-2 text-left text-sm ring-1 ring-black/10"> {t(k)}</button>
             ))}
           </div>
         </Card>
@@ -112,13 +112,13 @@ export default function AskPage() {
           <div key={i} className={`flex flex-col ${m.from === "me" ? "items-end" : "items-start"}`}>
             {m.steps && m.steps.length > 0 && (
               <details className="mb-1 max-w-[88%] text-xs text-[var(--muted)]">
-                <summary className="cursor-pointer select-none">🧭 {t("agent_how", { n: m.steps.length })}</summary>
+                <summary className="cursor-pointer select-none">{t("agent_how", { n: m.steps.length })}</summary>
                 <div className="mt-1 flex flex-col items-start gap-1">{m.steps.map((s) => <StepBubble key={s.n} s={s} label={stepLabel(s)} />)}</div>
               </details>
             )}
             <div className={`max-w-[88%] rounded-2xl px-3 py-2 text-sm ${m.from === "me" ? "bg-[var(--brand)] text-white" : "bg-[var(--card)] ring-1 ring-black/5"}`}>
               <div className="whitespace-pre-line">{m.from === "raah" ? withCites(m.text, i) : m.text}</div>
-              {m.note && <div className="mt-1 text-xs text-[var(--muted)]">ℹ️ {m.note}</div>}
+              {m.note && <div className="mt-1 text-xs text-[var(--muted)]">{m.note}</div>}
               {m.cites && m.cites.length > 0 && (
                 <ol className="mt-2 space-y-1 border-t border-black/10 pt-2">
                   {m.cites.map((c) => (
@@ -139,7 +139,7 @@ export default function AskPage() {
         {busy && (
           <div className="flex flex-col items-start gap-1">
             {live.map((s) => <StepBubble key={s.n} s={s} label={stepLabel(s)} />)}
-            <div className="text-sm text-[var(--muted)]">🔎 {live.length ? t("agent_thinking") : t("ask_searching")}</div>
+            <div className="text-sm text-[var(--muted)]">{live.length ? t("agent_thinking") : t("ask_searching")}</div>
           </div>
         )}
         <div ref={end} />

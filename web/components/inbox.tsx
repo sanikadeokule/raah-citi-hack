@@ -33,11 +33,11 @@ export function TeacherInbox() {
     <div className="space-y-2">
       {unread.map((n) => (
         <Card key={n.id} className="border-l-4 border-[var(--accent)]">
-          <div className="text-xs text-[var(--muted)]">📣 {n.from || t("your_teacher")} · {new Date(n.created_at * 1000).toLocaleDateString()}</div>
+          <div className="text-xs text-[var(--muted)]">{n.from || t("your_teacher")} · {new Date(n.created_at * 1000).toLocaleDateString()}</div>
           <div className="mt-1 font-semibold">{t("teacher_recommends", { scheme: n.scheme_name })}</div>
           {n.plan_label && <div className="text-xs text-[var(--muted)]">{t("plan_for")}: {n.plan_label}</div>}
           {n.missing_docs?.length > 0 && (
-            <div className="mt-1 text-sm">📄 {t("missing_document")}: {n.missing_docs.map((m: any) => docLabel(m.doc)).join(", ")}</div>
+            <div className="mt-1 text-sm">{t("missing_document")}: {n.missing_docs.map((m: any) => docLabel(m.doc)).join(", ")}</div>
           )}
           <div className="mt-2 flex gap-2">
             <Link href={`/eligibility/?scheme=${n.scheme_id}${n.plan_id ? `&plan=${n.plan_id}` : ""}`} onClick={() => markRead(n.id)}

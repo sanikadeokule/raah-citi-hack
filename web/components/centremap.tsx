@@ -25,7 +25,7 @@ export function CentreMap({ centres, home }: { centres: any[]; home: { lat?: num
       if (home.lat != null && home.lon != null) {
         pts.push([home.lat, home.lon]);
         L.circleMarker([home.lat, home.lon], { radius: 9, color: "#fff", weight: 2, fillColor: THEME.saffron, fillOpacity: 1 })
-          .addTo(map).bindPopup(`🏠 ${home.label}`);
+          .addTo(map).bindPopup(`${home.label}`);
       }
       centres.filter((c) => c.lat != null).forEach((c, i) => {
         pts.push([c.lat, c.lon]);
@@ -41,7 +41,7 @@ export function CentreMap({ centres, home }: { centres: any[]; home: { lat?: num
     return () => { cancelled = true; map?.remove(); };
   }, [centres, home.lat, home.lon, home.label, online, t]);
 
-  if (!online) return <p className="mb-2 text-xs text-[var(--muted)]">🗺️ {t("map_offline")}</p>;
+  if (!online) return <p className="mb-2 text-xs text-[var(--muted)]">{t("map_offline")}</p>;
   return (
     <>
       <div ref={el} className="mb-1 h-56 w-full overflow-hidden rounded-xl ring-1 ring-black/10" role="img" aria-label={t("nearest_centres")} />

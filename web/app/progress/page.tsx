@@ -1,5 +1,6 @@
 "use client";
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { Icon } from "@/components/icon";
 import { useCallback, useEffect, useState } from "react";
 import { Badge, Card, Shell, Stat, Source } from "@/components/ui";
 import { inr } from "@/lib/engine";
@@ -49,7 +50,7 @@ export default function Progress() {
       {auth?.user.role !== "student" ? <Card>{t("progress_students_only")}</Card> : error ? <Card>{error}</Card> : !progress ? <Card>Loading…</Card> : <>
         <div className="grid grid-cols-2 gap-3">
           <div className="rounded-2xl bg-[var(--card)] p-4 shadow-sm ring-1 ring-black/5">
-            <span className="grid h-9 w-9 place-items-center rounded-full bg-emerald-100 text-lg dark:bg-emerald-900/30">✅</span>
+            <span className="grid h-9 w-9 place-items-center rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30"><Icon name="check" size={18} /></span>
             <div className="mt-2 text-3xl font-extrabold leading-none text-[var(--brand-ink)]">{doneCount}<span className="text-lg font-bold text-[var(--muted)]">/{totalCount}</span></div>
             <div className="mt-1 text-xs font-semibold text-[var(--muted)]">{t("progress_completed")}</div>
             <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[var(--bg)]">
@@ -57,7 +58,7 @@ export default function Progress() {
             </div>
           </div>
           <div className="rounded-2xl bg-[var(--card)] p-4 shadow-sm ring-1 ring-black/5">
-            <span className="grid h-9 w-9 place-items-center rounded-full bg-amber-100 text-lg dark:bg-amber-900/30">🏆</span>
+            <span className="grid h-9 w-9 place-items-center rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30"><Icon name="trophy" size={18} /></span>
             <div className="mt-2 text-3xl font-extrabold leading-none text-[var(--brand-ink)]">{averageQuizScore == null ? "—" : `${averageQuizScore}%`}</div>
             <div className="mt-1 text-xs font-semibold text-[var(--muted)]">{t("progress_score")}</div>
             <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[var(--bg)]">
@@ -67,7 +68,7 @@ export default function Progress() {
           </div>
         </div>
         <Card>
-          <h2 className="font-bold">💰 {t("progress_income_title")}</h2>
+          <h2 className="font-bold">{t("progress_income_title")}</h2>
           {progress.income_outlook ? <>
             <p className="mt-1 text-sm font-semibold">{progress.income_outlook.career}</p>
             <p className="mt-1 text-sm">{progress.income_outlook.income || t("progress_income_unknown")}</p>
@@ -77,7 +78,7 @@ export default function Progress() {
           </> : <p className="mt-1 text-sm text-[var(--muted)]">{t("progress_no_outlook")}</p>}
         </Card>
         <Card>
-          <h2 className="font-bold">📝 {t("progress_learn_quizzes")}</h2>
+          <h2 className="font-bold">{t("progress_learn_quizzes")}</h2>
           {!learnQuizzes.length ? <p className="mt-2 text-sm text-[var(--muted)]">{t("progress_no_learn_quizzes")}</p> : (
             <ul className="mt-2 divide-y divide-black/5">
               {learnQuizzes.map((q) => (
@@ -92,7 +93,7 @@ export default function Progress() {
         </Card>
         <Card>
           <div className="flex items-center justify-between gap-2">
-            <h2 className="font-bold">📚 {t("progress_modules")}</h2>
+            <h2 className="font-bold">{t("progress_modules")}</h2>
             <Badge>{progress.completed} {t("progress_completed_badge")}</Badge>
           </div>
           {!progress.modules.length ? <p className="mt-2 text-sm text-[var(--muted)]">{t("progress_no_modules")}</p> : (

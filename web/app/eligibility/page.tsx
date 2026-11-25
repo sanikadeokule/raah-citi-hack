@@ -2,6 +2,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useMemo, useState } from "react";
 import { Card, Shell } from "@/components/ui";
+import { Icon } from "@/components/icon";
 import { SchemeResult } from "@/components/plan";
 import { eligibility, eligibilityChanges, inr } from "@/lib/engine";
 import { useApp } from "@/lib/store";
@@ -11,7 +12,7 @@ import { Tabs } from "@/components/tabs";
 const PAGE = 5;
 const STATUSES = ["eligible", "eligible_missing_docs", "need_info", "not_eligible"] as const;
 type Status = (typeof STATUSES)[number];
-const STATUS_ICON: Record<Status, string> = { eligible: "✅", eligible_missing_docs: "📄", need_info: "❔", not_eligible: "❌" };
+const STATUS_ICON: Record<Status, string> = { eligible: "check", eligible_missing_docs: "doc", need_info: "question", not_eligible: "x" };
 
 export default function EligibilityPage() {
   const { data, profile, t } = useApp();
@@ -67,7 +68,7 @@ export default function EligibilityPage() {
               /* one line until tapped: the full list is long and pushes the scholarships off screen */
               <details className="group rounded-lg bg-[var(--bg)] px-3 py-2">
                 <summary className="flex cursor-pointer list-none items-center justify-between gap-2 font-semibold">
-                  <span>🔄 {t("elig_changed_short", { n: changes.changed.length })}</span>
+                  <span>{t("elig_changed_short", { n: changes.changed.length })}</span>
                   <span aria-hidden className="text-[var(--muted)] transition-transform group-open:rotate-90">›</span>
                 </summary>
                 <ul className="mt-2 space-y-1.5">
@@ -88,7 +89,7 @@ export default function EligibilityPage() {
       </Card>
       <div ref={pg.top} />
       <Tabs cols={2} value={status} onChange={setPicked}
-        tabs={STATUSES.map((s) => ({ key: s, label: `${STATUS_ICON[s]} ${t(`st_${s}`)}`, count: counts[s] || 0 }))} />
+        tabs={STATUSES.map((s) => ({ key: s, label: <span className="inline-flex items-center gap-1"><Icon name={STATUS_ICON[s]} size={14} />{t(`st_${s}`)}</span>, count: counts[s] || 0 }))} />
       {shown.length === 0 && <Card><p className="text-sm text-[var(--muted)]">{t("st_none")}</p></Card>}
       <div className="space-y-2">
         {pg.pageItems.map((e: any) => (

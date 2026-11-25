@@ -4,6 +4,7 @@
 // original underneath), deadline chip, "why you see this", and Open / Listen / Send to parent.
 // TeacherNotices is the teacher's panel: "Check official sites now" with live steps, then Verify / Hide.
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { Icon } from "@/components/icon";
 import { useCallback, useEffect, useState } from "react";
 import { Card, SpeakButton } from "@/components/ui";
 import { getKV, setKV } from "@/lib/db";
@@ -12,7 +13,7 @@ import { useApp } from "@/lib/store";
 type T = (k: string, vars?: Record<string, string | number>) => string;
 
 const CAT_ICON: Record<string, string> = {
-  result: "🏁", admit_card: "🎫", application: "📝", admission: "🏫", exam: "📅", scholarship: "💰", general: "📢",
+  result: "flag", admit_card: "doc", application: "pencil", admission: "school", exam: "calendar", scholarship: "rupee", general: "bell",
 };
 
 /** Whole days from today to an ISO date (negative when past). */
@@ -42,7 +43,7 @@ function DeadlineChip({ deadline, t, lang }: { deadline?: string | null; t: T; l
   return (
     <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold ${urgent
       ? "bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-200" : "bg-amber-100 text-amber-900 dark:bg-amber-900/30 dark:text-amber-200"}`}>
-      ⏰ {label}
+       {label}
     </span>
   );
 }
@@ -77,7 +78,7 @@ export function NoticeCard({ n, unread, onOpen }: { n: any; unread?: boolean; on
     <li className={`rounded-2xl bg-[var(--card)] p-3 shadow-sm ring-1 ring-black/5 ${unread ? "border-l-4 border-[var(--brand)]" : ""}`}>
       <div className="flex flex-wrap items-center gap-1.5 text-xs">
         <span className="rounded-md bg-[var(--header-bg)] px-1.5 py-0.5 font-bold text-white">{n.source_short}</span>
-        <span className="text-[var(--muted)]">{CAT_ICON[cat] ?? "📢"} {catLabel === `notice_cat_${cat}` ? cat : catLabel}</span>
+        <span className="text-[var(--muted)]"><Icon name={CAT_ICON[cat] ?? "bell"} size={14} className="mr-1 align-[-2px]" />{catLabel === `notice_cat_${cat}` ? cat : catLabel}</span>
         {n.published && <span className="text-[var(--muted)]">· {t("notice_published", { date: fmtDate(n.published, lang) })}</span>}
         {unread && <span className="ml-auto h-2.5 w-2.5 rounded-full bg-[var(--brand)]" aria-label="unread" />}
       </div>
@@ -88,20 +89,20 @@ export function NoticeCard({ n, unread, onOpen }: { n: any; unread?: boolean; on
       {(n.deadline || why) && (
         <div className="mt-2 flex flex-col items-start gap-1">
           <DeadlineChip deadline={n.deadline} t={t} lang={lang} />
-          {why && <p className="text-xs text-[var(--brand-ink)]">💡 {why}</p>}
+          {why && <p className="text-xs text-[var(--brand-ink)]">{why}</p>}
         </div>
       )}
 
       <p className="mt-2 text-[11px] text-[var(--muted)]">
-        {n.verified ? `✅ ${t("notice_verified")}` : `ℹ️ ${t("notice_unverified")}`}
+        {n.verified ? `${t("notice_verified")}` : `${t("notice_unverified")}`}
       </p>
 
       <div className="mt-2 flex flex-wrap items-center gap-2">
         <a href={n.url} target="_blank" rel="noreferrer" onClick={onOpen}
-          className="rounded-full bg-[var(--brand)] px-3 py-1.5 text-xs font-semibold text-white">🔗 {t("notice_open")}</a>
+          className="rounded-full bg-[var(--brand)] px-3 py-1.5 text-xs font-semibold text-white"> {t("notice_open")}</a>
         <SpeakButton text={speak} label="" />
         <a href={`https://wa.me/?text=${encodeURIComponent(wa)}`} target="_blank" rel="noreferrer"
-          className="rounded-full bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white">💬 {t("notice_send_parent")}</a>
+          className="rounded-full bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white"> {t("notice_send_parent")}</a>
       </div>
     </li>
   );
@@ -117,8 +118,8 @@ export function SourcesFooter({ sources, lastChecked }: { sources: any[]; lastCh
   const stale = sources.filter((s) => s.status === "snapshot" || s.status === "error");
   return (
     <div className="space-y-1 px-1 text-center text-xs text-[var(--muted)]">
-      <p>🛰️ {t("notices_footer", { time, n: sources.length })}</p>
-      {stale.map((s) => <p key={s.id}>⚠️ {t("notices_snapshot", { site: s.short })}</p>)}
+      <p>{t("notices_footer", { time, n: sources.length })}</p>
+      {stale.map((s) => <p key={s.id}>{t("notices_snapshot", { site: s.short })}</p>)}
       <p className="flex flex-wrap justify-center gap-x-2">
         {sources.map((s) => <a key={s.id} href={s.url} target="_blank" rel="noreferrer" className="underline">{s.short}</a>)}
       </p>
@@ -210,17 +211,17 @@ export function TeacherNotices() {
   return (
     <>
       <Card className="space-y-2">
-        <h2 className="font-bold">🛰️ {t("teacher_tab_notices")}</h2>
+        <h2 className="font-bold">{t("teacher_tab_notices")}</h2>
         <p className="text-xs text-[var(--muted)]">{t("notices_teacher_intro")}</p>
         <button onClick={checkNow} disabled={running}
           className="w-full rounded-xl bg-[var(--accent)] py-3 font-semibold text-white disabled:opacity-60">
-          {running ? `⏳ ${t("notices_checking")}` : `🔄 ${t("notices_check_now")}`}
+          {running ? `${t("notices_checking")}` : `${t("notices_check_now")}`}
         </button>
         {lines.length > 0 && (
           <ul className="space-y-1 rounded-xl bg-[var(--bg)] p-2 text-xs" aria-live="polite">
             {lines.map((l) => (
               <li key={l.key} className={l.tone === "done" ? "font-semibold text-[var(--good)]" : l.tone === "warn" ? "text-[var(--bad)]" : ""}>
-                {l.tone === "ok" ? "✓" : l.tone === "warn" ? "⚠" : l.tone === "done" ? "✅" : "…"} {l.text}
+                {l.tone === "ok" ? "✓" : l.tone === "warn" ? "⚠" : l.tone === "done" ? "✓" : "…"} {l.text}
               </li>
             ))}
           </ul>
@@ -235,14 +236,14 @@ export function TeacherNotices() {
               <div className="flex flex-wrap items-center gap-1.5 text-xs">
                 <span className="rounded-md bg-[var(--header-bg)] px-1.5 py-0.5 font-bold text-white">{n.source_short}</span>
                 {n.published && <span className="text-[var(--muted)]">{fmtDate(n.published)}</span>}
-                {n.verified && <span className="text-[var(--good)]">✅ {t("notice_verified")}</span>}
+                {n.verified && <span className="text-[var(--good)]">{t("notice_verified")}</span>}
                 {n.hidden && <span className="text-[var(--muted)]">· {t("notices_hidden")}</span>}
               </div>
               <a href={n.url} target="_blank" rel="noreferrer" className="mt-1 block font-medium leading-snug underline-offset-2 hover:underline">{n.title}</a>
               <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-[var(--muted)]">
-                <span>👥 {t("notices_students", { n: n.students })}</span>
+                <span>{t("notices_students", { n: n.students })}</span>
                 {n.exams.length > 0 && <span>· {n.exams.map((e: any) => e.name).join(", ")}</span>}
-                {n.deadline && <span>· ⏰ {fmtDate(n.deadline)}</span>}
+                {n.deadline && <span>·  {fmtDate(n.deadline)}</span>}
               </div>
               <div className="mt-2 flex gap-2">
                 {!n.verified && <button onClick={() => act(n.id, "verify")} className="rounded-full bg-[var(--brand)] px-3 py-1 text-xs font-semibold text-white">✓ {t("notices_verify")}</button>}

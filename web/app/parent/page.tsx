@@ -210,17 +210,17 @@ function Dashboard({ token, studentName, onSignOut, onExpired }: { token: string
       </Card>
 
       <Card>
-        <h3 className="font-bold">📋 {t("exams")}</h3>
+        <h3 className="font-bold">{t("exams")}</h3>
         {!data.watched_exams.length
           ? <p className="mt-2 text-sm text-[var(--muted)]">{t("no_exams")}</p>
           : <ul className="mt-2 space-y-1">{data.watched_exams.map((id: string) => (
               <li key={id} className="flex items-center gap-2 rounded-xl bg-[var(--bg)] px-3 py-2 text-sm">
-                <span className="text-base">📝</span><span className="font-medium">{id}</span>
+                <span className="text-base"></span><span className="font-medium">{id}</span>
               </li>))}</ul>}
       </Card>
 
       <Card>
-        <h3 className="font-bold">📚 {t("lessons")}</h3>
+        <h3 className="font-bold">{t("lessons")}</h3>
         {!data.lessons_done.length
           ? <p className="mt-2 text-sm text-[var(--muted)]">{t("no_lessons")}</p>
           : <ul className="mt-2 space-y-1 text-sm">{data.lessons_done.slice(0, 10).map((l: any, i: number) => (
@@ -231,7 +231,7 @@ function Dashboard({ token, studentName, onSignOut, onExpired }: { token: string
       </Card>
 
       <Card>
-        <h3 className="font-bold">🔔 {t("notifications")}</h3>
+        <h3 className="font-bold">{t("notifications")}</h3>
         {!data.notifications.length
           ? <p className="mt-2 text-sm text-[var(--muted)]">{t("no_notifs")}</p>
           : <ul className="mt-2 space-y-1 text-sm">{data.notifications.slice(0, 8).map((n: any) => (
