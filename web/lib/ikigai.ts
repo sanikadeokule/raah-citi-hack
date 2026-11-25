@@ -13,8 +13,8 @@ export type Circle = "love" | "good" | "pays" | "needed";
 export interface Check { level: Level; text: string; vars?: Record<string, string | number>; key: string }
 export interface Spot { career: any; plan: any; checks: Record<Circle, Check>; score: number; parts: Record<Circle, number>; pct: number }
 
-/** How much each circle counts towards the match percentage (love 20, good at 20, pays 40, needed 20). */
-export const IKIGAI_WEIGHTS: Record<Circle, number> = { love: 0.2, good: 0.2, pays: 0.4, needed: 0.2 };
+/** How much each circle counts towards the match percentage (love 25, good at 25, pays 30, needed 20). */
+export const IKIGAI_WEIGHTS: Record<Circle, number> = { love: 0.25, good: 0.25, pays: 0.3, needed: 0.2 };
 const levelOf = (x: number): Level => (x >= 0.6 ? "yes" : x >= 0.3 ? "part" : "no");
 
 /** Tags offered as quick answers; any of the dataset's tags can still be typed, spoken or added. */
