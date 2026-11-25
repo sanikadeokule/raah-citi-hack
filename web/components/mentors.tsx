@@ -41,7 +41,7 @@ export function Mentors({ career, top }: { career: CareerChoice; top: string[] }
 
   return (
     <Card>
-      <h2 className="mb-2 font-bold">🤝 {t("mentors")} <Badge>{list.length}</Badge></h2>
+      <h2 className="mb-2 font-bold">{t("mentors")} <Badge>{list.length}</Badge></h2>
       <div className="grid gap-2 text-sm">
         <label className="flex items-center gap-2">{t("within_km", { km: maxKm })}
           <input type="range" min={5} max={100} step={5} value={maxKm} onChange={(e) => setMaxKm(Number(e.target.value))} className="flex-1" />
@@ -55,11 +55,11 @@ export function Mentors({ career, top }: { career: CareerChoice; top: string[] }
               <div><b>{m.name}</b><div className="text-xs text-[var(--muted)]">{m.works_as}</div></div>
               <span className="whitespace-nowrap text-xs text-[var(--muted)]">{placeLabel(t, m.taluka)}{m.km !== null ? ` · ~${Math.round(m.km)} km` : ""}</span>
             </div>
-            <div className="mt-1">💬 {m.helps_with}</div>
-            <div className="text-xs text-[var(--muted)]">🗣️ {m.languages.join(", ")} · {m.mode} · {m.available}</div>
+            <div className="mt-1">{m.helps_with}</div>
+            <div className="text-xs text-[var(--muted)]">{m.languages.join(", ")} · {m.mode} · {m.available}</div>
             {m.note && <div className="mt-1"><Badge tone="amber">{m.note}</Badge></div>}
             {contacts[m.id] ? (
-              <a href={`tel:${contacts[m.id].replace(/\s/g, "")}`} className="mt-2 block rounded-lg bg-[var(--good,#138808)] py-2 text-center font-semibold text-white">📞 {contacts[m.id]}</a>
+              <a href={`tel:${contacts[m.id].replace(/\s/g, "")}`} className="mt-2 block rounded-lg bg-[var(--good,#138808)] py-2 text-center font-semibold text-white">{contacts[m.id]}</a>
             ) : asking === m.id ? (
               <div className="mt-2 rounded-lg bg-[var(--card)] p-2 ring-1 ring-black/10">
                 <p className="text-xs">{t("mentor_consent", { name: m.name })}</p>
@@ -71,7 +71,7 @@ export function Mentors({ career, top }: { career: CareerChoice; top: string[] }
             ) : (
               <button onClick={() => setAsking(m.id)} disabled={!online || auth?.user.role !== "student"}
                 className="mt-2 w-full rounded-lg bg-[var(--brand-soft)] py-2 text-sm font-semibold text-[var(--brand-ink)] disabled:opacity-50">
-                {online ? `🙋 ${t("request_mentor")}` : t("needs_internet")}
+                {online ? `${t("request_mentor")}` : t("needs_internet")}
               </button>
             )}
           </li>

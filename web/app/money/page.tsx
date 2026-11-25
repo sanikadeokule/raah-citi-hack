@@ -1,5 +1,6 @@
 "use client";
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { Mark } from "@/components/icon";
 import { useEffect, useState } from "react";
 import { Badge, Card, Shell } from "@/components/ui";
 import { inr } from "@/lib/engine";
@@ -51,9 +52,9 @@ export default function Money() {
             <div>Consent <code className="text-xs">{consent.consentId.slice(0, 8)}…</code> <Badge tone="green">{consent.status}</Badge> · purpose: {consent.ConsentDetail.Purpose.text}</div>
             {fi && (
               <ul className="rounded-lg bg-[var(--bg)] p-2">
-                <li>{fi.analysis.account_active ? "✅" : "❌"} Bank account active ({fi.FI.Account.maskedAccNumber})</li>
-                <li>{fi.analysis.income_band_matches ? "✅" : "⚠️"} Income band matches: est. {inr(fi.analysis.estimated_income_annual)} vs declared {inr(fi.analysis.declared_income_annual)}</li>
-                <li>{fi.analysis.ready_for_dbt ? "✅ Ready for DBT" : "⚠️ Not ready for DBT"}</li>
+                <li><Mark kind={fi.analysis.account_active ? "yes" : "no"} /> Bank account active ({fi.FI.Account.maskedAccNumber})</li>
+                <li><Mark kind={fi.analysis.income_band_matches ? "yes" : "warn"} /> Income band matches: est. {inr(fi.analysis.estimated_income_annual)} vs declared {inr(fi.analysis.declared_income_annual)}</li>
+                <li><Mark kind={fi.analysis.ready_for_dbt ? "yes" : "warn"} /> {fi.analysis.ready_for_dbt ? "Ready for DBT" : "Not ready for DBT"}</li>
               </ul>
             )}
           </div>

@@ -2,6 +2,7 @@
 // Raah Pro gate. The server decides who has Pro (users.is_pro, or any teacher); there is no payment flow yet.
 // A student without Pro sees the feature behind a frosted glass with an "upgrade to unlock" banner,
 // so they know what they would get.
+import { Icon } from "@/components/icon";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { getKV, setKV } from "@/lib/db";
@@ -71,7 +72,7 @@ export function ProGate({ children }: { children: React.ReactNode }) {
       <div aria-hidden inert className="pointer-events-none max-h-[34rem] select-none overflow-hidden opacity-60 blur-[3px]">{children}</div>
       <div className="absolute inset-x-0 top-6 z-10 px-2">
         <div role="alert" className="rounded-2xl bg-[var(--card)] p-5 text-center shadow-xl ring-2 ring-amber-400">
-          <div className="text-4xl">🔒</div>
+          <div className="text-4xl"></div>
           <div className="mt-2 flex items-center justify-center gap-2"><ProBadge /></div>
           <h2 className="mt-2 text-lg font-bold">{t("title")}</h2>
           <p className="mt-1 text-sm text-[var(--muted)]">{t("text")}</p>
@@ -94,7 +95,7 @@ export function ProShelf() {
         {PRO_FEATURES.map((f) => (
           <Link key={f.href} href={f.href}
             className="flex flex-col items-center rounded-2xl bg-gradient-to-b from-amber-50 to-[var(--card)] px-1 py-2 text-center ring-1 ring-amber-300 active:scale-95 dark:from-amber-900/20">
-            <span className="text-2xl leading-none">{f.icon}</span>
+            <Icon name={f.icon} size={24} className="text-[var(--brand)]" />
             <span className="mt-1 text-xs font-semibold leading-tight text-[var(--brand-ink)]">{pick(f.title, lang)}</span>
             <span className="text-[10px] leading-tight text-[var(--muted)]">{pick(f.sub, lang)}</span>
           </Link>

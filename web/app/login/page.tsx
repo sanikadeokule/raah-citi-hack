@@ -1,4 +1,5 @@
 "use client";
+import { Icon } from "@/components/icon";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { Card, Shell } from "@/components/ui";
@@ -91,7 +92,7 @@ function LoginForm() {
         {(["student", "teacher"] as const).map((r) => (
           <button key={r} onClick={() => { setRole(r); setError(null); }}
             className={`rounded-xl py-3 font-semibold ${role === r ? "bg-[var(--brand)] text-white" : "bg-[var(--bg)]"}`}>
-            {r === "student" ? "🎒" : "👩‍🏫"} {t(r === "student" ? "role_student" : "role_teacher")}
+            {r === "student" ? "" : ""} {t(r === "student" ? "role_student" : "role_teacher")}
           </button>
         ))}
       </div>
@@ -100,12 +101,12 @@ function LoginForm() {
         {(["register", "signin"] as const).map((m) => (
           <button key={m} onClick={() => switchMode(m)}
             className={`rounded-lg py-2 font-semibold ${mode === m ? "bg-[var(--card)] text-[var(--brand-ink)] shadow-sm" : "text-[var(--muted)]"}`}>
-            {m === "register" ? `📝 ${t("register")}` : `🔑 ${t("sign_in")}`}
+            {m === "register" ? `${t("register")}` : `${t("sign_in")}`}
           </button>
         ))}
       </div>
 
-      {notice && <p className="rounded-lg bg-emerald-50 p-2 text-sm text-emerald-800">✅ {notice}</p>}
+      {notice && <p className="rounded-lg bg-emerald-50 p-2 text-sm text-emerald-800">{notice}</p>}
 
       {mode === "register" && (
         <label className="block text-sm">
@@ -124,7 +125,7 @@ function LoginForm() {
       </label>
       {pinInput(pin, setPin, t("pin"), mode === "register" ? "new-password" : "current-password")}
       {mode === "register" && pinInput(pin2, setPin2, t("pin_again"), "new-password")}
-      {mode === "register" && <p className="text-xs text-[var(--muted)]">🔒 {t("pin_hint")}</p>}
+      {mode === "register" && <p className="text-xs text-[var(--muted)]">{t("pin_hint")}</p>}
       {mode === "register" && role === "teacher" && <p className="text-xs text-[var(--muted)]">{t("teacher_register_note")}</p>}
 
       <button onClick={mode === "register" ? register : login} disabled={busy || !canSubmit}
@@ -164,7 +165,7 @@ export default function LoginPage() {
   return (
     <Shell title={t("login_title")} back={null} publicPage>
       <div className="py-4 text-center">
-        <div className="text-5xl">🧭</div>
+        <Icon name="compass" size={52} className="text-[var(--brand)]" />
         <h2 className="mt-2 text-2xl font-bold text-[var(--brand-ink)]">{t("app_name")}</h2>
         <p className="text-sm text-[var(--muted)]">{t("tagline")}</p>
       </div>

@@ -41,12 +41,12 @@ function PlanView() {
       <WhatIf r={r} opts={opts} setOpts={setOpts} />
 
       <Card>
-        <h2 className="mb-1 text-lg font-bold">📈 {t("cumulative")}</h2>
+        <h2 className="mb-1 text-lg font-bold">{t("cumulative")}</h2>
         <CashChart results={[r]} />
       </Card>
 
       <Card>
-        <h2 className="mb-2 text-lg font-bold">🎓 {t("eligibility")}</h2>
+        <h2 className="mb-2 text-lg font-bold">{t("eligibility")}</h2>
         <div className="space-y-2">
           {r.eligibility.filter((e: any) => e.status !== "not_eligible").slice(0, 5).map((e: any, i: number) => <SchemeResult key={e.id} e={e} open={i === 0} />)}
         </div>
@@ -58,7 +58,7 @@ function PlanView() {
       <ParentNote r={r} />
 
       <Card>
-        <h2 className="mb-2 font-bold">⚖️ {t("compare")}</h2>
+        <h2 className="mb-2 font-bold">{t("compare")}</h2>
         <div className="flex flex-wrap gap-2">
           {others.map((p: any) => (
             <Link key={p.id} href={`/compare/?a=${id}&b=${p.id}`} className="rounded-full bg-[var(--bg)] px-3 py-1.5 text-sm ring-1 ring-black/10">vs {p.label}</Link>

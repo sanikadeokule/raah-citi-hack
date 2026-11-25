@@ -1,5 +1,6 @@
 "use client";
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { Icon } from "@/components/icon";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -27,7 +28,7 @@ function WhyLine({ s, profile, lang }: { s: any; profile: any; lang: string }) {
     });
     return () => { live = false; };
   }, [s.career.id, profile, lang]);
-  return <p className="mt-1 text-sm">{ai ? <>✨ {ai}</> : s.why}</p>;
+  return <p className="mt-1 text-sm">{ai ? <> {ai}</> : s.why}</p>;
 }
 
 function flagBadges(c: any, t: (k: string) => string) {
@@ -65,16 +66,16 @@ export default function CareersPage() {
   return (
     <Shell title={t("home_careers")}>
       <div className="flex gap-2">
-        {tabBtn("top", `⭐ ${t("shortlist")}`)}
+        {tabBtn("top", `${t("shortlist")}`)}
         {tabBtn("all", t("all_careers", { n: data?.careers?.length ?? 0 }))}
       </div>
       {tab === "top" && <Card>
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold">⭐ {t("shortlist")}</h2>
+          <h2 className="text-lg font-bold">{t("shortlist")}</h2>
           <Link href="/profile/" className="text-sm underline">{t("edit_profile")}</Link>
         </div>
         <p className="text-xs text-[var(--muted)]">{(profile?.interests || []).map((x: string) => tagLabel(t, x)).join(", ")}</p>
-        <p className="mt-1 text-xs font-medium text-[var(--brand-ink)]">🗺️ {t("rm_tap_hint")}</p>
+        <p className="mt-1 text-xs font-medium text-[var(--brand-ink)]">{t("rm_tap_hint")}</p>
         <ul className="mt-2 space-y-2">
           {top.map((s: any, i: number) => {
             const r = s.plan_id ? quick(s.plan_id) : null;
@@ -100,7 +101,7 @@ export default function CareersPage() {
                   <p className="mt-1 text-xs text-[var(--muted)]">{s.career.income_text}</p>
                 )}
                 <div className="mt-2 flex items-center justify-between rounded-lg bg-[var(--brand-soft)] px-3 py-2 text-sm font-semibold text-[var(--brand-ink)]">
-                  <span>🗺️ {t("rm_see")}</span><span>›</span>
+                  <span>{t("rm_see")}</span><span>›</span>
                 </div>
               </li>
             );
@@ -110,13 +111,13 @@ export default function CareersPage() {
       {/* the Government of India's own career portal, for careers beyond this list */}
       <a href={NCS_URL} target="_blank" rel="noreferrer"
         className="flex items-center gap-3 rounded-xl bg-[var(--card)] p-3 text-sm ring-1 ring-black/5 active:scale-[.98]">
-        <span className="text-2xl">🏛️</span>
+        <Icon name="building" size={24} className="text-[var(--brand)]" />
         <span className="min-w-0 flex-1">
           <span className="block font-semibold">{t("careers_gov_title")}</span>
           <span className="block text-xs text-[var(--muted)]">{t("careers_gov_sub")}</span>
           <span className="block truncate text-xs font-semibold text-[var(--brand-ink)] underline">ncs.gov.in</span>
         </span>
-        <span aria-hidden className="text-lg text-[var(--muted)]">↗</span>
+        <span aria-hidden className="text-lg text-[var(--muted)]"></span>
       </a>
       {tab === "all" && <Card>
         <h2 className="text-lg font-bold">{t("all_careers", { n: all.length })}</h2>
@@ -132,7 +133,7 @@ export default function CareersPage() {
                   <div className="text-xs text-[var(--muted)]">{c.income_estimate && <Badge tone="amber">{t("estimate")}</Badge>} {c.income_text}</div>
                 </div>
                 <span className="flex shrink-0 flex-col items-end gap-1">
-                <span className="rounded-full bg-[var(--brand)] px-3 py-1 text-xs font-semibold text-white">🗺️</span>
+                <span className="rounded-full bg-[var(--brand)] px-3 py-1 text-xs font-semibold text-white"><Icon name="map" size={14} className="align-[-2px]" /></span>
                 {plans[c.id] && <Link href={`/plan/?id=${plans[c.id].id}`} className="shrink-0 rounded-full bg-[var(--brand-soft)] px-3 py-1 text-xs font-semibold text-[var(--brand-ink)]">₹ plan</Link>}
                 </span>
               </div>

@@ -76,7 +76,7 @@ export function VoiceNote({ text, name }: { text: string; name?: string }) {
 
   return (
     <div className="mt-3 rounded-xl bg-[var(--bg)] p-3">
-      <div className="text-sm font-semibold">🎙️ {t("voice_note")}</div>
+      <div className="text-sm font-semibold">{t("voice_note")}</div>
       {!clip && state === "idle" && (
         <button onClick={make} className="mt-2 w-full rounded-lg bg-[var(--brand)] py-2 text-sm font-semibold text-white">{t("make_voice_note")}</button>
       )}
@@ -84,20 +84,20 @@ export function VoiceNote({ text, name }: { text: string; name?: string }) {
       {(state === "record" || state === "recording") && (
         <div className="mt-2 space-y-2">
           <p className="text-xs text-[var(--muted)]">{t("record_hint")}</p>
-          {problem && <p role="alert" className="rounded-lg bg-amber-100 p-2 text-xs text-amber-900">⚠️ {t(`voice_err_${problem}`)}</p>}
+          {problem && <p role="alert" className="rounded-lg bg-amber-100 p-2 text-xs text-amber-900">{t(`voice_err_${problem}`)}</p>}
           <button onClick={() => (state === "recording" ? rec.current?.stop() : startRec())}
             className={`w-full rounded-lg py-2 text-sm font-semibold text-white ${state === "recording" ? "animate-pulse bg-[var(--bad)]" : "bg-[var(--accent)]"}`}>
-            {state === "recording" ? `⏹ ${t("stop_recording")}` : `⏺ ${t("record_own")}`}
+            {state === "recording" ? `${t("stop_recording")}` : `⏺ ${t("record_own")}`}
           </button>
         </div>
       )}
       {clip && (
         <div className="mt-2 space-y-2">
           <audio controls src={clip.url} className="w-full" onError={() => setProblem("play")} />
-          {problem === "play" && <p role="alert" className="rounded-lg bg-amber-100 p-2 text-xs text-amber-900">⚠️ {t("voice_err_play")}</p>}
+          {problem === "play" && <p role="alert" className="rounded-lg bg-amber-100 p-2 text-xs text-amber-900">{t("voice_err_play")}</p>}
           <div className="flex gap-2">
-            {canShare() && <button onClick={share} className="flex-1 rounded-lg bg-[#25D366] py-2 text-sm font-semibold text-white">📤 {t("share_audio")}</button>}
-            <a href={clip.url} download={fileName()} className="flex-1 rounded-lg bg-[var(--card)] py-2 text-center text-sm ring-1 ring-black/10">⬇️ {t("download_audio")}</a>
+            {canShare() && <button onClick={share} className="flex-1 rounded-lg bg-[#25D366] py-2 text-sm font-semibold text-white">{t("share_audio")}</button>}
+            <a href={clip.url} download={fileName()} className="flex-1 rounded-lg bg-[var(--card)] py-2 text-center text-sm ring-1 ring-black/10">{t("download_audio")}</a>
             <button onClick={() => { setClip(null); setState("idle"); }} className="rounded-lg px-3 text-sm underline">{t("redo")}</button>
           </div>
         </div>

@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { LANGS, useApp } from "@/lib/store";
 import { ProfileMenu } from "@/components/profilemenu";
+import { Icon } from "@/components/icon";
 import { ROADMAP_HREF } from "@/lib/roadmap";
 import { cachedAudio, fetchAudio, micErrorKind, micProblem, pickVoice, startRecording, transcribe, voiceStatus, type Recording, type VoiceProblem } from "@/lib/audio";
 
@@ -17,7 +18,7 @@ export function Shell({ title, back = "/", role = "any", publicPage = false, fit
   const path = usePathname();
   const needsLogin = !publicPage && authReady && !auth;
   useEffect(() => {
-    if (needsLogin) router.replace(`/login/?next=${encodeURIComponent(path)}${role === "teacher" ? "&role=teacher" : ""}`);
+    if (needsLogin) router.replace(path === "/" ? "/start/" : `/login/?next=${encodeURIComponent(path)}${role === "teacher" ? "&role=teacher" : ""}`);
   }, [needsLogin, path, role, router]);
   const wrongRole = !publicPage && auth && role === "teacher" && auth.user.role !== "teacher";
   const ready = publicPage || (authReady && auth);
@@ -38,8 +39,13 @@ export function Shell({ title, back = "/", role = "any", publicPage = false, fit
           <Link href={ROADMAP_HREF} title={t("my_roadmap")} aria-label={t("my_roadmap")}
             aria-current={onRoadmap ? "page" : undefined}
             className={`grid h-8 w-8 place-items-center rounded-full text-lg active:scale-90 ${onRoadmap ? "bg-white/30 ring-2 ring-[var(--saffron)]" : "bg-white/15"}`}>
-            🗺️
+            <Icon name="map" size={18} />
           </Link>
+        )}
+        {/* alerts sit in the top bar for every student */}
+        {auth?.user.role === "student" && (
+          <Link href="/notifications/" title={t("alerts")} aria-label={t("alerts")}
+            className="grid h-8 w-8 place-items-center rounded-full bg-white/15 active:scale-90"><Icon name="bell" size={18} /></Link>
         )}
         <select aria-label="language" value={lang} onChange={(e) => setLang(e.target.value)}
           className="h-8 rounded-full bg-white/15 px-2 text-sm font-semibold">
@@ -49,11 +55,11 @@ export function Shell({ title, back = "/", role = "any", publicPage = false, fit
       </header>
       <div aria-hidden className="tricolour" />
       </div>
-      {!online && <div className="bg-amber-500 px-4 py-2 text-center text-sm font-medium text-black">📴 {t("offline_banner")}</div>}
+      {!online && <div className="bg-amber-500 px-4 py-2 text-center text-sm font-medium text-black"><Icon name="offline" size={16} className="mr-1 align-[-3px]" />{t("offline_banner")}</div>}
       <main className={fit ? "flex flex-1 flex-col gap-3 p-3" : "space-y-4 p-4"}>
         {!ready ? <Loading /> : wrongRole ? (
           <Card>
-            <p>🔒 {t("teacher_only")}</p>
+            <p><Icon name="lock" size={16} className="mr-1 align-[-3px]" />{t("teacher_only")}</p>
             <button onClick={async () => { await signOut(); router.replace(`/login/?next=${encodeURIComponent(path)}&role=teacher`); }}
               className="mt-3 w-full rounded-xl bg-[var(--brand)] py-3 font-semibold text-white">{t("sign_in_teacher")}</button>
           </Card>
@@ -175,7 +181,7 @@ export function SpeakButton({ text, label, cache, lang: speechLanguage }: { text
     speakDevice(id);
   };
   useEffect(() => () => { window.speechSynthesis?.cancel(); audio.current?.pause(); }, []);
-  const icon = state === "on" ? "■" : state === "loading" ? "…" : state === "error" ? "⚠️" : "🔊";
+  const icon = <Icon name={state === "on" ? "stop" : state === "error" ? "warning" : "speaker"} size={16} className="align-[-3px]" />;
   const text_ = label ?? (state === "on" ? t("stop") : state === "error" ? t("voice_retry") : t("play"));
   return (
     <button onClick={play} aria-live="polite" title={state === "error" ? t("voice_err_play") : undefined}
@@ -259,7 +265,7 @@ export function MicButton({ onText }: { onText: (s: string, detectedLang?: strin
   return (
     <button onClick={click} aria-label={state === "listening" ? t("voice_listening") : t("mic")} aria-pressed={state === "listening"}
       className={`h-12 w-12 shrink-0 rounded-full text-xl text-white shadow ${state === "listening" ? "animate-pulse bg-rose-500" : state === "working" ? "bg-[var(--muted)]" : "bg-[var(--brand)]"}`}>
-      {state === "working" ? "…" : state === "listening" ? "⏹" : "🎤"}
+      {state === "working" ? "…" : <Icon name={state === "listening" ? "stop" : "mic"} size={22} />}
     </button>
   );
 }

@@ -1,5 +1,6 @@
 "use client";
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { Icon } from "@/components/icon";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Badge, Card, Shell, Source } from "@/components/ui";
@@ -85,12 +86,12 @@ function CentreCard({ c, t, profile, lang }: { c: any; t: (k: string) => string;
             <div className="mt-1.5 flex flex-wrap gap-2">
               {distLabel && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-[var(--bg)] px-2 py-0.5 text-[10px] text-[var(--muted)] ring-1 ring-black/8">
-                  📍 {distLabel}
+                  <Icon name="pin" size={14} className="mr-1 align-[-2px]" />{distLabel}
                 </span>
               )}
               {fees && (
                 <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ring-1 ${fees.isFree ? "bg-green-50 text-green-700 ring-green-200 dark:bg-green-900/30 dark:text-green-300 dark:ring-green-800" : "bg-[var(--bg)] text-[var(--muted)] ring-black/8"}`}>
-                  💰 {fees.isFree ? t("colleges_free") : fees.label}
+                  <Icon name="rupee" size={14} className="mr-1 align-[-2px]" />{fees.isFree ? t("colleges_free") : fees.label}
                 </span>
               )}
             </div>
@@ -103,30 +104,30 @@ function CentreCard({ c, t, profile, lang }: { c: any; t: (k: string) => string;
         <div className="border-t border-black/6 px-4 py-3 space-y-2 bg-[var(--bg)]">
           {distLabel && (
             <div className="flex items-center gap-2 text-xs text-[var(--muted)]">
-              <span className="text-base">📍</span>
+              <Icon name="pin" size={16} />
               <span>{distLabel}</span>
             </div>
           )}
           {fees ? (
             <div className="flex items-center gap-2 text-xs">
-              <span className="text-base">💰</span>
+              <Icon name="rupee" size={16} />
               <span className={fees.isFree ? "font-semibold text-green-700 dark:text-green-400" : "text-[var(--muted)]"}>{fees.label}</span>
             </div>
           ) : (
             <div className="flex items-center gap-2 text-xs text-[var(--muted)]">
-              <span className="text-base">💰</span>
+              <Icon name="rupee" size={16} />
               <span>{t("fees_not_listed")}</span>
             </div>
           )}
           {courses && (
             <div className="flex items-start gap-2 text-xs text-[var(--muted)]">
-              <span className="text-base mt-0.5">🎓</span>
+              <Icon name="graduation" size={16} className="mt-0.5" />
               <span>{courses}</span>
             </div>
           )}
           {c.address && (
             <div className="flex items-start gap-2 text-xs text-[var(--muted)]">
-              <span className="text-base mt-0.5">🏛️</span>
+              <Icon name="building" size={16} className="mt-0.5" />
               <span>{c.address}</span>
             </div>
           )}
@@ -184,10 +185,10 @@ export default function CollegesPage() {
 
   return (
     <Shell title={t("colleges_title")}>
-      <Tabs value={tab} onChange={setTab} tabs={[{ key: "exams", label: `📝 ${t("home_exams")}` }, { key: "colleges", label: `🏫 ${t("adm_tab_colleges")}` }]} />
+      <Tabs value={tab} onChange={setTab} tabs={[{ key: "exams", label: `${t("home_exams")}` }, { key: "colleges", label: `${t("adm_tab_colleges")}` }]} />
       {tab === "exams" ? <ExamsList /> : noRoadmap ? (
         <Card className="text-center space-y-3">
-          <p className="text-4xl">🎓</p>
+          <Icon name="graduation" size={40} className="text-[var(--brand)]" />
           <p className="text-sm text-[var(--muted)]">{t("colleges_no_roadmap")}</p>
           <Link href={BUILD_ROADMAP_HREF}
             className="inline-block rounded-xl bg-[var(--brand)] px-5 py-2 text-sm font-semibold text-white">
@@ -199,11 +200,11 @@ export default function CollegesPage() {
           <Card className="space-y-1">
             <p className="text-xs font-semibold text-[var(--muted)] uppercase tracking-wide">{t("home_careers")}</p>
             <p className="text-lg font-bold text-[var(--brand-ink)]">{careerName ?? careerId}</p>
-            {summary && <p className="mt-2 text-sm leading-relaxed">✨ {summary}</p>}
+            {summary && <p className="mt-2 text-sm leading-relaxed">{summary}</p>}
           </Card>
 
           <Card>
-            <h2 className="mb-3 font-bold">🏫 {t("colleges_centres")}</h2>
+            <h2 className="mb-3 font-bold">{t("colleges_centres")}</h2>
             {loading && <p className="text-sm text-[var(--muted)] animate-pulse">Loading…</p>}
             {!loading && centres.length === 0 && (
               <p className="text-sm text-[var(--muted)]">{t("colleges_no_centres")}</p>
@@ -240,7 +241,7 @@ export default function CollegesPage() {
 
           {(courses.length > 0 || loading) && (
             <Card>
-              <h2 className="mb-3 font-bold">💻 {t("colleges_online")}</h2>
+              <h2 className="mb-3 font-bold">{t("colleges_online")}</h2>
               {loading && courses.length === 0 && (
                 <p className="text-sm text-[var(--muted)] animate-pulse">Loading…</p>
               )}

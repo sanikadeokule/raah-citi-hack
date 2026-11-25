@@ -2,6 +2,7 @@
 // Financial aid calculator (Raah Pro). Course fee, length, family income and scholarships in;
 // net cost, education-loan eligibility, EMI and a payback timeline against the first job's pay out.
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { Icon } from "@/components/icon";
 import { useEffect, useMemo, useState } from "react";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Badge, Card, Shell, Source } from "@/components/ui";
@@ -101,7 +102,7 @@ const T: Record<string, Record<string, string>> = {
 };
 
 type Tab = "inputs" | "cost" | "loan" | "emi" | "payback";
-const TAB_ICON: Record<Tab, string> = { inputs: "✏️", cost: "🧾", loan: "🏦", emi: "📅", payback: "⏳" };
+const TAB_ICON: Record<Tab, string> = { inputs: "pencil", cost: "receipt", loan: "bank", emi: "calendar", payback: "hourglass" };
 const TENURES = [5, 7, 10, 15];
 
 function Slider({ label, value, display, min, max, step, onChange }: {
@@ -159,7 +160,7 @@ function Calculator() {
         {order.map((k) => (
           <button key={k} role="tab" aria-selected={active === k} onClick={() => setTab(k)}
             className={`flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-xl px-1 py-1.5 text-[11px] font-semibold leading-tight ${active === k ? "bg-[var(--brand)] text-white" : "text-[var(--muted)]"}`}>
-            <span className="text-base leading-none">{TAB_ICON[k]}</span>
+            <Icon name={TAB_ICON[k]} size={18} />
             <span className="max-w-full truncate">{t(`tab_${k}`)}</span>
           </button>
         ))}
@@ -184,7 +185,7 @@ function Calculator() {
 
       {active === "inputs" && (
       <Card className="space-y-4">
-        <h3 className="font-bold">✏️ {t("inputs")}</h3>
+        <h3 className="font-bold">{t("inputs")}</h3>
         <Slider label={t("fee")} value={inp.fee_per_year} display={inr(inp.fee_per_year)} min={0} max={500000} step={5000} onChange={(v) => set({ fee_per_year: v })} />
         <Slider label={t("years")} value={inp.years} display={yearsLabel(inp.years)} min={1} max={6} step={1} onChange={(v) => set({ years: v })} />
         <Slider label={t("income")} value={inp.family_income} display={inr(inp.family_income)} min={0} max={1500000} step={10000} onChange={(v) => set({ family_income: v })} />
@@ -232,7 +233,7 @@ function Calculator() {
 
       {active === "cost" && (
       <Card>
-        <h3 className="font-bold">🧾 {t("net")}</h3>
+        <h3 className="font-bold">{t("net")}</h3>
         <div className="mt-3 space-y-2 text-sm">
           {[
             { k: t("cost"), v: aid.course_cost, cls: "bg-slate-400" },
@@ -246,7 +247,7 @@ function Calculator() {
             </div>
           ))}
         </div>
-        {!L.needed && <p className="mt-3 rounded-xl bg-emerald-50 p-3 text-center text-sm font-semibold text-emerald-900 dark:bg-emerald-900/30 dark:text-emerald-200">🎉 {t("covered")}</p>}
+        {!L.needed && <p className="mt-3 rounded-xl bg-emerald-50 p-3 text-center text-sm font-semibold text-emerald-900 dark:bg-emerald-900/30 dark:text-emerald-200">{t("covered")}</p>}
       </Card>
       )}
       {active === "cost" && nextBtn("cost")}
@@ -254,16 +255,16 @@ function Calculator() {
         {L.needed && active === "loan" && (
         <Card>
           <div className="flex items-center justify-between gap-2">
-            <h3 className="font-bold">🏦 {t("loan_title")}</h3>
-            <Badge tone={L.security === "collateral" ? "amber" : "green"}>{L.security === "collateral" ? "⚠️" : "✓"} {lakh(L.amount)}</Badge>
+            <h3 className="font-bold">{t("loan_title")}</h3>
+            <Badge tone={L.security === "collateral" ? "amber" : "green"}>{L.security === "collateral" ? "⚠" : "✓"} {lakh(L.amount)}</Badge>
           </div>
           <dl className="mt-2 grid grid-cols-2 gap-2 text-sm">
             <div className="rounded-xl bg-[var(--bg)] p-2.5"><dt className="text-xs text-[var(--muted)]">{t("loan_amount")}</dt><dd className="font-bold">{inr(L.amount)}</dd></div>
             <div className="rounded-xl bg-[var(--bg)] p-2.5"><dt className="text-xs text-[var(--muted)]">{t("margin")} · {L.margin_pct}%</dt><dd className="font-bold">{inr(L.margin)}</dd></div>
           </dl>
           <ul className="mt-3 space-y-2 text-sm">
-            <li className="flex gap-2"><span>{L.security === "collateral" ? "🏠" : "✅"}</span><span>{t(`sec_${L.security}`)}</span></li>
-            <li className="flex gap-2"><span>{L.csis || L.vidyalaxmi ? "🎁" : "ℹ️"}</span><span>{L.csis ? t("csis") : L.vidyalaxmi ? t("vidyalaxmi") : t("no_sub")}</span></li>
+            <li className="flex gap-2"><Icon name={L.security === "collateral" ? "home" : "check"} size={16} /><span>{t(`sec_${L.security}`)}</span></li>
+            <li className="flex gap-2"><Icon name={L.csis || L.vidyalaxmi ? "gift" : "info"} size={16} /><span>{L.csis ? t("csis") : L.vidyalaxmi ? t("vidyalaxmi") : t("no_sub")}</span></li>
           </ul>
         </Card>
         )}
@@ -271,7 +272,7 @@ function Calculator() {
 
         {L.needed && active === "emi" && (
         <Card>
-          <h3 className="font-bold">📅 {t("emi_title")}</h3>
+          <h3 className="font-bold">{t("emi_title")}</h3>
           <div className="mt-1 flex items-end gap-2">
             <span className="text-3xl font-extrabold text-[var(--brand-ink)]">{inr(L.emi)}</span>
             <span className="pb-1 text-xs text-[var(--muted)]">/ month</span>
@@ -314,7 +315,7 @@ function Calculator() {
 
         {L.needed && active === "payback" && (
         <Card>
-          <h3 className="font-bold">⏳ {t("timeline")}</h3>
+          <h3 className="font-bold">{t("timeline")}</h3>
           {(() => {
             const total = aid.loan_free_after_months;
             const seg = [
@@ -329,28 +330,28 @@ function Calculator() {
               <div className="mt-1 flex flex-wrap gap-3 text-xs">
                 {seg.map((s) => <span key={s.k} className="flex items-center gap-1"><span className={`h-2 w-2 rounded-full ${s.cls}`} />{s.k} · {s.m} mo</span>)}
               </div>
-              <p className="mt-2 rounded-xl bg-[var(--brand-soft)] p-2.5 text-center text-sm font-semibold text-[var(--brand-ink)]">🏁 {t("free", { y: year0 + Math.ceil(total / 12) })}</p>
+              <p className="mt-2 rounded-xl bg-[var(--brand-soft)] p-2.5 text-center text-sm font-semibold text-[var(--brand-ink)]">{t("free", { y: year0 + Math.ceil(total / 12) })}</p>
             </>);
           })()}
           <div className="mt-3 h-40">
             <ResponsiveContainer>
               <AreaChart data={aid.balance} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
-                <defs><linearGradient id="owed" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#1b3a6b" stopOpacity={0.5} /><stop offset="100%" stopColor="#1b3a6b" stopOpacity={0.05} /></linearGradient></defs>
+                <defs><linearGradient id="owed" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#2563eb" stopOpacity={0.5} /><stop offset="100%" stopColor="#2563eb" stopOpacity={0.05} /></linearGradient></defs>
                 <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
                 <XAxis dataKey="month" tick={{ fontSize: 10 }} />
                 <YAxis tick={{ fontSize: 10 }} width={44} tickFormatter={(v) => (v >= 100000 ? `${(v / 100000).toFixed(1)}L` : `${Math.round(v / 1000)}k`)} />
                 <Tooltip formatter={(v: any) => [inr(Number(v)), t("owed")]} labelFormatter={(m) => `${m} ${t("months_after")}`} />
-                <Area type="monotone" dataKey="owed" stroke="#1b3a6b" fill="url(#owed)" strokeWidth={2} />
+                <Area type="monotone" dataKey="owed" stroke="#2563eb" fill="url(#owed)" strokeWidth={2} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
-          <p className="mt-2 text-sm">💡 {aid.fast_payback_months !== null ? t("fast", { m: aid.fast_payback_months }) : t("fast_none")}</p>
+          <p className="mt-2 text-sm">{aid.fast_payback_months !== null ? t("fast", { m: aid.fast_payback_months }) : t("fast_none")}</p>
         </Card>
         )}
         {active === "payback" && nextBtn("payback")}
 
       <Card className="space-y-2">
-        <a href={LOAN_SOURCES[0].url} target="_blank" rel="noreferrer" className="block rounded-xl bg-[var(--brand)] py-3 text-center font-semibold text-white">{t("apply")} ↗</a>
+        <a href={LOAN_SOURCES[0].url} target="_blank" rel="noreferrer" className="block rounded-xl bg-[var(--brand)] py-3 text-center font-semibold text-white">{t("apply")} </a>
         <p className="text-xs text-[var(--muted)]">{t("note")}</p>
         <p className="text-xs text-[var(--muted)]">{t("rules")}: {LOAN_SOURCES.map((s, i) => <span key={s.url}>{i ? " · " : ""}<a className="underline" href={s.url} target="_blank" rel="noreferrer">{s.label}</a></span>)}</p>
         <span className="hidden">{lang}</span>

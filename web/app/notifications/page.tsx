@@ -9,17 +9,18 @@ import { fromNotification, NoticeCard, SourcesFooter, useNotices } from "@/compo
 import { Pager, usePaged } from "@/components/pager";
 import { Tabs } from "@/components/tabs";
 import { Card, Shell } from "@/components/ui";
+import { Icon } from "@/components/icon";
 import { getKV, setKV } from "@/lib/db";
 import { useApp } from "@/lib/store";
 
 const KIND_META: Record<string, { icon: string; color: string }> = {
-  scheme_recommendation: { icon: "📣", color: "bg-blue-50 border-blue-300 dark:bg-blue-900/20 dark:border-blue-700" },
-  enrollment_confirmed:  { icon: "✅", color: "bg-green-50 border-green-300 dark:bg-green-900/20 dark:border-green-700" },
-  exam_update:           { icon: "📅", color: "bg-red-50 border-red-300 dark:bg-red-900/20 dark:border-red-700" },
-  payout:                { icon: "💰", color: "bg-yellow-50 border-yellow-300 dark:bg-yellow-900/20 dark:border-yellow-700" },
-  mentor_message:        { icon: "💬", color: "bg-purple-50 border-purple-300 dark:bg-purple-900/20 dark:border-purple-700" },
-  deadline_alert:        { icon: "⏰", color: "bg-amber-50 border-amber-300 dark:bg-amber-900/20 dark:border-amber-700" },
-  teacher_message:       { icon: "👩‍🏫", color: "bg-orange-50 border-orange-300 dark:bg-orange-900/20 dark:border-orange-700" },
+  scheme_recommendation: { icon: "bell", color: "bg-blue-50 border-blue-300 dark:bg-blue-900/20 dark:border-blue-700" },
+  enrollment_confirmed:  { icon: "check", color: "bg-green-50 border-green-300 dark:bg-green-900/20 dark:border-green-700" },
+  exam_update:           { icon: "calendar", color: "bg-red-50 border-red-300 dark:bg-red-900/20 dark:border-red-700" },
+  payout:                { icon: "rupee", color: "bg-yellow-50 border-yellow-300 dark:bg-yellow-900/20 dark:border-yellow-700" },
+  mentor_message:        { icon: "chat", color: "bg-purple-50 border-purple-300 dark:bg-purple-900/20 dark:border-purple-700" },
+  deadline_alert:        { icon: "calendar", color: "bg-amber-50 border-amber-300 dark:bg-amber-900/20 dark:border-amber-700" },
+  teacher_message:       { icon: "users", color: "bg-orange-50 border-orange-300 dark:bg-orange-900/20 dark:border-orange-700" },
 };
 
 function notifLink(n: any): string {
@@ -42,7 +43,7 @@ function notifTitle(n: any, t: (k: string, p?: any) => string): string {
 }
 
 function NotifCard({ n, onRead, t }: { n: any; onRead: (id: number) => void; t: (k: string, p?: any) => string }) {
-  const meta = KIND_META[n.kind] ?? { icon: "🔔", color: "bg-[var(--bg)] border-[var(--muted)]" };
+  const meta = KIND_META[n.kind] ?? { icon: "bell", color: "bg-[var(--bg)] border-[var(--muted)]" };
   const date = new Date(n.created_at * 1000).toLocaleDateString(undefined, { day: "numeric", month: "short" });
   const href = notifLink(n);
   const title = notifTitle(n, t);
@@ -54,7 +55,7 @@ function NotifCard({ n, onRead, t }: { n: any; onRead: (id: number) => void; t: 
         onClick={() => !n.read && onRead(n.id)}
         className="flex items-start gap-3 px-4 py-3"
       >
-        <span className="mt-0.5 text-2xl shrink-0">{meta.icon}</span>
+        <Icon name={meta.icon} size={24} className="mt-0.5 text-[var(--brand)]" />
         <div className="min-w-0 flex-1">
           <p className={`text-sm leading-snug ${n.read ? "" : "font-semibold"}`}>{title}</p>
           {n.body && <p className="mt-0.5 text-xs text-[var(--muted)] line-clamp-2">{n.body}</p>}
@@ -124,7 +125,7 @@ export default function NotificationsPage() {
     return (
       <Shell title={t("notif_title")}>
         <Card className="text-center py-8">
-          <p className="text-4xl mb-2">🔔</p>
+          <Icon name="bell" size={40} className="mb-2 text-[var(--muted)]" />
           <p className="text-sm text-[var(--muted)]">{t("notif_login")}</p>
         </Card>
       </Shell>
@@ -164,7 +165,7 @@ function NotificationsView({ tab, setTab, unread, read, items, loading, markAllR
 
         {!loading && items.length === 0 && (
           <Card className="text-center py-10 space-y-2">
-            <p className="text-4xl">🔔</p>
+            <Icon name="bell" size={40} className="text-[var(--muted)]" />
             <p className="text-sm text-[var(--muted)]">{t("notices_empty_for_you")}</p>
           </Card>
         )}
@@ -198,7 +199,7 @@ function NotificationsView({ tab, setTab, unread, read, items, loading, markAllR
         {!list.loaded && <p className="text-sm text-[var(--muted)] animate-pulse px-1">{t("loading")}</p>}
         {list.loaded && list.items.length === 0 && (
           <Card className="text-center py-10 space-y-2">
-            <p className="text-4xl">{tab === "deadlines" ? "⏰" : "📰"}</p>
+            <Icon name={tab === "deadlines" ? "calendar" : "doc"} size={40} className="text-[var(--muted)]" />
             <p className="text-sm text-[var(--muted)]">{t(tab === "deadlines" ? "notices_empty_deadlines" : "notices_empty_all")}</p>
           </Card>
         )}

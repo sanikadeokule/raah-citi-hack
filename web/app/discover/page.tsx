@@ -123,7 +123,7 @@ export default function Discover() {
     setDraft(next);
     setAiMissing(j.missing || []);
     if (j.done || !(j.missing || []).length) {
-      setMsgs((m) => [...m, { from: "raah", text: j.reply || "👍", learned: j.learned, lang: replyLang }]);
+      setMsgs((m) => [...m, { from: "raah", text: j.reply || "OK", learned: j.learned, lang: replyLang }]);
       toScript(next);
     } else {
       setMsgs((m) => [...m, { from: "raah", text: j.reply, learned: j.learned, lang: replyLang }]);
@@ -226,17 +226,17 @@ export default function Discover() {
     <Shell title={t("home_discover")}>
       {mode !== "checking" && !finished && (
         <div className="flex items-center justify-between text-xs text-[var(--muted)]">
-          <span>{mode === "ai" ? `✨ ${t("ai_chat_mode")}` : `📝 ${t("quick_mode")}`}</span>
+          <span>{mode === "ai" ? `${t("ai_chat_mode")}` : `${t("quick_mode")}`}</span>
           {mode === "ai" && <button className="underline" onClick={() => toScript(draft)}>{t("use_quick_questions")}</button>}
-          <Link href="/ask/" className="underline">💬 {t("home_ask")}</Link>
+          <Link href="/ask/" className="underline"> {t("home_ask")}</Link>
         </div>
       )}
       <div className="space-y-2">
         {msgs.map((m, i) => { const v = view(m); return (
           <div key={i} className={`flex ${m.from === "me" ? "justify-end" : "justify-start"}`}>
             <div className={`max-w-[80%] rounded-2xl px-3 py-2 text-sm ${m.from === "me" ? "bg-[var(--brand)] text-white" : m.error ? "bg-amber-50 ring-1 ring-amber-300 text-amber-900" : "bg-[var(--card)] ring-1 ring-black/5"}`}>
-              {m.error && "⚠️ "}{v.text}
-              {v.hint && <div className="mt-1 text-xs text-[var(--muted)]">💡 {v.hint}</div>}
+              {m.error && "! "}{v.text}
+              {v.hint && <div className="mt-1 text-xs text-[var(--muted)]">{v.hint}</div>}
               {m.learned && Object.keys(m.learned).length > 0 && (
                 <div className="mt-2 flex flex-wrap gap-1">
                   <span className={`text-xs ${m.from === "me" ? "text-white/80" : "text-[var(--muted)]"}`}>{t("ai_understood")}:</span>
@@ -249,7 +249,7 @@ export default function Discover() {
             </div>
           </div>
         ); })}
-        {busy && <div className="text-sm text-[var(--muted)]">✨ {t("thinking")}</div>}
+        {busy && <div className="text-sm text-[var(--muted)]">{t("thinking")}</div>}
         <div ref={end} />
       </div>
 
@@ -262,7 +262,7 @@ export default function Discover() {
                 return (
                   <button key={o.label} onClick={() => (q.kind === "multi" ? setMulti(on ? multi.filter((x) => x !== o.v) : [...multi, o.v]) : answer(o.v, chipLabel(q, draft, [oi]), undefined, o.patch, true))}
                     className={`rounded-full px-3 py-2 text-sm ring-1 ring-black/10 ${on ? "bg-[var(--brand)] text-white" : "bg-[var(--bg)]"}`}>
-                    {o.icon} {o.label}
+                    {o.label}
                   </button>
                 );
               })}
@@ -282,7 +282,7 @@ export default function Discover() {
 
       {consent === "asking" && (
         <Card>
-          <h2 className="text-lg font-bold">👪 {t("consent_title")}</h2>
+          <h2 className="text-lg font-bold">{t("consent_title")}</h2>
           <p className="mt-1 text-sm">{t("consent_text", { name: draft.name })}</p>
           <p className="mt-2 text-xs text-[var(--muted)]">{t("otp")}</p>
           <div className="mt-2 flex gap-2">
@@ -293,7 +293,7 @@ export default function Discover() {
       )}
       {consent === "done" && profile && (
         <Card>
-          <p className="font-semibold">✅ {t("consent_recorded")} · {t("saved")}</p>
+          <p className="font-semibold">{t("consent_recorded")} · {t("saved")}</p>
           <Link href="/careers/" className="mt-3 block rounded-xl bg-[var(--brand)] py-3 text-center font-semibold text-white">{t("shortlist")} →</Link>
           <Link href="/profile/" className="mt-2 block text-center text-sm underline">{t("edit_profile")}</Link>
         </Card>

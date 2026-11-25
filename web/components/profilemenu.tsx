@@ -4,6 +4,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { Icon } from "@/components/icon";
 import { ROADMAP_HREF } from "@/lib/roadmap";
 import { useApp } from "@/lib/store";
 
@@ -23,9 +24,9 @@ function applyTheme(v: Theme) {
 }
 
 const SHORTCUTS = [
-  { key: "menu_my_roadmap", href: ROADMAP_HREF, icon: "🗺️" },
-  { key: "menu_my_progress", href: "/progress/", icon: "📈" },
-  { key: "menu_my_mentor", href: "/opportunity/?tab=mentors", icon: "🤝" },
+  { key: "menu_my_roadmap", href: ROADMAP_HREF, icon: "map" },
+  { key: "menu_my_progress", href: "/progress/", icon: "chart" },
+  { key: "menu_my_mentor", href: "/opportunity/?tab=mentors", icon: "users" },
 ];
 
 export function ProfileMenu() {
@@ -71,7 +72,7 @@ export function ProfileMenu() {
             <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-[var(--brand)] text-lg font-bold text-white">{initial}</span>
             <span className="min-w-0">
               <span className="block truncate font-bold">{name}</span>
-              <span className="block text-sm font-medium text-[var(--accent)]">{auth.user.is_pro ? "⭐ Raah Pro" : t("try_premium")}</span>
+              <span className="block text-sm font-medium text-[var(--accent)]">{auth.user.is_pro ? "Raah Pro" : t("try_premium")}</span>
             </span>
           </Link>
 
@@ -79,7 +80,7 @@ export function ProfileMenu() {
             {SHORTCUTS.map((s) => (
               <Link key={s.key} href={s.href} onClick={close} role="menuitem"
                 className="flex flex-col items-center gap-1 rounded-xl bg-[var(--bg)] px-1 py-3 text-center text-xs font-medium active:scale-95">
-                <span aria-hidden className="text-xl">{s.icon}</span>
+                <Icon name={s.icon} size={22} className="text-[var(--brand)]" />
                 {t(s.key)}
               </Link>
             ))}
@@ -88,11 +89,11 @@ export function ProfileMenu() {
           <div className="my-3 h-px bg-[var(--muted)] opacity-25" />
 
           <Link href="/profile/" onClick={close} role="menuitem" className="flex items-center gap-3 rounded-xl px-2 py-2.5 text-sm hover:bg-[var(--bg)]">
-            <span aria-hidden className="w-5 text-center">⚙️</span>{t("settings")}
+            <Icon name="settings" size={18} />{t("settings")}
           </Link>
           <button type="button" role="menuitem" aria-expanded={showThemes} onClick={() => setShowThemes((s) => !s)}
             className="flex w-full items-center gap-3 rounded-xl px-2 py-2.5 text-left text-sm hover:bg-[var(--bg)]">
-            <span aria-hidden className="w-5 text-center">🌓</span>
+            <Icon name="moon" size={18} />
             <span className="flex-1">{t("appearance")}</span>
             <span aria-hidden className={`text-[var(--muted)] transition-transform ${showThemes ? "rotate-90" : ""}`}>›</span>
           </button>
@@ -101,14 +102,14 @@ export function ProfileMenu() {
               {(["system", "light", "dark"] as Theme[]).map((v) => (
                 <button key={v} type="button" role="menuitemradio" aria-checked={theme === v} onClick={() => pickTheme(v)}
                   className="flex items-center justify-between rounded-lg px-2 py-2 text-left text-sm hover:bg-[var(--bg)]">
-                  {t(`theme_${v}`)}{theme === v && <span aria-hidden className="text-[var(--brand)]">✓</span>}
+                  {t(`theme_${v}`)}{theme === v && <Icon name="check" size={16} className="text-[var(--brand)]" />}
                 </button>
               ))}
             </div>
           )}
           <button type="button" role="menuitem" onClick={async () => { close(); await signOut(); router.replace("/login/"); }}
             className="flex w-full items-center gap-3 rounded-xl px-2 py-2.5 text-left text-sm text-[var(--bad)] hover:bg-[var(--bg)]">
-            <span aria-hidden className="w-5 text-center">↪</span>{t("logout")}
+            <Icon name="logout" size={18} />{t("logout")}
           </button>
         </div>
       )}

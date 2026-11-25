@@ -5,15 +5,17 @@ import { Card, Source } from "@/components/ui";
 import { Pager, usePaged } from "@/components/pager";
 import { coursesFor } from "@/lib/helpers";
 import { useApp } from "@/lib/store";
+import { myCareer } from "@/lib/tailor";
 
 // Free online courses (Skill India, SWAYAM, DIKSHA) from the dataset, the student's own roadmap first, five to a page.
 export function FreeCourses() {
   const { t, data, profile } = useApp();
   const [platform, setPlatform] = useState("all");
-  const career = (data?.careers ?? []).find((c: any) => c.id === profile?.roadmap_career);
-  const plan = (data?.plans ?? []).find((p: any) => p.career_id === career?.id);
+  // the saved career, otherwise Raah's best match (lib/tailor.ts)
+  const mc = myCareer(data, profile);
+  const career = mc?.career;
   const platforms: string[] = useMemo(() => [...new Set<string>((data?.courses ?? []).map((c: any) => c.platform))], [data]);
-  const mineIds = new Set<string>(career ? coursesFor(data, career, plan).map((c: any) => c.id) : []);
+  const mineIds = new Set<string>(mc ? coursesFor(data, mc.career, mc.plan).map((c: any) => c.id) : []);
   const list = useMemo(() => {
     const rows = (data?.courses ?? []).filter((c: any) => platform === "all" || c.platform === platform);
     return [...rows].sort((a: any, b: any) => Number(mineIds.has(b.id)) - Number(mineIds.has(a.id)));
@@ -35,7 +37,7 @@ export function FreeCourses() {
         {pg.pageItems.map((c: any) => (
           <li key={c.id}>
             <Card className="space-y-1">
-              {mineIds.has(c.id) && <span className="inline-block rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-900">⭐ {t("fc_for_you")}</span>}
+              {mineIds.has(c.id) && <span className="inline-block rounded-full bg-[var(--brand-soft)] px-2 py-0.5 text-[11px] font-semibold text-[var(--brand-ink)]">{t("fc_for_you")} · {t("because_career", { career: career?.name ?? "" })}</span>}
               <a className="block font-semibold leading-snug underline" href={c.source} target="_blank" rel="noreferrer">{c.title}</a>
               <p className="text-xs text-[var(--muted)]">{c.platform}{c.provider ? ` · ${c.provider}` : ""}</p>
               <p className="text-xs text-[var(--muted)]">{c.language} · {c.fee_text} · {c.duration}</p>

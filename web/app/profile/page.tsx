@@ -76,7 +76,7 @@ export default function ProfilePage() {
         <Card><h2 className="font-bold">{t("consent_recorded")}</h2>
           <pre className="mt-1 whitespace-pre-wrap text-xs">{JSON.stringify(consent, null, 2)}</pre></Card>
       )}
-      <button onClick={async () => { await authFetch("/api/auth/me", { method: "DELETE" }).catch(() => null); await signOut(); await db.delete(); location.href = "/login/"; }} className="w-full rounded-xl bg-rose-100 py-3 font-semibold text-rose-800">🗑️ {t("delete_my_data")}</button>
+      <button onClick={async () =>{ await authFetch("/api/auth/me", { method: "DELETE" }).catch(() => null); await signOut(); await db.delete(); location.href = "/login/"; }} className="w-full rounded-xl bg-rose-100 py-3 font-semibold text-rose-800"> {t("delete_my_data")}</button>
     </Shell>
   );
 }
