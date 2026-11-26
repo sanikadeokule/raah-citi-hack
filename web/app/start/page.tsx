@@ -77,12 +77,17 @@ function Start() {
       const post = async (path: string, body: object) => {
         const r = await fetch(`${API}${path}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
         const j = await r.json();
-        if (!r.ok) throw new Error(typeof j.detail === "string" ? j.detail : j.detail?.[0]?.msg?.replace("Value error, ", "") ?? "Error");
+        if (!r.ok) throw Object.assign(new Error(typeof j.detail === "string" ? j.detail : j.detail?.[0]?.msg?.replace("Value error, ", "") ?? "Error"), { status: r.status });
         return j;
       };
-      await post("/api/auth/register", { name, phone, pin, role: "student" });
-      const j = await post("/api/auth/login", { phone, pin, role: "student" });
+      let existing = false;
+      try { await post("/api/auth/register", { name, phone, pin, role: "student" }); }
+      catch (e: any) { if (e?.status !== 409) throw e; existing = true; } // this number already has an account: sign in to it
+      let j;
+      try { j = await post("/api/auth/login", { phone, pin, role: "student" }); }
+      catch (e: any) { throw existing ? new Error(t("start_exists_wrong_pin")) : e; }
       await signIn(j.access_token, j.user as AuthUser);
+      if (existing) { await setKV("guest_profile", null); router.replace("/"); return; } // their saved profile stays as it is; the answers just given are not added over it
       const tk = data?.talukas?.find((x: any) => x.name === p.taluka);
       const merged = { ...p, name, ...(tk ? { lat: tk.lat, lon: tk.lon } : {}), reminder_channel: channel, reminder_frequency: freq };
       setProfile(merged);
@@ -127,7 +132,7 @@ function Start() {
           </div>
           <div className="space-y-2">
             <Primary onClick={() => setI(1)}>{t("start_get_started")}</Primary>
-            <Link href="/login/" className="block py-3 text-sm font-semibold text-[var(--brand-ink)] underline">{t("start_have_account")}</Link>
+            <Link href="/login/" className="block w-full rounded-2xl border-2 border-black/15 py-3.5 text-base font-bold active:scale-[.98]">{t("start_have_account")}</Link>
           </div>
         </div>
       )}

@@ -17,6 +17,7 @@ from pydantic import BaseModel, Field
 
 from . import dataset, engine, mcp_client
 from .agent import router as agent_router
+from .today import router as today_router
 from .auth import current_user, log_sync, save_profile
 from .auth import router as auth_router
 from .chat import router as chat_router
@@ -175,6 +176,7 @@ def sync(items: list[dict], user: dict = Depends(current_user)):
 
 app.include_router(auth_router)
 app.include_router(agent_router)
+app.include_router(today_router)
 app.include_router(chat_router)
 app.include_router(embed_router)
 app.include_router(voice_router)
