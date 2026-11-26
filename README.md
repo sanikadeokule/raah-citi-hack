@@ -17,6 +17,7 @@ The pilot district is Pune.
 ## Contents
 
 - [Core idea: the AI explains, the data decides](#core-idea-the-ai-explains-the-data-decides)
+- [Build status: the finals plan](#build-status-the-finals-plan)
 - [Features](#features)
 - [Screens](#screens)
 - [The spreadsheet drives everything](#the-spreadsheet-drives-everything)
@@ -40,21 +41,39 @@ The pilot district is Pune.
 
 Eligibility, costs, payback months, distances and career ranking are computed by plain code from a curated dataset (`raah-dataset.xlsx`). Language models and voice are only used to talk, collect the profile and explain results. Every figure on screen carries a link to the page it came from and the date it was checked.
 
+## Build status: the finals plan
+
+For the Citi Ada Lovelace finals the app is being rebuilt around three hero moments and six supporting features, all on one **agent core**: one shared student profile, one set of MCP tools, one activity log. Cron is the clock (the exam-date watcher stays a scheduled job); the agent is the brain (language, judgment, several steps). Agents act alone on safe things such as finding careers, reminders and pre-filling forms, and ask a person first for anything involving money, consent or a minor.
+
+| Day | What | Status |
+|---|---|---|
+| 1 | Line icons and no emojis, brighter blue, six-tile home, first-minutes flow (`/start`), tailoring rule on Exams, Courses and Jobs | **Done** |
+| 2 | Discover as the ikigai conversation, student profile MCP tools | **Done** |
+| 3 | Agent core: Today's step decided by the agent, "What Raah did for you" activity page, Ask Raah reads the shared profile, sign-in fixes | **Done** |
+| 4 | Scholarship application chain (eligibility, document checklist, pre-filled application, tracking, parent approval), Compare and decide, Parent mode | **Planned, not built** |
+| 5 | Follow-up check-ins, mentor match, voice read-aloud and screen-reader pass, demo-proofing | **Planned, not built** |
+
+Tailoring rule on every list: your career is the saved one, otherwise the best match, with a "Because..." reason on each item and an All view.
+
 ## Features
 
 ### Student
 
 | Feature | What it does |
 |---|---|
-| **Language picker + icon home** | Marathi, Hindi, English. Big icon tiles for Discover, Careers, Learn, Opportunity, Scholarships and Compare. |
-| **Discover chat** | When a language model is reachable, Raah holds a free conversation ("I'm Asha, 15, in Class 10 and I like computers") and shows the fields it understood as chips under each reply. Otherwise, or with one tap, it asks 12 short scripted questions (name, age, class, interests, marks, taluka, category, family income, travel limit, hostel, documents). Answer chips for low-literacy use; mic on every question. |
+| **First minutes (`/start`)** | A new student sees a welcome screen, then one question per screen (language, class, goal, marks, category, income, taluka, achievements) with no sign-up, a first result (a career, scholarship or college), reminder choices, and only then "Save your progress" with name, mobile and PIN. A number that already has an account signs in to it instead of failing. People with an account use the "I already have an account" button. |
+| **Home** | Marathi, Hindi, English. **Today's step** (one thing to do now, why, and what Raah looked at), your career, and six tiles: Careers, Colleges, Scholarships, Exams, Learn, Jobs. Alerts and the roadmap sit in the top bar and profile menu. |
+| **Today's step** | Decided by the agent each day from the student's profile, unread alerts, scholarships and exams, read through the same MCP tools Ask Raah uses. A plain rule over what the tools return, not a model guess, so it is the same for the same facts. |
+| **What Raah did for you** | `/activity` lists what Raah did for the signed-in student: the step it chose, answers it gave, what Discover learned, the path chosen. Stored as a text key plus values, so it shows in the student's language. A student sees only their own. |
+| **Tailoring** | Exams, free courses and Jobs follow the student's career (saved, else best match), each with a reason and an All tab (`web/lib/tailor.ts`). |
+| **Discover (ikigai)** | A two-turn chat per stage: what you love, then what you are good at. The student types, speaks or taps reply chips, and Raah keeps whatever they say (a model maps it to dataset topics when reachable, keywords otherwise; words with no topic are kept as the student's own). Raah then checks the other two circles from the dataset: what pays and what is needed near you. Result: the top 5 careers with a match percentage (love 25%, good at 25%, pays 30%, needed 20%), then "can you get there" (cost, family share, scholarships, nearest centre, steps). The old profile questions live at `/discover/basics/`. |
 | **Why this career** | Each shortlisted career gets a one or two sentence reason. The model writes it from the score breakdown and dataset rows; if its text contains a number that is not in those rows, the template sentence is shown instead. |
-| **Parental consent** | Students under 18 need a parent's OTP before the profile is saved. A consent record with purpose and timestamp is stored (DPDP Act 2023). |
-| **Career shortlist** | Top 5 out of 45 careers, scored on interest match (50%), eligibility (20%), affordability (20%) and local demand (10%). The top 5 always includes at least one vocational and one non-STEM or self-employment option. |
+| **Parental consent** | Students under 18 tick that a parent or guardian agrees before the account is saved. A consent record with purpose and timestamp is stored (DPDP Act 2023). |
+| **Career shortlist** | Top 5 out of 50 careers, scored on interest match (60%), eligibility (15%), affordability (15%) and local demand (10%). The top 5 always includes at least one vocational and one non-STEM or self-employment option. |
 | **Cost & payback card** | Course fees, exam fees, materials, travel or hostel, scholarship cover, stipend while training, net family cost, monthly income range and the payback month at typical and low income. |
 | **What-if planner** | Toggle the scholarship, pick which scheme counts, move the commute slider, switch to hostel, set a monthly family contribution, or compare against leaving school for daily-wage work. Recalculates instantly, offline. |
 | **Side-by-side compare** | Any two paths in two columns plus a cumulative cash chart with break-even marked. |
-| **Scholarship check** | 48 central and Maharashtra schemes checked rule by rule (✅ ❌ ❔ 📄). Names the missing document and where to get it (tehsil office, Aaple Sarkar Seva Kendra, school). |
+| **Scholarship check** | 48 central and Maharashtra schemes checked rule by rule (yes, no, unknown, needs a document). Names the missing document and where to get it (tehsil office, Aaple Sarkar Seva Kendra, school). |
 | **Nearest training centres** | 3 nearest Govt ITIs or nursing schools for the chosen path on a Leaflet / OpenStreetMap map with the student's home, plus distance, fees and source. Offline the map is hidden and the list still works. Centres without exact coordinates sit at their taluka point and are marked approximate. |
 | **Parent voice note** | A short message for parents in the chosen language with the plan's numbers, played aloud and shareable on WhatsApp as text or as an audio file. With BHASHINI keys the file is generated speech (WAV); without them the student records the message in their own voice. On phones the file goes to the share sheet (WhatsApp, Bluetooth, Files); elsewhere it downloads. |
 | **Audio lessons + quiz** | "What is an ITI?", "What is an apprenticeship?", "How do scholarships work?" plus a 5-question quiz. Facts inside lessons and quiz (stipend rates, income limits, ITI count) come from the dataset. With BHASHINI keys, "Save lesson audio for offline" stores each lesson as an audio file on the phone; the file is tied to the exact lesson text, so after a dataset edit the new figures are spoken rather than an old recording. Without keys the phone's own voice reads them, which also works offline. |
@@ -106,6 +125,14 @@ Eligibility, costs, payback months, distances and career ranking are computed by
 | **Partner APIs** | OAuth2 client-credentials for employers, colleges and NGOs: post opportunities, see anonymised candidates (contacts hidden until the student accepts), mark enrolments complete to trigger a teacher payout. |
 
 ## Screens
+
+New in the finals build:
+
+| Home with Today's step | Discover chat | Sweet spot | What Raah did for you |
+|---|---|---|---|
+| <img src="docs/screenshots/home-todays-step.png" width="200"> | <img src="docs/screenshots/discover-chat.png" width="200"> | <img src="docs/screenshots/discover-sweet-spot.png" width="200"> | <img src="docs/screenshots/activity.png" width="200"> |
+
+Earlier screens (some predate the new look):
 
 | Discover | Careers | What-if |
 |---|---|---|
@@ -179,17 +206,17 @@ payback       = first month after training where cumulative gain ≥ net_cost
 
 ## Sign-in and roles
 
-Students and teachers sign in with their mobile number and a one-time password.
+Students and teachers sign in with their mobile number and a PIN.
 
 <p align="center"><img src="docs/screenshots/login.png" width="240" alt="Register screen with name, mobile number and PIN"></p>
 
 | | Student | Teacher |
 |---|---|---|
 | Who can register | Anyone with a 10-digit Indian mobile number | Only numbers listed in `RAAH_TEACHER_PHONES` |
-| Screens | Discover, Careers, plans, Compare, Scholarships, Learn, Opportunity, Profile | Everything a student sees, plus Class dashboard and Money |
+| Screens | Discover, Careers, plans, Compare, Scholarships, Learn, Jobs, Profile, What Raah did for you | Everything a student sees, plus Class dashboard and Money |
 | Server access | Own profile, own synced activity, own AA consent | Class data, bulk recommend, pain.001 payouts and ledger, any consent |
 
-- **Register, then sign in:** the first screen has **Register** (full name, mobile number, PIN typed twice) and **Sign in** (mobile number and PIN). After registering, the app moves to Sign in with the number filled in. After signing in, the home screen and the Discover chat greet the person by the name they registered with; demo students are never used as a student's identity (teachers can still preview them).
+- **Students register through the first-minutes flow** (`/start`): the questions come first, and name, mobile number and PIN are asked at the end. The Sign in page (`/login/`) has no Register tab for students; it points new students to "Get started". Someone already signed in who opens it goes straight home, and a number that already has an account signs in to it at the end of the flow. **Teachers** register on the Sign in page (Register tab: full name, mobile number, PIN typed twice), then sign in with mobile number and PIN. After signing in, the home screen and Discover greet the person by the name they registered with; demo students are never used as a student's identity (teachers can still preview them).
 - **Why a PIN, not a password:** most users type on a phone number pad, often in Marathi or Hindi. A 4 to 6 digit PIN works the same in every language and is familiar from ATM and UPI. Easy PINs (`1111`, `1234`, `9876`) are refused.
 - **PIN storage and lockout:** PINs are hashed with Argon2id (never stored or logged in plain text). 5 wrong PINs lock the account for 15 minutes; a correct PIN resets the count.
 - **Forgot PIN:** the teacher enters the student's number under "Student forgot their PIN" on the Class dashboard. That clears the PIN and the student registers again with the same number; their saved profile stays.
@@ -279,10 +306,14 @@ Ask Raah now reasons in steps instead of answering in one shot. Everything Raah 
 | `get_colleges(profile, career?)` | Colleges For You matching | centres and online courses for a career |
 | `list_exams(career?)` | Exams sheet + exam date watcher | dates, timing, fees, official site, last check |
 | `get_notifications(user_id)` | notifications table | the signed-in student's alerts |
+| `get_student_profile(user_id)` | the saved profile | what Raah knows: class, category, income band, taluka, interests, strengths, ikigai |
+| `save_student_profile(user_id, learned)` | the saved profile | adds what an agent learned (interests, strengths, ikigai, documents, commute, hostel); cannot change class, category, income, marks or the saved career |
 
 **The loop** (`backend/raah/agent.py`, `POST /api/agent/ask`): system prompt + student profile + question + tool list go to the LLM (`llm.chat_tools`, the OpenAI `tools` field, which OpenAI, Groq and Ollama accept). When the model asks for a tool, the backend calls it through MCP and sends the result back, up to **6 rounds**, then the model answers and cites each tool result as `[n]`. Each step streams to the page as a Server-Sent Event, so the student sees grey bubbles such as "Checking eligibility · 8 schemes" while Raah works, and afterwards a "How Raah found this" list above the answer.
 
 **Data still decides.** The student's profile and account id are filled in by the server, never by the model, so it cannot read another student's notifications. Every number in the answer must appear in some tool result, the question or the profile; if not, the one-shot RAG answer (`/api/ask`) is shown instead. Fallbacks keep it working: a model without function calling (Sarvam) plans in JSON (`{"tool": ..., "args": ...}`); with no model at all, a fixed tool chain picked from the question's words runs and the matching dataset rows are shown; if streaming fails, the page calls `/api/ask`. Every run is saved in `agent_runs` (`GET /api/agent/runs`), and `GET /api/mcp/status` shows the server, transport and tools.
+
+**The agent core.** Today's step and the activity page sit on the same tools. `backend/raah/today.py` reads the student through the tools above, picks one step, and writes every action to `agent_activity` (`GET /api/activity`). For a signed-in student Ask Raah also merges the stored profile (including ikigai and the saved career) with what the page sends. Day 4 and 5 features (scholarship chain, Compare, Parent mode, follow-ups, mentor match) are planned on this core and are not built yet.
 
 The same server works with any MCP client. For Claude Desktop, add to its config:
 
@@ -409,6 +440,9 @@ Interactive OpenAPI docs: <http://localhost:8000/docs>
 | `POST /api/eligibility` | Rule-by-rule results for a profile, optionally for a plan |
 | `POST /api/careers` | Top-N careers with score breakdown and reason |
 | `POST /api/agent/ask` | Agentic Ask Raah: tool steps and the answer as Server-Sent Events |
+| `POST /api/agent/today` | Today's step for the signed-in student, decided with the agent's tools |
+| `GET /api/activity` | What Raah did for the signed-in student, newest first |
+| `POST /api/chat/ikigai` | Maps a free-text answer in Discover to dataset topics and a short reply |
 | `GET /api/agent/runs` · `GET /api/mcp/status` | Agent audit log (teacher: all, student: own) · MCP server and tools |
 | `POST /api/centres` | Nearest centres of a type |
 | `GET /api/voice/status`, `POST /api/voice/tts`, `/api/voice/asr` | Speech through BHASHINI, then Sarvam |
@@ -454,21 +488,22 @@ backend/
     db.py           PostgreSQL schema and connection (DATABASE_URL)
     rag.py          Ask Raah: row chunks, hybrid BM25 + vector search, cited answers
     agent.py        Ask Raah agent: tool-calling loop (6 steps), SSE steps, grounding, run log
+    today.py        Today's step and the activity log (first feature on the agent core)
     mcp_client.py   starts the raah-data MCP server (stdio) and calls its tools
     voice.py        speech: BHASHINI, then Sarvam (ASR / TTS)
     teacher.py      synthetic class, dropout model, bulk recommend
     money.py        pain.001, Account Aggregator mock, skills passport
     partners.py     OAuth2 partner endpoints
   mcp_servers/
-    data_server.py  raah-data MCP server: careers, plans, eligibility, colleges, exams, notifications
+    data_server.py  raah-data MCP server: careers, plans, eligibility, colleges, exams, notifications, student profile
   scripts/add_app_sheets.py
   scripts/add_income_detail.py
   scripts/serve_https.py   https for phones (Cloudflare tunnel or self-signed LAN)
   tests/            parity and spreadsheet-edit tests
 web/
   app/              one folder per screen
-  components/       shared UI, payback card, what-if, chart, scheme result
-  lib/              engine.ts, store (data, profile, sync), db (IndexedDB), lessons
+  components/       shared UI, line icons (icon.tsx), payback card, what-if, chart, scheme result
+  lib/              engine.ts, ikigai.ts (Discover), tailor.ts, todaysstep.ts, store (data, profile, sync), db (IndexedDB), lessons
   locales/          en.json, mr.json, hi.json
   public/           service worker, manifest, icon
   out/              prebuilt static export
@@ -480,7 +515,7 @@ run.sh
 
 - **Language:** copy `web/locales/en.json` to `web/locales/<code>.json`, translate the values, and add the code to `LANGS` in `web/lib/store.tsx`.
 - **Scholarship:** add a row to `Scholarships`, then its rules to `Eligibility_Rules` (use `@income` for the income limit). No code change.
-  Freeship schemes that are only for families above a limit use operator `>` with `@income`. Course tags used by rules include `post_matric`, `ug`, `pg`, `iti_govt`, `iti_ppp` (ITI seat taken under PPP), `technical_professional`, `top_institute`. The Profile screen also asks religion and whether a parent is a registered construction worker or an ex-serviceman, because some schemes depend on them; a rule on a field the student has not filled shows as ❔ rather than ❌.
+  Freeship schemes that are only for families above a limit use operator `>` with `@income`. Course tags used by rules include `post_matric`, `ug`, `pg`, `iti_govt`, `iti_ppp` (ITI seat taken under PPP), `technical_professional`, `top_institute`. The Profile screen also asks religion and whether a parent is a registered construction worker or an ex-serviceman, because some schemes depend on them; a rule on a field the student has not filled shows as unknown rather than no.
 - **Career path with a cost plan:** add the career to `Careers_Income` and `Career_Profile`, and a row to `Plan_Inputs`.
 - **Training centre coordinates:** fill `Lat` and `Lon` in `Training_Centres`.
 
@@ -497,6 +532,7 @@ TEST_DATABASE_URL=postgresql://raah:raah@localhost:5432/raah_test python -m pyte
 Tests never use the app's `DATABASE_URL`. Without `TEST_DATABASE_URL` they run on a throwaway SQLite file.
 
 - `test_parity.py`: Python and TypeScript engines agree on 105 scenarios (3 students × 7 plans × 5 what-if settings), including eligibility and ranking.
+- `test_ikigai.py` (runs `web/tests/ikigai.ts`), `test_student_profile_tools.py`, `test_today.py`: Discover tag matching and match percentages, the profile tools' limits, Today's step and the activity log.
 - `test_auth.py`: register then sign in, registered name in the token and `/me`, Argon2 PIN hashing, duplicate and weak-PIN rejection, wrong-PIN countdown and lockout, teacher PIN reset, upgrading an old account, teacher allowlist, role checks on teacher and money endpoints, consent ownership, profile sync and account deletion.
 - `test_agent.py`: the MCP server lists all tools over the real protocol, tools return dataset figures, profile and user id never come from the model, the loop streams steps and cites tool results, an invented figure falls back to RAG, the 6-step limit, the JSON planner, the no-model workflow, notifications only for the signed-in student, the audit log.
 - `test_rag.py`: one chunk per row with path, row and source; tables kept whole in documents; exact codes found; hybrid search; Marathi questions without a model; re-index after a spreadsheet edit; citations; invented numbers rejected; Weaviate path and its fallback.
