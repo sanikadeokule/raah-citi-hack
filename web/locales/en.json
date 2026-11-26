@@ -868,5 +868,6 @@
  "act_today": "Chose your step for today: {step}",
  "act_ask": "Answered “{q}” after {n} checks in the data",
  "act_ikigai": "Saved what you love ({love}) and what you are good at ({good})",
- "act_path": "Saved your path: {career}"
+ "act_path": "Saved your path: {career}",
+ "start_exists_wrong_pin": "This number already has an account, but that PIN is not right. Check the PIN, or use “I already have an account” on the first screen."
 }
