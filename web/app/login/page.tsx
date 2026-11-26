@@ -1,17 +1,19 @@
 "use client";
 import { Icon } from "@/components/icon";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { Card, Shell } from "@/components/ui";
 import { API, useApp, type AuthUser } from "@/lib/store";
 
 type Mode = "signin" | "register";
 
 function LoginForm() {
-  const { t, signIn } = useApp();
+  const { t, signIn, auth, authReady } = useApp();
   const router = useRouter();
   const sp = useSearchParams();
   const next = sp.get("next") || "/";
+  // someone who is already signed in has nothing to do here (the Google callback carries a token and signs in below)
+  useEffect(() => { if (authReady && auth && !sp.get("token")) router.replace(next); }, [authReady, auth, sp, next, router]);
   const [role, setRole] = useState<"student" | "teacher">(sp.get("role") === "teacher" ? "teacher" : "student");
   const [mode, setMode] = useState<Mode>(sp.get("mode") === "register" ? "register" : "signin");
   const [phone, setPhone] = useState("");
