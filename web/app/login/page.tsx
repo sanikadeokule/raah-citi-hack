@@ -1,6 +1,7 @@
 "use client";
 import { Icon } from "@/components/icon";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { Suspense, useEffect, useState } from "react";
 import { Card, Shell } from "@/components/ui";
 import { API, useApp, type AuthUser } from "@/lib/store";
@@ -15,7 +16,7 @@ function LoginForm() {
   // someone who is already signed in has nothing to do here (the Google callback carries a token and signs in below)
   useEffect(() => { if (authReady && auth && !sp.get("token")) router.replace(next); }, [authReady, auth, sp, next, router]);
   const [role, setRole] = useState<"student" | "teacher">(sp.get("role") === "teacher" ? "teacher" : "student");
-  const [mode, setMode] = useState<Mode>(sp.get("mode") === "register" ? "register" : "signin");
+  const [mode, setMode] = useState<Mode>(sp.get("mode") === "register" && sp.get("role") === "teacher" ? "register" : "signin");
   const [phone, setPhone] = useState("");
   const [name, setName] = useState("");
   const [pin, setPin] = useState("");
@@ -92,21 +93,21 @@ function LoginForm() {
     <Card className="space-y-4">
       <div className="grid grid-cols-2 gap-2">
         {(["student", "teacher"] as const).map((r) => (
-          <button key={r} onClick={() => { setRole(r); setError(null); }}
+          <button key={r} onClick={() => { setRole(r); if (r === "student") setMode("signin"); setError(null); }}
             className={`rounded-xl py-3 font-semibold ${role === r ? "bg-[var(--brand)] text-white" : "bg-[var(--bg)]"}`}>
             {r === "student" ? "" : ""} {t(r === "student" ? "role_student" : "role_teacher")}
           </button>
         ))}
       </div>
 
-      <div className="grid grid-cols-2 gap-1 rounded-xl bg-[var(--bg)] p-1">
+      {role === "teacher" && <div className="grid grid-cols-2 gap-1 rounded-xl bg-[var(--bg)] p-1">
         {(["register", "signin"] as const).map((m) => (
           <button key={m} onClick={() => switchMode(m)}
             className={`rounded-lg py-2 font-semibold ${mode === m ? "bg-[var(--card)] text-[var(--brand-ink)] shadow-sm" : "text-[var(--muted)]"}`}>
             {m === "register" ? `${t("register")}` : `${t("sign_in")}`}
           </button>
         ))}
-      </div>
+      </div>}
 
       {notice && <p className="rounded-lg bg-emerald-50 p-2 text-sm text-emerald-800">{notice}</p>}
 
@@ -153,7 +154,9 @@ function LoginForm() {
       {error && <p className="rounded-lg bg-rose-50 p-2 text-sm text-rose-800">{error}</p>}
 
       <p className="text-center text-sm">
-        {mode === "signin"
+        {role === "student"
+          ? <>{t("new_here")} <Link href="/start/" className="font-semibold underline">{t("start_get_started")}</Link></>
+          : mode === "signin"
           ? <>{t("new_here")} <button className="font-semibold underline" onClick={() => switchMode("register")}>{t("register")}</button></>
           : <>{t("have_account")} <button className="font-semibold underline" onClick={() => switchMode("signin")}>{t("sign_in")}</button></>}
       </p>
