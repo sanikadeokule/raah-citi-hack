@@ -127,7 +127,7 @@ function Start() {
           </div>
           <div className="space-y-2">
             <Primary onClick={() => setI(1)}>{t("start_get_started")}</Primary>
-            <Link href="/login/" className="block py-3 text-sm font-semibold text-[var(--brand-ink)] underline">{t("start_have_account")}</Link>
+            <Link href="/login/" className="block w-full rounded-2xl border-2 border-black/15 py-3.5 text-base font-bold active:scale-[.98]">{t("start_have_account")}</Link>
           </div>
         </div>
       )}
