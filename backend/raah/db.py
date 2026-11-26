@@ -197,6 +197,21 @@ agent_runs = Table(
 )
 
 
+# what Raah did for a student, shown on "What Raah did for you": one row per action, text kept as a key + values so the
+# page can show it in the student's language
+agent_activity = Table(
+    "agent_activity", metadata,
+    Column("id", Integer, primary_key=True, autoincrement=True),
+    Column("user_id", Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True),
+    Column("kind", String(24), nullable=False),
+    Column("text_key", String(48), nullable=False),
+    Column("vars", Text, nullable=False, server_default="{}"),
+    Column("href", String(120)),
+    Column("source", Text),
+    Column("created_at", Integer, nullable=False),
+)
+
+
 # notices read from official sites (NTA, CET Cell, MahaDBT ...) by raah/notices.py. The title, link and
 # published date are kept exactly as the site shows them; exams/schemes/dates are worked out from that text.
 notices = Table(

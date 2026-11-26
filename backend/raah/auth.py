@@ -261,10 +261,18 @@ def put_profile(profile: dict, user: dict = Depends(current_user)):
 
 
 def save_profile(user_id: int, profile: dict) -> None:
+    from .today import _stored_profile, log_activity  # late import: today builds on the agent, which builds on auth
+    old, new = _stored_profile(user_id), profile or {}
     with db.connect() as con:
         con.execute("INSERT INTO profiles (user_id, data, updated_at) VALUES (?, ?, ?) "
                     "ON CONFLICT(user_id) DO UPDATE SET data = excluded.data, updated_at = excluded.updated_at",
                     (user_id, json.dumps(profile, ensure_ascii=False), int(time.time())))
+    # what Raah learned, for "What Raah did for you"
+    ik, ik_old = new.get("ikigai") or {}, old.get("ikigai") or {}
+    if ik.get("confirmed_at") and ik.get("confirmed_at") != ik_old.get("confirmed_at"):
+        log_activity(user_id, "learned", "act_ikigai", {"love": str(len(ik.get("love") or [])), "good": str(len(ik.get("good_at") or []))}, "/discover/")
+    if new.get("roadmap_career") and new.get("roadmap_career") != old.get("roadmap_career"):
+        log_activity(user_id, "chose", "act_path", {"career": str(new["roadmap_career"])}, "/roadmap/")
 
 
 def log_sync(user_id: int, items: list[dict]) -> None:

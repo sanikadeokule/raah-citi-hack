@@ -5,7 +5,7 @@ import { categoryLabel } from "@/lib/labels";
 import { useEffect, useState } from "react";
 import { Card, Shell } from "@/components/ui";
 import { Icon } from "@/components/icon";
-import { todaysStep } from "@/lib/todaysstep";
+import { todaysStep, type Step } from "@/lib/todaysstep";
 import { myCareer } from "@/lib/tailor";
 import { TeacherInbox } from "@/components/inbox";
 import { ProShelf } from "@/components/pro";
@@ -78,12 +78,19 @@ function ClassDashboardCard() {
 }
 
 export default function Home() {
-  const { t, profile, setProfile, data, auth, lang } = useApp();
+  const { t, profile, setProfile, data, auth, authFetch, lang } = useApp();
   const [tTab, setTTab] = useState<"class" | "tools">("class");
   const isTeacher = auth?.user.role === "teacher";
   // greet the signed-in person by their registered name, never by a demo profile
   const greetName = auth?.user.name || (isTeacher ? null : profile?.name) || "";
-  const step = todaysStep(data, profile);
+  // Today's step is decided by the agent from the student's tools; the plain rule shows until it answers or when offline
+  const [agentStep, setAgentStep] = useState<(Step & { looked?: { label: string }[] }) | null>(null);
+  useEffect(() => {
+    if (!auth || isTeacher) return;
+    authFetch("/api/agent/today", { method: "POST" }).then((r) => (r.ok ? r.json() : null)).then((j) => { if (j?.key) setAgentStep(j); }).catch(() => {});
+  }, [auth, isTeacher, authFetch, profile?.roadmap_career, profile?.ikigai?.confirmed_at]);
+  const careerName = (id?: string) => data?.careers?.find((c: any) => c.id === id)?.name ?? id ?? "";
+  const step = agentStep ? { ...agentStep, vars: { ...agentStep.vars, ...(agentStep.vars?.career ? { career: careerName(agentStep.vars.career) } : {}) } } : todaysStep(data, profile);
   const mine = myCareer(data, profile);
   const details = profile ? [profile.class && t("class_n", { n: profile.class }), placeLabel(t, profile.taluka), categoryLabel(profile.category, lang)].filter(Boolean).join(" · ") : "";
   return (
@@ -152,7 +159,11 @@ export default function Home() {
           <p className="mt-1 text-base font-bold leading-snug">{t(step.key, step.vars)}</p>
           <p className="mt-1 text-xs text-[var(--muted)]">{t(`${step.key}_why`, step.vars)}</p>
           {step.source && <p className="mt-1 truncate text-[11px] text-[var(--muted)]">{t("source")}: <a href={step.source.split(" ; ")[0]} target="_blank" rel="noreferrer" className="underline">{step.source.split(" ; ")[0].replace(/^https?:\/\/(www\.)?/, "")}</a></p>}
-          <Link href={step.href} className="mt-3 inline-block rounded-xl bg-[var(--brand)] px-4 py-2.5 text-sm font-bold text-white active:scale-95">{t("step_do_it")}</Link>
+          {agentStep?.looked?.length ? <p className="mt-1 text-[11px] text-[var(--muted)]">{t("step_looked", { tools: agentStep.looked.map((x) => x.label).join(", ") })}</p> : null}
+          <div className="mt-3 flex items-center gap-3">
+            <Link href={step.href} className="inline-block rounded-xl bg-[var(--brand)] px-4 py-2.5 text-sm font-bold text-white active:scale-95">{t("step_do_it")}</Link>
+            <Link href="/activity/" className="text-sm font-semibold text-[var(--brand-ink)] underline">{t("act_title")}</Link>
+          </div>
         </section>
 
         {mine && (

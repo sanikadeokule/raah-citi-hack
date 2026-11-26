@@ -33,7 +33,7 @@ MAX_STEPS = 6
 RESULT_CHARS = 6000  # a tool result longer than this is cut before it goes back to the model
 LANG_NAME = {"mr": "Marathi", "hi": "Hindi", "en": "English"}
 PROFILE_FIELDS = ("name", "class", "age", "gender", "category", "family_income_annual", "taluka", "lat", "lon", "marks_pct",
-                  "interests", "can_stay_hostel", "max_commute_km", "documents", "exams_passed", "disability_pct")
+                  "interests", "strengths", "ikigai", "roadmap_career", "can_stay_hostel", "max_commute_km", "documents", "exams_passed", "disability_pct")
 # filled in by the server, never by the model: the student's own profile and account
 INJECTED = ("profile", "user_id")
 
@@ -187,6 +187,9 @@ def run(body: AskBody, user_id: int | None = None) -> Iterator[dict]:
     lang = body.lang if body.lang in LANG_NAME else "en"
     profile = _clean_profile(body.profile)
     signed_in = bool(user_id)
+    if signed_in:  # the shared student profile: what Discover and the profile page saved is known here too
+        from .today import _stored_profile
+        profile = {**_clean_profile(_stored_profile(user_id)), **profile}
     transport = mcp_client.start()
     yield {"type": "start", "mcp": transport, "max_steps": MAX_STEPS}
 
@@ -312,6 +315,9 @@ def log_run(user_id: int | None, question: str, out: dict) -> None:
                          (out.get("answer") or "")[:2000], 1 if out.get("grounded") else 0, out.get("ms"), int(time.time())))
     except Exception:  # the audit log must never break an answer
         pass
+    if user_id and out.get("steps"):
+        from .today import log_activity
+        log_activity(user_id, "ask", "act_ask", {"q": question[:80], "n": len(out["steps"])}, "/ask/")
 
 
 # ------------------------------------------------------------------ endpoints
