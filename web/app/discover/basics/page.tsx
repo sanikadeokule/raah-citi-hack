@@ -112,9 +112,9 @@ export default function Discover() {
     setBusy(false);
     if (!j || j.fallback) {
       resetAiStatus();
-      // say why the AI chat stopped, so it is clear whether the server, the model name or a timeout is the cause
-      const why = !j ? "the Raah server did not answer" : j.reason || "no model answered";
-      setMsgs((m) => [...m, say((tt) => `${tt("ai_fallback_note")} (${why})`, true)]);
+      // the student sees a plain note; the technical reason (server down, model name, timeout) goes to the console for us
+      console.warn("AI chat fell back to quick questions:", !j ? "the Raah server did not answer" : j.reason || "no model answered");
+      setMsgs((m) => [...m, say((tt) => tt("ai_fallback_note"), true)]);
       toScript(base);
       return;
     }

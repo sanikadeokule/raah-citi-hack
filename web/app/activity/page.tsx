@@ -7,16 +7,23 @@ import { Icon } from "@/components/icon";
 import { Shell } from "@/components/ui";
 import { useApp } from "@/lib/store";
 
-const ICON: Record<string, string> = { today: "compass", ask: "chat", learned: "check", chose: "map" };
+const ICON: Record<string, string> = { today: "compass", ask: "chat", learned: "check", chose: "map", checkin: "check" };
 
 export default function Activity() {
-  const { t, data, auth, authFetch, lang } = useApp();
+  const { t, data, auth, authFetch, lang, showToast } = useApp();
   const [rows, setRows] = useState<any[] | null>(null);
   const [failed, setFailed] = useState(false);
   useEffect(() => {
     if (!auth) return;
     authFetch("/api/activity").then((r) => (r.ok ? r.json() : Promise.reject())).then(setRows).catch(() => setFailed(true));
   }, [auth, authFetch]);
+
+  // demo: ask the follow-up questions now instead of waiting the usual 3 days
+  const followUpsNow = async () => {
+    const r = await authFetch("/api/checkins/refresh?soon=1", { method: "POST" }).catch(() => null);
+    const j = r?.ok ? await r.json() : null;
+    showToast(j ? t("ci_refreshed", { n: j.due.length }) : t("act_offline"));
+  };
 
   const name = (id?: string) => data?.careers?.find((c: any) => c.id === id)?.name ?? id ?? "";
   const text = (r: any) => {
@@ -42,6 +49,7 @@ export default function Activity() {
           </li>
         ))}
       </ol>
+      {auth && <button onClick={followUpsNow} className="w-full py-2 text-xs font-semibold text-[var(--muted)] underline">{t("ci_check_now")}</button>}
     </Shell>
   );
 }

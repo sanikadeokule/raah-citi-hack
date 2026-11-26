@@ -55,6 +55,15 @@ def decide(user_id: int) -> dict:
     if not chosen and not said:
         return _step("step_find_career", "/discover/", looked=looked)
 
+    # 2. a follow-up that is due ("Did you apply for X?"): the answer changes what the next step should be
+    from . import checkins
+    t0 = time.time()
+    open_ = checkins.due(user_id)
+    looked.append({"tool": "get_checkins", "label": "Follow-ups", "summary": f"{len(open_)} due", "ms": int((time.time() - t0) * 1000)})
+    if open_:
+        c = open_[0]
+        return _step(c["text_key"], c["href"], c["vars"], looked=looked)
+
     notes = look("get_notifications", {"unread_only": True})
     unread = notes.get("unread", 0)
     if unread:

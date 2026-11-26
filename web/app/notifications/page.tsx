@@ -8,7 +8,7 @@ import { useEffect, useMemo, useState } from "react";
 import { fromNotification, NoticeCard, SourcesFooter, useNotices } from "@/components/notices";
 import { Pager, usePaged } from "@/components/pager";
 import { Tabs } from "@/components/tabs";
-import { Card, Shell } from "@/components/ui";
+import { Card, Shell, SpeakButton } from "@/components/ui";
 import { Icon } from "@/components/icon";
 import { getKV, setKV } from "@/lib/db";
 import { useApp } from "@/lib/store";
@@ -49,11 +49,11 @@ function NotifCard({ n, onRead, t }: { n: any; onRead: (id: number) => void; t: 
   const title = notifTitle(n, t);
 
   return (
-    <li className={`rounded-2xl border-l-4 overflow-hidden shadow-sm ${meta.color} ${n.read ? "opacity-60" : ""}`}>
+    <li className={`flex items-start rounded-2xl border-l-4 overflow-hidden shadow-sm ${meta.color} ${n.read ? "opacity-60" : ""}`}>
       <Link
         href={href}
         onClick={() => !n.read && onRead(n.id)}
-        className="flex items-start gap-3 px-4 py-3"
+        className="flex min-w-0 flex-1 items-start gap-3 py-3 pl-4"
       >
         <Icon name={meta.icon} size={24} className="mt-0.5 text-[var(--brand)]" />
         <div className="min-w-0 flex-1">
@@ -66,6 +66,8 @@ function NotifCard({ n, onRead, t }: { n: any; onRead: (id: number) => void; t: 
         </div>
         {!n.read && <span className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full bg-[var(--brand)]" aria-label="unread" />}
       </Link>
+      {/* outside the link, so reading it aloud does not open it */}
+      <div className="shrink-0 py-2 pr-2"><SpeakButton text={n.body ? `${title}. ${n.body}` : title} label="" /></div>
     </li>
   );
 }
