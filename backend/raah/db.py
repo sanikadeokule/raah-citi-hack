@@ -212,6 +212,25 @@ agent_activity = Table(
 )
 
 
+# follow-up check-ins (raah/checkins.py): "Did you apply for X?" a few days after something happened.
+# key is stable per student ("card:12:applied", "mentor:MEN03"), so the same question is never created twice.
+checkins = Table(
+    "checkins", metadata,
+    Column("id", Integer, primary_key=True, autoincrement=True),
+    Column("user_id", Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True),
+    Column("key", String(80), nullable=False),
+    Column("text_key", String(48), nullable=False),
+    Column("vars", Text, nullable=False, server_default="{}"),
+    Column("href", String(120)),
+    Column("status", String(8), nullable=False, server_default="open"),  # open | done
+    Column("due_at", Integer, nullable=False),
+    Column("asked", Integer, nullable=False, server_default="0"),  # times "Not yet" was answered
+    Column("answered_at", Integer),
+    Column("created_at", Integer, nullable=False),
+    UniqueConstraint("user_id", "key", name="uq_checkins_user_key"),
+)
+
+
 # notices read from official sites (NTA, CET Cell, MahaDBT ...) by raah/notices.py. The title, link and
 # published date are kept exactly as the site shows them; exams/schemes/dates are worked out from that text.
 notices = Table(

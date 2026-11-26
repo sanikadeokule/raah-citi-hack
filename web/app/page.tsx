@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { categoryLabel } from "@/lib/labels";
 import { useEffect, useState } from "react";
-import { Card, Shell } from "@/components/ui";
+import { Card, Shell, SpeakButton } from "@/components/ui";
+import { useRouter } from "next/navigation";
 import { Icon } from "@/components/icon";
 import { todaysStep, type Step } from "@/lib/todaysstep";
 import { myCareer } from "@/lib/tailor";
@@ -78,7 +79,9 @@ function ClassDashboardCard() {
 }
 
 export default function Home() {
-  const { t, profile, setProfile, data, auth, authFetch, lang } = useApp();
+  const { t, profile, setProfile, data, auth, authFetch, lang, showToast } = useApp();
+  const router = useRouter();
+  const [stepRun, setStepRun] = useState(0);
   const [tTab, setTTab] = useState<"class" | "tools">("class");
   const isTeacher = auth?.user.role === "teacher";
   // greet the signed-in person by their registered name, never by a demo profile
@@ -88,10 +91,24 @@ export default function Home() {
   useEffect(() => {
     if (!auth || isTeacher) return;
     authFetch("/api/agent/today", { method: "POST" }).then((r) => (r.ok ? r.json() : null)).then((j) => { if (j?.key) setAgentStep(j); }).catch(() => {});
-  }, [auth, isTeacher, authFetch, profile?.roadmap_career, profile?.ikigai?.confirmed_at]);
+  }, [auth, isTeacher, authFetch, profile?.roadmap_career, profile?.ikigai?.confirmed_at, stepRun]);
   const careerName = (id?: string) => data?.careers?.find((c: any) => c.id === id)?.name ?? id ?? "";
   const step = agentStep ? { ...agentStep, vars: { ...agentStep.vars, ...(agentStep.vars?.career ? { career: careerName(agentStep.vars.career) } : {}) } } : todaysStep(data, profile);
   const mine = myCareer(data, profile);
+  // a follow-up check-in ("Did you apply for X?") is answered right on the step card
+  const checkin = Number((step.vars as Record<string, string> | undefined)?.checkin) || undefined;
+  const [answering, setAnswering] = useState(false);
+  const answerCheckin = async (answer: "yes" | "later" | "help") => {
+    if (!checkin || answering) return;
+    setAnswering(true);
+    const r = await authFetch(`/api/checkins/${checkin}`, { method: "POST", body: JSON.stringify({ answer }) }).catch(() => null);
+    setAnswering(false);
+    if (!r?.ok) { showToast(t("act_offline")); return; }
+    if (answer === "help") { router.push(`/ask/?q=${encodeURIComponent(t("ci_help_ask", { q: t(step.key, step.vars) }))}`); return; }
+    showToast(t(answer === "yes" ? "ci_thanks" : "ci_later_ok"));
+    setAgentStep(null);
+    setStepRun((n) => n + 1);
+  };
   const details = profile ? [profile.class && t("class_n", { n: profile.class }), placeLabel(t, profile.taluka), categoryLabel(profile.category, lang)].filter(Boolean).join(" · ") : "";
   return (
     <Shell back={null} fit>
@@ -156,14 +173,25 @@ export default function Home() {
         {/* one step chosen for the student today, with the reason and the source */}
         <section aria-labelledby="step-h" className="rounded-2xl border-2 border-[var(--brand)] bg-[var(--card)] p-4 shadow-sm">
           <h2 id="step-h" className="text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">{t("step_title")}</h2>
-          <p className="mt-1 text-base font-bold leading-snug">{t(step.key, step.vars)}</p>
+          <div className="mt-1 flex items-start gap-2">
+            <p className="min-w-0 flex-1 text-base font-bold leading-snug">{t(step.key, step.vars)}</p>
+            <SpeakButton text={`${t(step.key, step.vars)} ${t(`${step.key}_why`, step.vars)}`} label="" />
+          </div>
           <p className="mt-1 text-xs text-[var(--muted)]">{t(`${step.key}_why`, step.vars)}</p>
           {step.source && <p className="mt-1 truncate text-[11px] text-[var(--muted)]">{t("source")}: <a href={step.source.split(" ; ")[0]} target="_blank" rel="noreferrer" className="underline">{step.source.split(" ; ")[0].replace(/^https?:\/\/(www\.)?/, "")}</a></p>}
           {agentStep?.looked?.length ? <p className="mt-1 text-[11px] text-[var(--muted)]">{t("step_looked", { tools: agentStep.looked.map((x) => x.label).join(", ") })}</p> : null}
-          <div className="mt-3 flex items-center gap-3">
-            <Link href={step.href} className="inline-block rounded-xl bg-[var(--brand)] px-4 py-2.5 text-sm font-bold text-white active:scale-95">{t("step_do_it")}</Link>
-            <Link href="/activity/" className="text-sm font-semibold text-[var(--brand-ink)] underline">{t("act_title")}</Link>
-          </div>
+          {checkin ? (
+            <div className="mt-3 flex flex-wrap items-center gap-2" role="group" aria-label={t(step.key, step.vars)}>
+              <button onClick={() => answerCheckin("yes")} disabled={answering} className="rounded-xl bg-[var(--brand)] px-4 py-2.5 text-sm font-bold text-white active:scale-95 disabled:opacity-50">{t("ci_yes")}</button>
+              <button onClick={() => answerCheckin("later")} disabled={answering} className="rounded-xl bg-[var(--brand-soft)] px-4 py-2.5 text-sm font-bold text-[var(--brand-ink)] active:scale-95 disabled:opacity-50">{t("ci_later")}</button>
+              <button onClick={() => answerCheckin("help")} disabled={answering} className="px-1 py-2.5 text-sm font-semibold text-[var(--brand-ink)] underline disabled:opacity-50">{t("ci_help")}</button>
+            </div>
+          ) : (
+            <div className="mt-3 flex items-center gap-3">
+              <Link href={step.href} className="inline-block rounded-xl bg-[var(--brand)] px-4 py-2.5 text-sm font-bold text-white active:scale-95">{t("step_do_it")}</Link>
+              <Link href="/activity/" className="text-sm font-semibold text-[var(--brand-ink)] underline">{t("act_title")}</Link>
+            </div>
+          )}
         </section>
 
         {mine && (

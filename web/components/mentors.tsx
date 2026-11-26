@@ -1,11 +1,13 @@
 "use client";
-// Mentors from the spreadsheet, filtered by the career picked on the page and by distance. A mentor's phone number
+// Mentors from the spreadsheet, filtered by the career picked on the page and by distance, then ranked: works in the
+// student's own career (50) or a related one (25), close by (up to 30, same taluka counts as next door), speaks the
+// student's language (20). Each mentor shows the reasons, so the order is never a mystery. A mentor's phone number
 // comes from the server only after the student agrees to share their first name, class and taluka.
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useMemo, useState } from "react";
 import { Badge, Card } from "./ui";
 import { haversine } from "@/lib/engine";
-import { mentorMatches, pickForCareers, type CareerChoice } from "@/lib/listings";
+import { chosenCareers, mentorMatches, pickForCareers, type CareerChoice } from "@/lib/listings";
 import { useApp } from "@/lib/store";
 import { placeLabel } from "@/lib/questions";
 import { RelatedNote } from "./careerfilter";
@@ -28,7 +30,20 @@ export function Mentors({ career, top }: { career: CareerChoice; top: string[] }
     .filter((m: any) => m.km === null || m.km <= maxKm)
     .sort((a: any, b: any) => (a.km ?? 999) - (b.km ?? 999)), [data, profile, maxKm]);
   const picked = pickForCareers(data, nearby, career, top, mentorMatches);
-  const list = picked.items;
+  const speaks = { en: "English", hi: "Hindi", mr: "Marathi" }[lang as "en" | "hi" | "mr"] ?? "Marathi";
+  const list = useMemo(() => {
+    const own = chosenCareers(data, career, top);
+    return picked.items.map((m: any) => {
+      const reasons: string[] = [];
+      let score = 0;
+      if (own.some((c: any) => mentorMatches(m, c))) { score += 50; reasons.push(t("mr_career")); }
+      else if (picked.related) { score += 25; reasons.push(t("mr_related")); }
+      if (profile?.taluka && m.taluka === profile.taluka) { score += 30; reasons.push(t("mr_same_taluka")); }
+      else if (m.km !== null) { score += Math.max(0, 30 - m.km / 2); if (m.km <= 40) reasons.push(t("mr_near", { km: Math.round(m.km) })); }
+      if ((m.languages || []).includes(speaks)) { score += 20; reasons.push(t("mr_lang", { lang: t(`langname_${speaks}`) })); }
+      return { ...m, score, reasons };
+    }).sort((a: any, b: any) => b.score - a.score);
+  }, [picked.items, picked.related, data, career, top, profile?.taluka, speaks, t]);
 
   const accept = async (id: string) => {
     setError(null);
@@ -49,14 +64,15 @@ export function Mentors({ career, top }: { career: CareerChoice; top: string[] }
       </div>
       <RelatedNote picked={picked} />
       <ul className="mt-2 space-y-2">
-        {list.map((m: any) => (
+        {list.map((m: any, i: number) => (
           <li key={m.id} className="rounded-xl bg-[var(--bg)] p-3 text-sm">
             <div className="flex items-start justify-between gap-2">
-              <div><b>{m.name}</b><div className="text-xs text-[var(--muted)]">{m.works_as}</div></div>
+              <div><b>{m.name}</b>{i === 0 && list.length > 1 && m.score > 0 && <> <Badge tone="green">{t("mentor_best")}</Badge></>}<div className="text-xs text-[var(--muted)]">{m.works_as}</div></div>
               <span className="whitespace-nowrap text-xs text-[var(--muted)]">{placeLabel(t, m.taluka)}{m.km !== null ? ` · ~${Math.round(m.km)} km` : ""}</span>
             </div>
+            {m.reasons.length > 0 && <div className="mt-1 text-xs font-semibold text-[var(--brand-ink)]">{t("mentor_why", { reasons: m.reasons.join(" · ") })}</div>}
             <div className="mt-1">{m.helps_with}</div>
-            <div className="text-xs text-[var(--muted)]">{m.languages.join(", ")} · {m.mode} · {m.available}</div>
+            <div className="text-xs text-[var(--muted)]">{m.languages.map((x: string) => t(`langname_${x}`) === `langname_${x}` ? x : t(`langname_${x}`)).join(", ")} · {m.mode} · {m.available}</div>
             {m.note && <div className="mt-1"><Badge tone="amber">{m.note}</Badge></div>}
             {contacts[m.id] ? (
               <a href={`tel:${contacts[m.id].replace(/\s/g, "")}`} className="mt-2 block rounded-lg bg-[var(--good,#138808)] py-2 text-center font-semibold text-white">{contacts[m.id]}</a>

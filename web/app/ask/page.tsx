@@ -42,6 +42,8 @@ export default function AskPage() {
   const [live, setLive] = useState<Step[]>([]);
   const end = useRef<HTMLDivElement>(null);
   useEffect(() => { end.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs, busy, live]);
+  // /ask/?q=... (e.g. "I need help" on a check-in) opens with the question typed in, ready to send or change
+  useEffect(() => { const q = new URLSearchParams(window.location.search).get("q"); if (q) setText(q.slice(0, 300)); }, []);
 
   /** Runs the agent over Server-Sent Events, showing each tool step as it happens. Null if the stream fails. */
   const askAgent = async (body: unknown): Promise<any | null> => {

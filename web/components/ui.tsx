@@ -185,6 +185,7 @@ export function SpeakButton({ text, label, cache, lang: speechLanguage }: { text
   const text_ = label ?? (state === "on" ? t("stop") : state === "error" ? t("voice_retry") : t("play"));
   return (
     <button onClick={play} aria-live="polite" title={state === "error" ? t("voice_err_play") : undefined}
+      aria-label={label === "" ? (state === "on" ? t("stop") : state === "error" ? t("voice_retry") : t("play")) : undefined}
       className={`inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-medium ${state === "error" ? "bg-amber-100 text-amber-900" : "bg-[var(--brand-soft)] text-[var(--brand-ink)]"}`}>
       {icon} {text_}
     </button>

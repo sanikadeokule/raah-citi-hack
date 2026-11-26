@@ -21,6 +21,7 @@ from .today import router as today_router
 from .auth import current_user, log_sync, save_profile
 from .auth import router as auth_router
 from .chat import router as chat_router
+from .checkins import router as checkins_router
 from .embed import router as embed_router
 from .mentors import router as mentors_router
 from .modules import router as modules_router, seed_test_demo_module
@@ -54,6 +55,8 @@ def _connect_database() -> None:
     watcher.start_background()
     from . import guardian
     guardian.start_background()
+    from . import checkins
+    checkins.start_background()
     if os.environ.get("RAAH_TESTING") != "1":
         from . import notices
         notices.start_background()  # read official notices (NTA, CET Cell, MahaDBT ...) every 6 hours
@@ -177,6 +180,7 @@ def sync(items: list[dict], user: dict = Depends(current_user)):
 app.include_router(auth_router)
 app.include_router(agent_router)
 app.include_router(today_router)
+app.include_router(checkins_router)
 app.include_router(chat_router)
 app.include_router(embed_router)
 app.include_router(voice_router)

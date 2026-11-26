@@ -327,7 +327,7 @@ def read_notification(nid: int, user: dict = Depends(current_user)):
 def delete_me(user: dict = Depends(current_user)):
     """Delete-my-data: removes the account, saved profile and synced activity."""
     with db.connect() as con:
-        for t in ("sync_log", "profiles", "notifications", "interests", "mentor_requests", "enrolments", "user_notices"):
+        for t in ("sync_log", "profiles", "notifications", "interests", "mentor_requests", "enrolments", "user_notices", "checkins"):
             con.execute(f"DELETE FROM {t} WHERE user_id = ?", (user["id"],))
         con.execute("DELETE FROM users WHERE id = ?", (user["id"],))
     return {"deleted": True}
