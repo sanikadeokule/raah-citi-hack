@@ -27,8 +27,6 @@ const SHORTCUTS = [
   { key: "menu_my_roadmap", href: ROADMAP_HREF, icon: "map" },
   { key: "menu_my_progress", href: "/progress/", icon: "chart" },
   { key: "menu_my_mentor", href: "/opportunity/?tab=mentors", icon: "users" },
-  { key: "menu_apply", href: "/apply/", icon: "clipboard" },
-  { key: "menu_parent", href: "/parent/", icon: "users" },
 ];
 
 export function ProfileMenu() {
