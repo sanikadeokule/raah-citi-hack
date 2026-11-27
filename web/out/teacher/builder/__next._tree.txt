@@ -1,6 +1,6 @@
-:HL["/_next/static/chunks/22l2bqetmkxmd.css","style"]
+:HL["/_next/static/chunks/3jjl09ktt1ydm.css","style"]
 :HL["https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;600;700&family=Noto+Sans+Devanagari:wght@400;600;700&display=swap","style"]
 3:[["children",{"s":"__PAGE__","h":160}]]
 2:[["children",{"s":"builder","h":96,"c":"$Q3"}]]
 1:[["children",{"s":"teacher","h":96,"c":"$Q2"}]]
-0:{"b":"zjZS-EcZ3W8xHVe0ah5bU","t":{"t":{"s":"","h":80,"c":"$Q1"}}}
+0:{"b":"jyQ5-WKKj1sw6NJ_L2MBJ","t":{"t":{"s":"","h":80,"c":"$Q1"}}}

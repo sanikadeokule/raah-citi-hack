@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { LANGS, useApp } from "@/lib/store";
 import { ProfileMenu } from "@/components/profilemenu";
 import { Icon } from "@/components/icon";
+import { SideInfo } from "@/components/sideinfo";
 import { ROADMAP_HREF } from "@/lib/roadmap";
 import { cachedAudio, fetchAudio, micErrorKind, micProblem, pickVoice, startRecording, transcribe, voiceStatus, type Recording, type VoiceProblem } from "@/lib/audio";
 
@@ -45,6 +46,7 @@ export function Shell({ title, back = "/", role = "any", publicPage = false, fit
   const [railOpen, setRailOpen] = useState(!onHome);
   useEffect(() => { setRailOpen(!onHome); }, [onHome]);
   const isStudent = auth?.user.role === "student";
+  const withAside = isStudent && !onHome && !!ready;
   const onRoadmap = (path.endsWith("/") ? path : `${path}/`) === ROADMAP_HREF;
   return (
     <div className={`mx-auto max-w-md bg-[var(--bg)] lg:max-w-none ${fit ? "flex min-h-[100dvh] flex-col" : "min-h-screen pb-24"}`}>
@@ -102,7 +104,8 @@ export function Shell({ title, back = "/", role = "any", publicPage = false, fit
       )}
       <div className="flex min-w-0 flex-1 flex-col">
       {!online && <div className="bg-amber-500 px-4 py-2 text-center text-sm font-medium text-black"><Icon name="offline" size={16} className="mr-1 align-[-3px]" />{t("offline_banner")}</div>}
-      <main className={`${fit ? "flex flex-1 flex-col gap-3 p-3" : "space-y-4 p-4"} lg:mx-auto lg:w-full lg:px-8 lg:py-6 ${wide ? "lg:max-w-[1600px]" : "lg:max-w-5xl"}`}>
+      <div className={`flex min-w-0 flex-1 flex-col lg:flex-row lg:justify-center ${withAside ? "xl:gap-2 xl:pr-6" : ""}`}>
+      <main className={`${fit ? "flex flex-1 flex-col gap-3 p-3" : "space-y-4 p-4"} lg:mx-0 lg:w-full lg:min-w-0 lg:px-8 lg:py-6 ${wide ? "lg:max-w-[1600px]" : "lg:max-w-6xl"}`}>
         {!ready ? <Loading /> : wrongRole ? (
           <Card>
             <p><Icon name="lock" size={16} className="mr-1 align-[-3px]" />{t("teacher_only")}</p>
@@ -111,6 +114,8 @@ export function Shell({ title, back = "/", role = "any", publicPage = false, fit
           </Card>
         ) : data || publicPage ? children : <Loading />}
       </main>
+      {withAside && <div className="hidden xl:block xl:py-6"><SideInfo /></div>}
+      </div>
       </div>
       </div>
       {toast && (
