@@ -96,6 +96,11 @@ applications = Table(
     Column("prefill", Text, nullable=False, server_default="'{}'"),
     Column("parent_message", Text),
     Column("parent_message_approved_at", Integer),
+    Column("student_approved_at", Integer),   # student's own yes on the review screen
+    Column("parent_sent_at", Integer),        # when the (mock) message to the parent was logged
+    Column("parent_agreed_at", Integer),      # parent said yes in Parent mode
+    Column("submitted_at", Integer),          # student says they submitted on the official portal
+    Column("remind_at", Integer),             # Raah will check the missing documents again then
     Column("created_at", Integer, nullable=False),
     Column("updated_at", Integer, nullable=False),
 )

@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 
 from . import dataset, db, engine
+from .today import log_activity
 from .auth import current_user
 
 router = APIRouter(prefix="/api/scholarship-applications", tags=["scholarship applications"])
@@ -36,6 +37,9 @@ def _format(row) -> dict:
             "notes": row["notes"] or "", "deadline": row["deadline"],
             "checklist": json.loads(row["checklist"] or "[]"), "prefill": json.loads(row["prefill"] or "{}"),
             "parent_message": row["parent_message"], "parent_approved_at": row["parent_message_approved_at"],
+            "student_approved_at": row["student_approved_at"], "parent_sent_at": row["parent_sent_at"],
+            "parent_agreed_at": row["parent_agreed_at"], "submitted_at": row["submitted_at"],
+            "remind_at": row["remind_at"],
             "created_at": row["created_at"], "updated_at": row["updated_at"]}
 
 
@@ -59,6 +63,22 @@ class UpdateIn(BaseModel):
 
 class ParentMessageIn(BaseModel):
     message: str = Field(..., min_length=5, max_length=1000)
+    lang: str = "en"
+
+
+REQUIRED_FIELDS = ("name", "age", "class", "taluka", "marks_pct", "family_income_annual")
+REMIND_AFTER_DAYS = 3
+
+
+def missing_fields(prefill: dict) -> list[str]:
+    return [k for k in REQUIRED_FIELDS if prefill.get(k) in (None, "", [])]
+
+
+def is_minor(prefill: dict) -> bool:
+    try:
+        return float(prefill.get("age")) < 18
+    except (TypeError, ValueError):
+        return False
 
 
 @router.get("")
@@ -121,7 +141,16 @@ def update_application(app_id: int, body: UpdateIn, user: dict = Depends(current
         row = _get_for_student(con, app_id, user["id"])
         updates: dict = {}
         if "stage" in patch:
+            if patch["stage"] in ("applied", "docs_submitted", "waiting", "result"):
+                prefill = json.loads(row["prefill"] or "{}")
+                if is_minor(prefill) and not row["parent_agreed_at"]:
+                    raise HTTPException(status.HTTP_409_CONFLICT, "A parent must agree before this is submitted")
+                if not row["student_approved_at"]:
+                    raise HTTPException(status.HTTP_409_CONFLICT, "Review and approve the application first")
             updates["column"] = patch["stage"]
+            if patch["stage"] == "applied" and not row["submitted_at"]:
+                updates["submitted_at"] = int(time.time())
+                log_activity(user["id"], "chose", "act_submitted", {"title": row["title"]}, "/apply/")
         if "checklist" in patch:
             scheme = next((s for s in dataset.get()["scholarships"] if s["id"] == row["ref_id"]), None)
             allowed_docs = {r.get("doc") for r in (scheme or {}).get("rules", []) if r.get("doc")}
@@ -156,3 +185,54 @@ def share_with_parent(app_id: int, body: ParentMessageIn, user: dict = Depends(c
                     "? WHERE id = ? AND user_id = ?", (body.message.strip(), now, now, app_id, user["id"]))
         return _format(con.execute("SELECT * FROM applications WHERE id = ?", (app_id,)).fetchone())
 
+
+
+@router.post("/{app_id}/approve")
+def approve(app_id: int, user: dict = Depends(current_user)):
+    """The student's own yes. Raah blocks it while required details are missing."""
+    _student(user)
+    now = int(time.time())
+    with db.connect() as con:
+        row = _get_for_student(con, app_id, user["id"])
+        gaps = missing_fields(json.loads(row["prefill"] or "{}"))
+        if gaps:
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, {"missing": gaps})
+        con.execute("UPDATE applications SET student_approved_at = ?, updated_at = ? WHERE id = ? AND user_id = ?",
+                    (now, now, app_id, user["id"]))
+        out = _format(con.execute("SELECT * FROM applications WHERE id = ?", (app_id,)).fetchone())
+    log_activity(user["id"], "chose", "act_approved", {"title": row["title"]}, "/apply/")
+    return out
+
+
+@router.post("/{app_id}/ask-parent")
+def ask_parent(app_id: int, body: ParentMessageIn, user: dict = Depends(current_user)):
+    """Log the message to the parent. There is no SMS provider yet, so this is a recorded mock."""
+    _student(user)
+    now = int(time.time())
+    with db.connect() as con:
+        row = _get_for_student(con, app_id, user["id"])
+        if not row["student_approved_at"]:
+            raise HTTPException(status.HTTP_409_CONFLICT, "Approve the application before asking a parent")
+        account = con.execute("SELECT family_pin_hash FROM users WHERE id = ?", (user["id"],)).fetchone()
+        if not account or not account["family_pin_hash"]:
+            raise HTTPException(status.HTTP_409_CONFLICT, "Set a family PIN in Parent mode before sharing a message")
+        con.execute("UPDATE applications SET parent_message = ?, parent_message_approved_at = ?, parent_sent_at = ?, "
+                    "updated_at = ? WHERE id = ? AND user_id = ?", (body.message.strip(), now, now, now, app_id, user["id"]))
+        out = _format(con.execute("SELECT * FROM applications WHERE id = ?", (app_id,)).fetchone())
+    log_activity(user["id"], "chose", "act_asked_parent", {"title": row["title"]}, "/apply/")
+    return {**out, "delivery": "mock"}
+
+
+@router.post("/{app_id}/remind")
+def remind(app_id: int, user: dict = Depends(current_user)):
+    _student(user)
+    now = int(time.time())
+    when = now + REMIND_AFTER_DAYS * 86400
+    with db.connect() as con:
+        row = _get_for_student(con, app_id, user["id"])
+        con.execute("UPDATE applications SET remind_at = ?, updated_at = ? WHERE id = ? AND user_id = ?",
+                    (when, now, app_id, user["id"]))
+        out = _format(con.execute("SELECT * FROM applications WHERE id = ?", (app_id,)).fetchone())
+    left = len([c for c in out["checklist"] if not c["ready"]])
+    log_activity(user["id"], "chose", "act_remind", {"title": row["title"], "n": left}, "/apply/")
+    return out
