@@ -11,6 +11,7 @@ import { tagLabel } from "@/lib/questions";
 import { paybackText } from "@/components/plan";
 import { aiAvailable, postAi } from "@/lib/ai";
 import { Pager, usePaged } from "@/components/pager";
+import { MODULE_COLOR, ModuleHero, Ring } from "@/components/modulehero";
 
 // National Career Service, Ministry of Labour & Employment, Government of India
 const NCS_URL = "https://www.ncs.gov.in/";
@@ -65,6 +66,12 @@ export default function CareersPage() {
   );
   return (
     <Shell title={t("home_careers")}>
+      <ModuleHero color={MODULE_COLOR.careers} item="compass"
+        line={top.length ? t("hero_careers", { n: top.length }) : t("hero_careers_none")}
+        stats={[
+          ...(top[0] ? [{ icon: "star", value: `${Math.round(top[0].score * 100)}%`, label: t("hero_stat_best") }] : []),
+          { icon: "compass", value: data?.careers?.length ?? 0, label: t("hero_stat_all") },
+        ]} />
       <div className="flex gap-2">
         {tabBtn("top", `${t("shortlist")}`)}
         {tabBtn("all", t("all_careers", { n: data?.careers?.length ?? 0 }))}
@@ -84,7 +91,7 @@ export default function CareersPage() {
                 className="cursor-pointer rounded-xl bg-[var(--bg)] p-3 ring-1 ring-transparent transition hover:ring-[var(--brand)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)] active:scale-[0.99]">
                 <div className="flex items-start justify-between gap-2">
                   <div><span className="mr-1 text-[var(--muted)]">{i + 1}.</span><b>{s.career.name}</b></div>
-                  <span className="text-xs text-[var(--muted)]">{Math.round(s.score * 100)}%</span>
+                  <Ring value={s.score} color={MODULE_COLOR.careers} size={38} />
                 </div>
                 <div className="mt-1 flex flex-wrap gap-1">
                   {flagBadges(s.career, t)}

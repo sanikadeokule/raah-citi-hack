@@ -10,6 +10,7 @@ import { Mentors } from "@/components/mentors";
 import { CareerFilter, RelatedNote } from "@/components/careerfilter";
 import { Pager, usePaged } from "@/components/pager";
 import { Tabs } from "@/components/tabs";
+import { MODULE_COLOR, Meter, ModuleHero } from "@/components/modulehero";
 
 const PAGE = 10;
 
@@ -30,10 +31,19 @@ export default function Opportunity() {
   const napsPg = usePaged(naps.items, PAGE, reset);
   const railPg = usePaged(rail.items, PAGE, reset);
   const [tab, setTab] = useState<"naps" | "rail" | "mentors">("naps");
+  // the best stipend in view, so each row's bar shows how it compares
+  const maxStipend = Math.max(0, ...naps.items.map((n: any) => n.stipend?.high || 0), ...rail.items.map((n: any) => n.stipend || 0));
   // the profile menu's "My Mentor" links here with ?tab=mentors
   useEffect(() => { if (new URLSearchParams(location.search).get("tab") === "mentors") setTab("mentors"); }, []);
   return (
     <Shell title={t("opportunities")}>
+      <ModuleHero color={MODULE_COLOR.jobs} item="bag"
+        line={t("hero_jobs", { n: naps.items.length + rail.items.length })}
+        stats={[
+          { icon: "wrench", value: naps.items.length, label: t("hero_stat_naps") },
+          { icon: "train", value: rail.items.length, label: t("hero_stat_rail") },
+          ...(maxStipend ? [{ icon: "rupee", value: inr(maxStipend), label: t("hero_stat_stipend") }] : []),
+        ]} />
       <CareerFilter value={career} onChange={setCareer} />
       <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Electrician, Fitter, Chakan…" className="w-full rounded-xl bg-[var(--card)] p-3 ring-1 ring-black/10" />
       <Tabs value={tab} onChange={setTab} tabs={[
@@ -50,6 +60,7 @@ export default function Opportunity() {
           {napsPg.pageItems.map((n: any) => (
             <li key={n.id} className="py-2 text-sm">
               <div className="flex justify-between gap-2"><b>{n.trade}</b><span className="whitespace-nowrap">{n.stipend ? `${inr(n.stipend.low)}–${inr(n.stipend.high)}` : n.stipend_text}</span></div>
+              {n.stipend?.high ? <Meter value={n.stipend.high} max={maxStipend} color={MODULE_COLOR.jobs} /> : null}
               <div className="text-xs text-[var(--muted)]">{n.employer} · {n.location} · {n.duration}</div>
               <div className="flex items-center justify-between"><Source url={n.source} label="apprenticeshipindia.gov.in" date={`posted ${n.posted}`} />
                 <a href={n.source} target="_blank" rel="noreferrer" className="text-xs font-semibold text-[var(--brand-ink)] underline">Apply</a></div>
@@ -66,6 +77,7 @@ export default function Opportunity() {
           {railPg.pageItems.map((n: any) => (
             <li key={n.id} className="py-2 text-sm">
               <div className="flex justify-between gap-2"><b>{n.trade}</b><span>{n.seats} seats · {inr(n.stipend)}{t("per_month")}</span></div>
+              {n.stipend ? <Meter value={n.stipend} max={maxStipend} color={MODULE_COLOR.jobs} /> : null}
               <div className="text-xs text-[var(--muted)]">{n.employer} · {n.notice}</div>
               <Source url={n.source} label="rrccr.com" date={n.last_checked} />
             </li>

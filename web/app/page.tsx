@@ -6,6 +6,8 @@ import { useEffect, useState } from "react";
 import { Card, Shell, SpeakButton } from "@/components/ui";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/icon";
+import { Mascot } from "@/components/mascot";
+import { MODULE_COLOR } from "@/components/modulehero";
 import { todaysStep, type Step } from "@/lib/todaysstep";
 import { myCareer } from "@/lib/tailor";
 import { TeacherInbox } from "@/components/inbox";
@@ -28,12 +30,12 @@ const TILES = [
 ];
 // the student home has six tiles; alerts live in the top bar, progress/roadmap/mentor in the profile menu
 const STUDENT_TILES = [
-  { href: "/careers/", icon: "compass", key: "home_careers" },
-  { href: "/colleges/", icon: "graduation", key: "home_colleges" },
-  { href: "/eligibility/", icon: "rupee", key: "home_eligibility" },
-  { href: "/exams/", icon: "clipboard", key: "home_exams" },
-  { href: "/learn/", icon: "book", key: "home_learn" },
-  { href: "/opportunity/", icon: "briefcase", key: "home_opportunity" },
+  { href: "/careers/", icon: "compass", key: "home_careers", color: MODULE_COLOR.careers },
+  { href: "/colleges/", icon: "graduation", key: "home_colleges", color: MODULE_COLOR.colleges },
+  { href: "/eligibility/", icon: "rupee", key: "home_eligibility", color: MODULE_COLOR.scholarships },
+  { href: "/exams/", icon: "clipboard", key: "home_exams", color: MODULE_COLOR.exams },
+  { href: "/learn/", icon: "book", key: "home_learn", color: MODULE_COLOR.learn },
+  { href: "/opportunity/", icon: "briefcase", key: "home_opportunity", color: MODULE_COLOR.jobs },
 ];
 // A teacher's main job is the class: one big card to the class dashboard with the headline numbers.
 function ClassDashboardCard() {
@@ -88,9 +90,11 @@ export default function Home() {
   const greetName = auth?.user.name || (isTeacher ? null : profile?.name) || "";
   // Today's step is decided by the agent from the student's tools; the plain rule shows until it answers or when offline
   const [agentStep, setAgentStep] = useState<(Step & { looked?: { label: string }[] }) | null>(null);
+  const [stepLoading, setStepLoading] = useState(false); // Maina thinks while the agent picks the step
   useEffect(() => {
     if (!auth || isTeacher) return;
-    authFetch("/api/agent/today", { method: "POST" }).then((r) => (r.ok ? r.json() : null)).then((j) => { if (j?.key) setAgentStep(j); }).catch(() => {});
+    setStepLoading(true);
+    authFetch("/api/agent/today", { method: "POST" }).then((r) => (r.ok ? r.json() : null)).then((j) => { if (j?.key) setAgentStep(j); }).catch(() => {}).finally(() => setStepLoading(false));
   }, [auth, isTeacher, authFetch, profile?.roadmap_career, profile?.ikigai?.confirmed_at, stepRun]);
   const careerName = (id?: string) => data?.careers?.find((c: any) => c.id === id)?.name ?? id ?? "";
   const step = agentStep ? { ...agentStep, vars: { ...agentStep.vars, ...(agentStep.vars?.career ? { career: careerName(agentStep.vars.career) } : {}) } } : todaysStep(data, profile);
@@ -98,6 +102,7 @@ export default function Home() {
   // a follow-up check-in ("Did you apply for X?") is answered right on the step card
   const checkin = Number((step.vars as Record<string, string> | undefined)?.checkin) || undefined;
   const [answering, setAnswering] = useState(false);
+  const [cheer, setCheer] = useState(false);
   const answerCheckin = async (answer: "yes" | "later" | "help") => {
     if (!checkin || answering) return;
     setAnswering(true);
@@ -105,7 +110,8 @@ export default function Home() {
     setAnswering(false);
     if (!r?.ok) { showToast(t("act_offline")); return; }
     if (answer === "help") { router.push(`/ask/?q=${encodeURIComponent(t("ci_help_ask", { q: t(step.key, step.vars) }))}`); return; }
-    showToast(t(answer === "yes" ? "ci_thanks" : "ci_later_ok"));
+    // a done step gets Maina cheering with the thanks; "not yet" stays a quiet toast
+    if (answer === "yes") { setCheer(true); window.setTimeout(() => setCheer(false), 3200); } else showToast(t("ci_later_ok"));
     setAgentStep(null);
     setStepRun((n) => n + 1);
   };
@@ -171,7 +177,10 @@ export default function Home() {
         <TeacherInbox />
 
         {/* one step chosen for the student today, with the reason and the source */}
-        <section aria-labelledby="step-h" className="rounded-2xl border-2 border-[var(--brand)] bg-[var(--card)] p-4 shadow-sm">
+        <section aria-labelledby="step-h" className="rounded-2xl border-2 border-[var(--brand)] bg-[var(--card)] flex gap-3 p-4 shadow-sm">
+          {/* Maina presents the step: thinking while Raah picks it, a clipboard for a follow-up question, a wave otherwise */}
+          <Mascot pose={stepLoading && !agentStep ? "think" : checkin ? "clipboard" : "wave"} size={64} className="-ml-1 shrink-0 self-start" />
+          <div className="min-w-0 flex-1">
           <h2 id="step-h" className="text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">{t("step_title")}</h2>
           <div className="mt-1 flex items-start gap-2">
             <p className="min-w-0 flex-1 text-base font-bold leading-snug">{t(step.key, step.vars)}</p>
@@ -192,6 +201,7 @@ export default function Home() {
               <Link href="/activity/" className="text-sm font-semibold text-[var(--brand-ink)] underline">{t("act_title")}</Link>
             </div>
           )}
+          </div>
         </section>
 
         {mine && (
@@ -204,8 +214,12 @@ export default function Home() {
         {/* tiles grow to fill the free height on tall screens and shrink (never below a big tap target) on short ones */}
         <div className="grid max-h-[30rem] min-h-[14rem] flex-1 grid-cols-3 gap-2">
           {STUDENT_TILES.map((x) => (
-            <Link key={x.href} href={x.href} className="flex flex-col items-center justify-center rounded-2xl bg-[var(--card)] px-1 py-2 text-center text-[var(--brand-ink)] shadow-sm ring-1 ring-black/10 active:scale-95">
-              <Icon name={x.icon} size={36} className="text-[var(--brand)]" />
+            // each module keeps its own colour, the same one its page banner uses
+            <Link key={x.href} href={x.href} className="flex flex-col items-center justify-center rounded-2xl border-b-4 bg-[var(--card)] px-1 py-2 text-center text-[var(--brand-ink)] shadow-sm ring-1 ring-black/10 active:scale-95"
+              style={{ borderBottomColor: x.color }}>
+              <span className="tile-icon grid h-12 w-12 place-items-center rounded-2xl" style={{ background: `color-mix(in srgb, ${x.color} 16%, transparent)`, color: x.color }}>
+                <Icon name={x.icon} size={28} />
+              </span>
               <span className="mt-2 font-semibold leading-tight text-sm">{t(x.key)}</span>
             </Link>
           ))}
@@ -223,6 +237,11 @@ export default function Home() {
         </Link>
 
         </>
+      )}
+      {cheer && (
+        <div role="status" className="pointer-events-none fixed inset-x-0 bottom-8 z-50 flex justify-center px-4">
+          <Mascot pose="cheer" size={110} stack><p className="text-base font-bold">{t("ci_thanks")}</p></Mascot>
+        </div>
       )}
     </Shell>
   );

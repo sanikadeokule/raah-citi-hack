@@ -12,6 +12,7 @@ import { postAi } from "@/lib/ai";
 import { BUILD_ROADMAP_HREF } from "@/lib/roadmap";
 import { ExamsList } from "@/components/exams";
 import { Tabs } from "@/components/tabs";
+import { MODULE_COLOR, ModuleHero } from "@/components/modulehero";
 import { CHANCE_TEXT, chanceFor } from "@/lib/chance";
 import { centreTypeLabel } from "@/lib/labels";
 
@@ -185,6 +186,10 @@ export default function CollegesPage() {
 
   return (
     <Shell title={t("colleges_title")}>
+      {/* Maina in her graduation cap; she thinks while the colleges load */}
+      <ModuleHero color={MODULE_COLOR.colleges} item="cap" pose={loading ? "think" : "wave"}
+        line={careerName ? t("hero_colleges", { career: careerName }) : t("hero_colleges_none")}
+        stats={centres.length ? [{ icon: "building", value: centres.length, label: t("hero_stat_centres") }, ...(courses.length ? [{ icon: "book", value: courses.length, label: t("hero_stat_courses") }] : [])] : []} />
       <Tabs value={tab} onChange={setTab} tabs={[{ key: "exams", label: `${t("home_exams")}` }, { key: "colleges", label: `${t("adm_tab_colleges")}` }]} />
       {tab === "exams" ? <ExamsList /> : noRoadmap ? (
         <Card className="text-center space-y-3">

@@ -8,6 +8,7 @@ import { eligibility, eligibilityChanges, inr } from "@/lib/engine";
 import { useApp } from "@/lib/store";
 import { Pager, usePaged } from "@/components/pager";
 import { Tabs } from "@/components/tabs";
+import { HeroSplit, MODULE_COLOR, ModuleHero } from "@/components/modulehero";
 
 const PAGE = 5;
 const STATUSES = ["eligible", "eligible_missing_docs", "need_info", "not_eligible"] as const;
@@ -45,6 +46,15 @@ export default function EligibilityPage() {
   const pg = usePaged(shown, PAGE, `${planId}|${hostel}|${focus}|${status}`);
   return (
     <Shell title={t("eligibility")}>
+      <ModuleHero color={MODULE_COLOR.scholarships} item="coins"
+        line={counts.eligible ? t("hero_schol", { n: counts.eligible }) : t("hero_schol_none")}>
+        <HeroSplit parts={[
+          { color: "#4ade80", n: counts.eligible || 0, label: t("st_eligible") },
+          { color: "#fcd34d", n: counts.eligible_missing_docs || 0, label: t("st_eligible_missing_docs") },
+          { color: "#cbd5e1", n: counts.need_info || 0, label: t("st_need_info") },
+          { color: "#fca5a5", n: counts.not_eligible || 0, label: t("st_not_eligible") },
+        ]} />
+      </ModuleHero>
       <Card>
         <label className="text-sm">{t("plan_for")}:
           <select value={planId} onChange={(e) => setPlanId(e.target.value)} className="ml-2 rounded bg-[var(--bg)] p-1">

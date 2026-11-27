@@ -15,6 +15,8 @@
   --header-bg: #2563eb;
   --saffron: #ff9933;
   --india-green: #138808;
+  --m-shadow: rgba(0, 0, 0, .12);
+  --m-path: #eadcc2; --m-path-line: #d2bf9c;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
@@ -30,12 +32,14 @@
     --bad: #ff7b72;
     /* a deeper blue bar in dark mode so it does not glare on the dark page */
     --header-bg: #1e40af;
+    --m-shadow: rgba(255, 255, 255, .12);
+    --m-path: #2a3240; --m-path-line: #3d4757;
   }
 }
 :root[data-theme="dark"] {
   --bg: #0f141c; --card: #18202b; --ink: #e8edf5; --muted: #9aa5b5;
   --brand: #3a70de; --brand-ink: #bfd3f2; --brand-soft: #1c2a40; --accent: #f5a04f; --good: #4cc36a; --bad: #ff7b72;
-  --header-bg: #1e40af;
+  --header-bg: #1e40af; --m-shadow: rgba(255, 255, 255, .12); --m-path: #2a3240; --m-path-line: #3d4757;
 }
 
 /* thin tricolour strip under the app bar */
@@ -65,6 +69,62 @@ button { cursor: pointer; }
 }
 @media (prefers-reduced-motion: reduce) {
   .story-grow, .story-fill { width: 100%; }
+}
+
+/* Maina the mynah (components/mascot.tsx). She only moves when the person has not asked for less motion.
+   Wings rotate about their shoulder, which is (0,0) of their own group; eyes, dots and sparkles about their own centre. */
+.m-wing { transform-origin: 0 0; }
+.m-blink, .m-dot, .m-star, .m-heart { transform-box: fill-box; transform-origin: center; }
+.m-flutter { transform-box: fill-box; transform-origin: left center; }
+.m-needle, .m-coin { transform-box: fill-box; transform-origin: center; }
+.m-page { transform-origin: 62px 90px; } /* the book's spine */
+.m-tassel { transform-origin: 60px 18px; }
+.m-headturn, .m-tilt { transform-origin: 60px 60px; } /* her neck */
+.m-nod, .m-sway { transform-origin: 60px 108px; } /* her feet */
+@keyframes m-in { from { opacity: 0; transform: translateY(8px) scale(.92); } to { opacity: 1; transform: none; } }
+@keyframes m-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+@keyframes m-nod { 0%, 100% { transform: none; } 20% { transform: translateY(2px) scale(1.04, .96); } 40% { transform: translateY(-7px); } 60% { transform: translateY(1px) scale(1.03, .97); } 80% { transform: translateY(-3px); } }
+@keyframes m-sway { 0%, 100% { transform: rotate(-4deg); } 50% { transform: rotate(4deg); } }
+@keyframes m-heart { 0% { opacity: 0; transform: translateY(6px) scale(.5); } 30% { opacity: 1; transform: translateY(0) scale(1); } 100% { opacity: 0; transform: translateY(-18px) scale(.9); } }
+@keyframes m-look { 0%, 30%, 100% { transform: translateX(0); } 38%, 50% { transform: translateX(-2.5px); } 58%, 70% { transform: translateX(2px); } }
+@keyframes m-headturn { 0%, 55%, 100% { transform: rotate(0); } 62%, 74% { transform: rotate(9deg); } 80% { transform: rotate(-3deg); } 86% { transform: rotate(0); } }
+@keyframes m-flutter { 0%, 100% { transform: skewY(0) scaleX(1); } 50% { transform: skewY(-6deg) scaleX(.9); } }
+@keyframes m-needle { 0%, 100% { transform: rotate(-30deg); } 40% { transform: rotate(25deg); } 70% { transform: rotate(-8deg); } }
+@keyframes m-coin { 0%, 100% { transform: translateY(0) scaleX(1); } 25% { transform: translateY(-4px) scaleX(.15); } 50% { transform: translateY(-6px) scaleX(1); } 75% { transform: translateY(-4px) scaleX(.15); } }
+@keyframes m-page { 0%, 45%, 100% { transform: scaleX(1); } 60%, 85% { transform: scaleX(-1); } }
+@keyframes m-tassel { 0%, 100% { transform: rotate(-6deg); } 50% { transform: rotate(8deg); } }
+@keyframes m-tilt { 0%, 100% { transform: rotate(-7deg); } 50% { transform: rotate(-3deg); } }
+@keyframes m-hop { 0%, 100% { transform: translateY(0); } 15% { transform: translateY(0) scale(1.05, .95); } 45% { transform: translateY(-12px) scale(.97, 1.03); } 75% { transform: translateY(0) scale(1.03, .97); } }
+@keyframes m-blink { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(.1); } }
+@keyframes m-wave { from { transform: rotate(-14deg); } to { transform: rotate(14deg); } }
+@keyframes m-flap { from { transform: rotate(-10deg); } to { transform: rotate(10deg); } }
+@keyframes m-write { 0%, 100% { transform: translate(0, 0); } 25% { transform: translate(-2px, 1px); } 50% { transform: translate(1px, 2px); } 75% { transform: translate(-1px, -1px); } }
+@keyframes m-dot { 0%, 100% { opacity: .25; transform: scale(.8); } 50% { opacity: 1; transform: scale(1); } }
+@keyframes m-star { 0%, 100% { opacity: 0; transform: scale(.3) rotate(0); } 50% { opacity: 1; transform: scale(1) rotate(45deg); } }
+@media (prefers-reduced-motion: no-preference) {
+  .m-in { animation: m-in .35s ease-out both; }
+  .m-bubble { animation: m-in .35s ease-out .12s both; }
+  .m-bob { animation: m-bob 2.6s ease-in-out infinite; }
+  .m-hop { animation: m-hop .7s ease-in-out 3; }
+  .m-nod { animation: m-nod .8s ease-out; }
+  .m-sway { animation: m-sway 1.6s ease-in-out infinite; }
+  .m-heart { animation: m-heart 1.8s ease-out infinite; }
+  .m-look { animation: m-look 6s ease-in-out infinite; }
+  .m-headturn { animation: m-headturn 7s ease-in-out infinite; }
+  .m-tilt { animation: m-tilt 2.4s ease-in-out infinite; }
+  .m-flutter { animation: m-flutter .9s ease-in-out infinite; }
+  .m-needle { animation: m-needle 3s ease-in-out infinite; }
+  .m-coin { animation: m-coin 2.4s ease-in-out infinite; }
+  .m-page { animation: m-page 4s ease-in-out infinite; }
+  .m-tassel { animation: m-tassel 1.6s ease-in-out infinite; }
+  .tile-icon { transition: transform .25s cubic-bezier(.3,1.6,.5,1); }
+  a:hover .tile-icon, a:active .tile-icon { transform: scale(1.12) rotate(-6deg); }
+  .m-blink { animation: m-blink 4.2s infinite; }
+  .m-wave { animation: m-wave .45s ease-in-out infinite alternate; }
+  .m-flap { animation: m-flap .35s ease-in-out infinite alternate; }
+  .m-write { animation: m-write .8s linear infinite; }
+  .m-dot { animation: m-dot 1.2s ease-in-out infinite; }
+  .m-star { animation: m-star 1.4s ease-in-out infinite; }
 }
 
 /* numbered centre markers on the Leaflet map */
