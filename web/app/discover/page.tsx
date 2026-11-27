@@ -11,7 +11,7 @@ import { ChatInput } from "@/components/chatinput";
 import { Icon, Mark } from "@/components/icon";
 import { MicButton, Shell, SpeakButton } from "@/components/ui";
 import { inr } from "@/lib/engine";
-import { GOOD_CHIPS, LOVE_CHIPS, IKIGAI_WEIGHTS, allTagsOf, extractTags, phrasesOf, reachable, sweetSpots, type Circle, type Check, type Spot } from "@/lib/ikigai";
+import { GOOD_CHIPS, LOVE_CHIPS, ikigaiWeights, type Semantic, allTagsOf, extractTags, phrasesOf, reachable, sweetSpots, type Circle, type Check, type Spot, refiners } from "@/lib/ikigai";
 import { tagLabel } from "@/lib/questions";
 import { useApp } from "@/lib/store";
 
@@ -60,6 +60,7 @@ export default function Discover() {
   const [text, setText] = useState("");
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [turn, setTurn] = useState(0); // 0: the open question, 1: the follow-up
+  const [follow, setFollow] = useState<string[]>([]); // the follow-up's reply chips: tags that sit beside what the student named
   const [voice, setVoice] = useState(false);
   const [adding, setAdding] = useState<"love" | "good" | null>(null);
   const [sel, setSel] = useState(0);
@@ -75,11 +76,31 @@ export default function Discover() {
   const stage = screen === "good" ? "good" : "love";
   const chips = (stage === "good" ? GOOD_CHIPS : LOVE_CHIPS).filter((x) => tags.includes(x)).slice(0, 5);
   // reply chips for the follow-up: each one stands for topics the dataset knows
-  const followUp: { k: string; tags: string[] }[] = stage === "good"
-    ? [{ k: "ik_fc_hands", tags: ["hands-on", "fixing things"] }, { k: "ik_fc_head", tags: ["maths", "reading"] }, { k: "ik_fc_both", tags: ["hands-on", "maths"] }]
-    : [{ k: "ik_fc_make", tags: ["design", "hands-on"] }, { k: "ik_fc_people", tags: ["helping people", "talking to people"] }, { k: "ik_fc_both", tags: ["design", "helping people"] }];
 
-  const spots = useMemo(() => (screen === "sweet" || screen === "checking" || screen === "reach") && data && profile ? sweetSpots(data, profile, love, good) : [], [screen, data, profile, love, good]);
+  // closeness in meaning of what they said to every career (backend embedding model); empty when none is available
+  const [semantic, setSemantic] = useState<Semantic>({});
+  useEffect(() => {
+    if (screen !== "checking") return;
+    let live = true;
+    const words = (tagList: string[], free: string[]) => [...tagList, ...free].join(", ");
+    (async () => {
+      const [l, g] = await Promise.all([
+        words(love, loveWords) ? postAi("/api/interests/careers", { text: words(love, loveWords) }) : null,
+        words(good, goodWords) ? postAi("/api/interests/careers", { text: words(good, goodWords) }) : null,
+      ]);
+      if (!live) return;
+      const ls = l?.scores && Object.keys(l.scores).length ? l.scores : undefined;
+      setSemantic({ love: ls, good: g?.scores && Object.keys(g.scores).length ? g.scores : undefined });
+      if (ls && profile) {
+        // the rest of the app ranks by profile.interests; saving these lets its top 5 use meaning too (30% keyword, 70% meaning)
+        const prof = { ...profile, interest_meaning: { for: love, scores: ls } };
+        setProfile(prof);
+        await queueAction("profile", prof);
+      }
+    })();
+    return () => { live = false; };
+  }, [screen, love, good, loveWords, goodWords]);
+  const spots = useMemo(() => (screen === "sweet" || screen === "checking" || screen === "reach") && data && profile ? sweetSpots(data, profile, love, good, semantic) : [], [screen, data, profile, love, good, semantic]);
   const reach = useMemo(() => (pick && data && profile ? reachable(data, profile, pick) : null), [pick, data, profile]);
   useEffect(() => { end.current?.scrollIntoView({ block: "nearest", behavior: "smooth" }); }, [msgs, screen]);
 
@@ -114,7 +135,12 @@ export default function Discover() {
     const loose = forced.length ? [] : phrasesOf(said).filter((w) => extractTags(w, tags).length === 0 && !found.some((f) => w.toLowerCase().includes(f)));
     if (loose.length && !(reply && found.length)) setWords((w) => [...new Set([...w, ...loose])]);
     if (turn === 0) {
-      say({ from: "raah", text: `${reply || t("ik_nice")} ${t(stage === "good" ? "ik_f_good" : "ik_f_love")}` });
+      // the follow-up is about what they just said: it names it and offers what usually goes with it in the dataset
+      const anchor = found.length ? found : list.slice(-2);
+      const chipsFor = anchor.length ? refiners(data, anchor, [...list, ...found]) : [];
+      const named = anchor.length ? tagLabel(t, anchor[0]) : said.slice(0, 40);
+      setFollow(chipsFor);
+      say({ from: "raah", text: `${reply || t("ik_nice")} ${t(`${stage === "good" ? "ik_f_good" : "ik_f_love"}${chipsFor.length ? "" : "0"}`, { a: named })}` });
       setTurn(1);
     } else {
       setTurn(0); setMsgs([]);
@@ -224,7 +250,7 @@ export default function Discover() {
             <div className="flex flex-wrap gap-2">
               {turn === 0
                 ? chips.map((x) => <Chip key={x} onClick={() => submit(tagLabel(t, x), [x])}>{tagLabel(t, x)}</Chip>)
-                : followUp.map((f) => <Chip key={f.k} onClick={() => submit(t(f.k), f.tags)}>{t(f.k)}</Chip>)}
+                : (follow.length ? follow : chips).map((x) => <Chip key={x} onClick={() => submit(tagLabel(t, x), [x])}>{tagLabel(t, x)}</Chip>)}
             </div>
             <div className="flex items-end gap-2">
               <MicButton onText={(s) => setText((x) => `${x} ${s}`.trim())} />
@@ -304,7 +330,7 @@ export default function Discover() {
                 {CIRCLES.map((c) => (
                   <span key={c} className="block text-[10px] font-semibold leading-tight text-[var(--muted)]">
                     <span className="block h-1.5 overflow-hidden rounded-full bg-black/10"><span className="block h-full rounded-full bg-[var(--brand)]" style={{ width: `${Math.round(s.parts[c] * 100)}%` }} /></span>
-                    <span className="mt-1 block">{t(`ik_short_${c}`)} {Math.round(IKIGAI_WEIGHTS[c] * 100)}%</span>
+                    <span className="mt-1 block">{t(`ik_short_${c}`)} {Math.round(ikigaiWeights(data)[c] * 100)}%</span>
                   </span>
                 ))}
               </span>

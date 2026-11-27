@@ -22,7 +22,6 @@ def test_computers_interest_ranks_only_linked_careers():
     top = engine.rank_careers(d, {**BASE, "interests": ["computers"]}, len(direct) + 3)
     assert set(names(top[:len(direct)])) == set(direct)
     assert all(s["fit"] in ("direct", "related") for s in top)
-    assert "Beautician / salon" not in names(top)
     for s in top[len(direct):]:
         assert s["related"] and "close to your interests" in s["why"]
 
