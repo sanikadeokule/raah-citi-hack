@@ -1163,5 +1163,7 @@
  "ik_said": "You said {a}.",
  "nav_collapse": "Collapse menu",
  "nav_expand": "Open menu",
- "colleges_filter_all": "All"
+ "colleges_filter_all": "All",
+ "not_sure_yet": "Not sure yet?",
+ "not_sure_yet_sub": "Compare two careers side by side, or ask Raah."
 }

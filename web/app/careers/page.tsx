@@ -88,9 +88,9 @@ export default function CareersPage() {
             const r = s.plan_id ? quick(s.plan_id) : null;
             return (
               <li key={s.career.id} {...cardProps(s.career.id)}
-                className="cursor-pointer rounded-xl bg-[var(--bg)] p-3 ring-1 ring-transparent transition hover:ring-[var(--brand)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)] active:scale-[0.99]">
+                className={`cursor-pointer rounded-xl p-3 ring-1 transition hover:ring-[var(--brand)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)] active:scale-[0.99] ${i === 0 ? "bg-[var(--brand-soft)] ring-2 ring-[var(--brand)]" : "bg-[var(--bg)] ring-transparent"}`}>
                 <div className="flex items-start justify-between gap-2">
-                  <div><span className="mr-1 text-[var(--muted)]">{i + 1}.</span><b>{s.career.name}</b></div>
+                  <div>{i === 0 && <span className="mb-0.5 block text-[10px] font-bold uppercase tracking-wider text-[var(--brand-ink)]">{t("your_career")}</span>}<span className="mr-1 text-[var(--muted)]">{i + 1}.</span><b>{s.career.name}</b></div>
                   <Ring value={s.score} color={MODULE_COLOR.careers} size={38} />
                 </div>
                 <div className="mt-1 flex flex-wrap gap-1">
@@ -113,6 +113,16 @@ export default function CareersPage() {
               </li>
             );
           })}
+          {top.length > 0 && (
+            <li className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-black/15 p-3 text-center">
+              <p className="font-semibold">{t("not_sure_yet")}</p>
+              <p className="text-xs text-[var(--muted)]">{t("not_sure_yet_sub")}</p>
+              <div className="mt-1 flex gap-2">
+                <Link href="/compare/" className="rounded-full bg-[var(--bg)] px-3 py-1.5 text-xs font-semibold ring-1 ring-black/10">{t("home_compare")}</Link>
+                <Link href="/ask/" className="rounded-full bg-[var(--bg)] px-3 py-1.5 text-xs font-semibold ring-1 ring-black/10">{t("home_ask")}</Link>
+              </div>
+            </li>
+          )}
         </ul>
       </Card>}
       {/* the Government of India's own career portal, for careers beyond this list */}
