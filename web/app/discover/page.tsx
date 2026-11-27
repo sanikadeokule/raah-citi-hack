@@ -140,7 +140,9 @@ export default function Discover() {
       const chipsFor = anchor.length ? refiners(data, anchor, [...list, ...found]) : [];
       const named = anchor.length ? tagLabel(t, anchor[0]) : said.slice(0, 40);
       setFollow(chipsFor);
-      say({ from: "raah", text: `${reply || t("ik_nice")} ${t(`${stage === "good" ? "ik_f_good" : "ik_f_love"}${chipsFor.length ? "" : "0"}`, { a: named })}` });
+      // the model's own reply already says back what it understood; only without it do we name the topic ourselves
+      const ack = reply || (stage === "love" && anchor.length ? t("ik_said", { a: named }) : t("ik_nice"));
+      say({ from: "raah", text: `${ack} ${t(`${stage === "good" ? "ik_f_good" : "ik_f_love"}${chipsFor.length ? "" : "0"}`, { a: named })}` });
       setTurn(1);
     } else {
       setTurn(0); setMsgs([]);

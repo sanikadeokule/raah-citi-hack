@@ -841,7 +841,7 @@
  "ik_voice_instead": "Use my voice instead",
  "ik_heard_love": "I heard you love:",
  "ik_nice": "Nice!",
- "ik_f_love": "You said {a}. Which part do you enjoy most?",
+ "ik_f_love": "Which part of that do you enjoy most?",
  "ik_f_good": "When people ask you for help with {a}, what do you actually do?",
  "ik_add": "+ add",
  "ik_confirm_next": "Next, Raah checks what pays and what's needed near you.",
@@ -1161,5 +1161,6 @@
  "because_trade": "Matches your {career} path",
  "fc_for_you_note": "Free courses that help with {career}. Your language comes first.",
  "fc_see_all": "See all {n} free courses",
- "fc_back_for_you": "Back to courses for you"
+ "fc_back_for_you": "Back to courses for you",
+ "ik_said": "You said {a}."
 }
