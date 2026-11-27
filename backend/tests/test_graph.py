@@ -95,3 +95,13 @@ def test_combined_diagram_names_every_flow():
     m = raah_graph.diagram()
     for word in ("Today's step", "Ask Raah", "Scholarship application", "Exam date agent", "Route by intent", "Shared:"):
         assert word in m
+
+
+def test_today_graph_uses_saved_language_in_model_prompt(monkeypatch, chosen_student):
+    with db.connect() as con:
+        profile = json.loads(con.execute("SELECT data FROM profiles WHERE user_id = ?", (chosen_student,)).fetchone()["data"])
+    auth.save_profile(chosen_student, {**profile, "language": "ta"})
+    seen = _fake_model(monkeypatch, [{"step": "step_notice", "reason": "Tamil reason"}])
+    step = raah_graph.run("today", user_id=chosen_student)
+    assert step["key"] == "step_notice"
+    assert "in Tamil" in seen[0]

@@ -47,7 +47,7 @@ export default function Progress() {
   return (
     <Shell title={t("progress_title")}>
       <Link href="/learn/" className="text-sm font-semibold text-[var(--brand-ink)] underline">← {t("home_learn")}</Link>
-      {auth?.user.role !== "student" ? <Card>{t("progress_students_only")}</Card> : error ? <Card>{error}</Card> : !progress ? <Card>Loading…</Card> : <>
+      {auth?.user.role !== "student" ? <Card>{t("progress_students_only")}</Card> : error ? <Card>{error}</Card> : !progress ? <Card>{t("loading")}</Card> : <>
         <div className="grid grid-cols-2 gap-3">
           <div className="rounded-2xl bg-[var(--card)] p-4 shadow-sm ring-1 ring-black/5">
             <span className="grid h-9 w-9 place-items-center rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30"><Icon name="check" size={18} /></span>

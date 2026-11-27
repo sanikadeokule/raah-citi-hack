@@ -42,7 +42,7 @@ export default function Learn() {
   const [voice, setVoice] = useState(false);
   const [saved, setSaved] = useState<Record<string, boolean>>({});
   const [saving, setSaving] = useState(false);
-  useEffect(() => { voiceAvailable().then(setVoice); }, []);
+  useEffect(() => { voiceAvailable(lang).then(setVoice); }, [lang]);
   useEffect(() => {
     Promise.all(ls.map(async (l) => [l.id, Boolean(await cachedAudio(lang, l.text))] as const)).then((e) => setSaved(Object.fromEntries(e)));
   }, [ls, lang]);
@@ -160,7 +160,7 @@ export default function Learn() {
         ) : (
           <div className="mt-3 rounded-xl bg-[var(--brand-soft)] p-3 text-center text-lg font-bold">{t("score")}: {score} / {qs.length}</div>
         )}
-        <p className="mt-2 text-xs text-[var(--muted)]">Answers are saved on the phone and sync when you are back online.</p>
+        <p className="mt-2 text-xs text-[var(--muted)]">{t("learn_sync_note")}</p>
         <Link href="/progress/" className="mt-3 inline-block text-sm font-semibold text-[var(--brand-ink)] underline">{t("progress_view_dashboard")}</Link>
       </Card>}
 

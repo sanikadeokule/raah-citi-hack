@@ -48,7 +48,7 @@ export default function Opportunity() {
           ...(maxStipend ? [{ icon: "rupee", value: inr(maxStipend), label: t("hero_stat_stipend") }] : []),
         ]} />
       <CareerFilter value={career} onChange={setCareer} />
-      <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Electrician, Fitter, Chakan…" className="w-full rounded-xl bg-[var(--card)] p-3 ring-1 ring-black/10" />
+      <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("opp_search_hint")} className="w-full rounded-xl bg-[var(--card)] p-3 ring-1 ring-black/10" />
       <Tabs value={tab} onChange={setTab} tabs={[
         { key: "naps", label: `${t("opp_tab_naps")}`, count: naps.items.length },
         { key: "rail", label: `${t("opp_tab_rail")}`, count: rail.items.length },
@@ -57,7 +57,7 @@ export default function Opportunity() {
       {tab === "mentors" && <Mentors career={career} top={top} />}
       {tab === "naps" && <Card>
         <div ref={napsPg.top} />
-        <h2 className="mb-2 font-bold">NAPS apprenticeships · Pune <Badge>{naps.items.length}</Badge></h2>
+        <h2 className="mb-2 font-bold">{t("opp_naps_pune")} <Badge>{naps.items.length}</Badge></h2>
         {!q && <RelatedNote picked={naps} />}
         <ul className="divide-y divide-black/5 lg:grid lg:grid-cols-2 lg:gap-x-8 lg:divide-y-0">
           {napsPg.pageItems.map((n: any) => (
@@ -66,8 +66,8 @@ export default function Opportunity() {
               <div className="flex justify-between gap-2"><b>{n.trade}</b><span className="whitespace-nowrap">{n.stipend ? `${inr(n.stipend.low)}–${inr(n.stipend.high)}` : n.stipend_text}</span></div>
               {n.stipend?.high ? <Meter value={n.stipend.high} max={maxStipend} color={MODULE_COLOR.jobs} /> : null}
               <div className="text-xs text-[var(--muted)]">{n.employer} · {n.location} · {n.duration}</div>
-              <div className="flex items-center justify-between"><Source url={n.source} label="apprenticeshipindia.gov.in" date={`posted ${n.posted}`} />
-                <a href={n.source} target="_blank" rel="noreferrer" className="text-xs font-semibold text-[var(--brand-ink)] underline">Apply</a></div>
+              <div className="flex items-center justify-between"><Source url={n.source} label="apprenticeshipindia.gov.in" date={t("opp_posted", { date: n.posted })} />
+                <a href={n.source} target="_blank" rel="noreferrer" className="text-xs font-semibold text-[var(--brand-ink)] underline">{t("opp_apply")}</a></div>
             </li>
           ))}
         </ul>
@@ -75,13 +75,13 @@ export default function Opportunity() {
       </Card>}
       {tab === "rail" && <Card>
         <div ref={railPg.top} />
-        <h2 className="mb-2 font-bold">Central Railway (Pune cluster) <Badge>{rail.items.length}</Badge></h2>
+        <h2 className="mb-2 font-bold">{t("opp_rail_pune")} <Badge>{rail.items.length}</Badge></h2>
         {!q && <RelatedNote picked={rail} />}
         <ul className="divide-y divide-black/5 lg:grid lg:grid-cols-2 lg:gap-x-8 lg:divide-y-0">
           {railPg.pageItems.map((n: any) => (
             <li key={n.id} className="py-2 text-sm lg:border-b lg:border-black/5">
               {because(n) && <span className="mb-1 inline-block rounded-full bg-[var(--brand-soft)] px-2 py-0.5 text-[11px] font-semibold text-[var(--brand-ink)]">{t("because_trade", { career: because(n) })}</span>}
-              <div className="flex justify-between gap-2"><b>{n.trade}</b><span>{n.seats} seats · {inr(n.stipend)}{t("per_month")}</span></div>
+              <div className="flex justify-between gap-2"><b>{n.trade}</b><span>{t("opp_seats", { n: n.seats })} · {inr(n.stipend)}{t("per_month")}</span></div>
               {n.stipend ? <Meter value={n.stipend} max={maxStipend} color={MODULE_COLOR.jobs} /> : null}
               <div className="text-xs text-[var(--muted)]">{n.employer} · {n.notice}</div>
               <Source url={n.source} label="rrccr.com" date={n.last_checked} />

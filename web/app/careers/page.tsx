@@ -128,7 +128,7 @@ export default function CareersPage() {
       </a>
       {tab === "all" && <Card>
         <h2 className="text-lg font-bold">{t("all_careers", { n: all.length })}</h2>
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search" className="mt-2 w-full rounded-lg bg-[var(--bg)] p-2" />
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("careers_search_placeholder")} className="mt-2 w-full rounded-lg bg-[var(--bg)] p-2" />
         <div ref={pg.top} />
         <ul className="mt-2 divide-y divide-black/5 lg:grid lg:grid-cols-2 lg:gap-x-6 lg:divide-y-0">
           {pg.pageItems.map((c: any) => (
@@ -141,7 +141,7 @@ export default function CareersPage() {
                 </div>
                 <span className="flex shrink-0 flex-col items-end gap-1">
                 <span className="rounded-full bg-[var(--brand)] px-3 py-1 text-xs font-semibold text-white"><Icon name="map" size={14} className="align-[-2px]" /></span>
-                {plans[c.id] && <Link href={`/plan/?id=${plans[c.id].id}`} className="shrink-0 rounded-full bg-[var(--brand-soft)] px-3 py-1 text-xs font-semibold text-[var(--brand-ink)]">₹ plan</Link>}
+                {plans[c.id] && <Link href={`/plan/?id=${plans[c.id].id}`} className="shrink-0 rounded-full bg-[var(--brand-soft)] px-3 py-1 text-xs font-semibold text-[var(--brand-ink)]">{t("careers_money_plan")}</Link>}
                 </span>
               </div>
             </li>

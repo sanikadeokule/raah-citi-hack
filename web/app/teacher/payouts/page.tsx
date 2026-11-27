@@ -31,7 +31,7 @@ export default function TeacherPayoutHistory() {
         <Stat label={t("unpaid")} value={inr(earnings.unpaid)} tone="text-[var(--good)]" />
         <Stat label={t("progress_completed")} value={String(earnings.completions)} />
       </div>}
-      {error && <Card><p className="text-sm text-rose-800">{error}</p><button onClick={load} className="mt-2 text-sm underline">Retry</button></Card>}
+      {error && <Card><p className="text-sm text-rose-800">{error}</p><button onClick={load} className="mt-2 text-sm underline">{t("teacher_retry")}</button></Card>}
       {batches?.length === 0 && !error && <Card><p className="text-sm text-[var(--muted)]">{t("payout_no_history")}</p></Card>}
       {batches?.map((batch) => (
         <Card key={batch.reference}>

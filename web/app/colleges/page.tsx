@@ -13,7 +13,7 @@ import { BUILD_ROADMAP_HREF } from "@/lib/roadmap";
 import { ExamsList } from "@/components/exams";
 import { Tabs } from "@/components/tabs";
 import { MODULE_COLOR, ModuleHero } from "@/components/modulehero";
-import { CHANCE_TEXT, chanceFor } from "@/lib/chance";
+import { chanceFor } from "@/lib/chance";
 import { centreTypeLabel } from "@/lib/labels";
 
 const PAGE_SIZE = 5;
@@ -48,7 +48,6 @@ const CHANCE_TONE = { safe: "green", good: "blue", reach: "amber" } as const;
 function CentreCard({ c, t, profile, lang }: { c: any; t: (k: string) => string; profile: any; lang: string }) {
   const [open, setOpen] = useState(false);
   const chance = chanceFor(c, profile);
-  const ct = CHANCE_TEXT[lang] ?? CHANCE_TEXT.en;
   const color = typeColor(c.type);
   const fees = cleanFees(c.fees_text);
   const courses = cleanCourses(c.courses);
@@ -67,14 +66,14 @@ function CentreCard({ c, t, profile, lang }: { c: any; t: (k: string) => string;
         <div className="min-w-0 flex-1">
           <p className="font-bold text-sm leading-snug">{c.name}</p>
           <div className="mt-1 flex flex-wrap items-center gap-1.5">
-            <Badge tone={CHANCE_TONE[chance.level]}>{ct[chance.level]}</Badge>
-            {chance.farAway && <span className="text-[10px] text-[var(--muted)]">{ct.far}</span>}
-            {chance.needsMarks && <span className="text-[10px] text-[var(--muted)]">{ct.no_marks}</span>}
+            <Badge tone={CHANCE_TONE[chance.level]}>{t(`chance_${chance.level}`)}</Badge>
+            {chance.farAway && <span className="text-[10px] text-[var(--muted)]">{t("chance_far")}</span>}
+            {chance.needsMarks && <span className="text-[10px] text-[var(--muted)]">{t("chance_no_marks")}</span>}
           </div>
           <div className="mt-1 flex flex-wrap items-center gap-1.5">
             {c.type && (
               <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${color.bg} ${color.text}`}>
-                {centreTypeLabel(c.type, lang)}
+                {centreTypeLabel(c.type, t)}
               </span>
             )}
             {(c.taluka || c.district) && (
@@ -210,7 +209,7 @@ export default function CollegesPage() {
 
           <Card>
             <h2 className="mb-3 font-bold">{t("colleges_centres")}</h2>
-            {loading && <p className="text-sm text-[var(--muted)] animate-pulse">Loading…</p>}
+            {loading && <p className="text-sm text-[var(--muted)] animate-pulse">{t("loading")}</p>}
             {!loading && centres.length === 0 && (
               <p className="text-sm text-[var(--muted)]">{t("colleges_no_centres")}</p>
             )}
@@ -252,7 +251,7 @@ export default function CollegesPage() {
             <Card>
               <h2 className="mb-3 font-bold">{t("colleges_online")}</h2>
               {loading && courses.length === 0 && (
-                <p className="text-sm text-[var(--muted)] animate-pulse">Loading…</p>
+                <p className="text-sm text-[var(--muted)] animate-pulse">{t("loading")}</p>
               )}
               <ul className="space-y-3 lg:grid lg:grid-cols-2 lg:items-start lg:gap-3 lg:space-y-0">
                 {courses.map((c: any) => (

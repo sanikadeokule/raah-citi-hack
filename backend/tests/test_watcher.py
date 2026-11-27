@@ -145,3 +145,27 @@ def test_the_exam_date_agent_writes_per_student_messages_and_drops_invented_date
     bodies = {json.dumps(n["body"]) for h in (ha, hb) for n in c.get("/api/auth/notifications", headers=h).json()[:1]}
     assert any("apply soon" in b for b in bodies)
     assert not any("5 March" in b for b in bodies), "an invented date never reaches a student"
+
+
+def test_exam_alert_graph_uses_saved_language_in_model_prompt(monkeypatch):
+    import json
+    from raah import db, llm, watch_graph
+
+    h = login("9700000091")
+    uid = c.get("/api/auth/me", headers=h).json()["id"]
+    with db.connect() as con:
+        con.execute("INSERT INTO profiles (user_id, data, updated_at) VALUES (?, ?, 0)",
+                    (uid, json.dumps({"language": "bn"})))
+    prompts = []
+
+    def fake_chat(messages, **kwargs):
+        prompts.append(messages[-1]["content"])
+        return json.dumps({"urgent": False, "message": "Registration is open."}), "test"
+
+    monkeypatch.setattr(llm, "chat", fake_chat)
+    monkeypatch.setattr(watch_graph, "notify", lambda *args: None)
+    monkeypatch.setattr("raah.today.log_activity", lambda *args: None)
+    out = watch_graph.run({"id": "EX01", "name": "Exam", "site": "https://example.org"},
+                          ["Registration is open."], [uid])
+    assert out["mode"] == "model"
+    assert "in Bengali" in prompts[0]

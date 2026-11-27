@@ -19,7 +19,7 @@ function ResetStudentPin() {
     const r = await authFetch("/api/auth/reset-pin", { method: "POST", body: JSON.stringify({ phone }) });
     const j = await r.json();
     if (r.ok) { showToast(t("pin_reset_done")); setPhone(""); setMsg(null); }
-    else setMsg(typeof j.detail === "string" ? j.detail : "Error");
+    else setMsg(typeof j.detail === "string" ? j.detail : t("teacher_error"));
   };
   return (
     <Card className="space-y-2">
@@ -35,26 +35,27 @@ function ResetStudentPin() {
   );
 }
 
-const SCHOOL: Record<string, string> = { government: "Government", aided: "Aided", local_body: "Local body", private: "Private", top_class: "Top-class" };
+const SCHOOL_TYPES = ["government", "aided", "local_body", "private", "top_class"];
 
 /** One student as a card. Closed it shows who and how worried to be; open it lists the details as bullets. */
 function StudentCard({ s }: { s: any }) {
   const { t, lang } = useApp();
   const riskTone = s.risk_level === "high" ? "red" : s.risk_level === "medium" ? "amber" : "gray";
-  const yes = (v: boolean | undefined) => (v ? "Yes" : "No");
+  const yes = (v: boolean | undefined) => t(v ? "teacher_student_yes" : "teacher_student_no");
+  const school = SCHOOL_TYPES.includes(s.school_type) ? t(`teacher_school_${s.school_type}`) : s.school_type ?? "—";
   const rows: [string, React.ReactNode][] = [
-    ["Class", s.class ? `${s.class}${s.age ? ` · age ${s.age}` : ""}` : "—"],
-    ["Taluka", talukaLabel(s.taluka, lang) || "—"],
-    ["Marks", s.marks_pct != null ? `${s.marks_pct}%` : "—"],
-    ["Best career match", s.top_career || "—"],
-    ["Interests", s.interests?.length ? s.interests.join(", ") : "—"],
-    ["Category", categoryLabel(s.category, lang) || "—"],
-    ["Family income", s.family_income_annual != null ? `${inr(s.family_income_annual)} / year` : "—"],
-    ["Can travel", s.max_commute_km != null ? `${s.max_commute_km} km` : "—"],
-    ["Can stay in hostel", yes(s.can_stay_hostel)],
-    ["School", SCHOOL[s.school_type] ?? s.school_type ?? "—"],
-    ["Documents", s.documents?.length ? s.documents.map((d: string) => d.replace(/_/g, " ")).join(", ") : "none yet"],
-    ["Profile completed", s.profile_completion != null ? `${s.profile_completion}%` : "—"],
+    [t("teacher_student_class"), s.class ? `${s.class}${s.age ? t("teacher_student_age", { age: s.age }) : ""}` : "—"],
+    [t("teacher_student_taluka"), talukaLabel(s.taluka, lang) || "—"],
+    [t("teacher_student_marks"), s.marks_pct != null ? `${s.marks_pct}%` : "—"],
+    [t("teacher_student_best_career"), s.top_career || "—"],
+    [t("teacher_student_interests"), s.interests?.length ? s.interests.join(", ") : "—"],
+    [t("teacher_student_category"), categoryLabel(s.category, t) || "—"],
+    [t("teacher_student_income"), s.family_income_annual != null ? `${inr(s.family_income_annual)} ${t("teacher_student_per_year")}` : "—"],
+    [t("teacher_student_travel"), s.max_commute_km != null ? `${s.max_commute_km} ${t("distance_unit")}` : "—"],
+    [t("teacher_student_hostel"), yes(s.can_stay_hostel)],
+    [t("teacher_student_school"), school],
+    [t("teacher_student_documents"), s.documents?.length ? s.documents.map((d: string) => d.replace(/_/g, " ")).join(", ") : t("teacher_student_no_documents")],
+    [t("teacher_student_profile"), s.profile_completion != null ? `${s.profile_completion}%` : "—"],
   ];
   return (
     <details className="group rounded-2xl bg-[var(--card)] shadow-sm ring-1 ring-black/5">
@@ -122,7 +123,7 @@ export default function Teacher() {
     showToast(`${t("sent_to", { n: j.sent })} · ${t("sent_to_app", { n: j.sent_to_app ?? 0 })}`);
   };
   const pg = usePaged((cls?.students ?? []).filter((s: any) => filter === "all" || (filter === "risk" ? s.risk_level === "high" : s.talent)), 5, filter);
-  if (!cls) return <Shell title={t("teacher_dashboard")} role="teacher"><Card>Connect to the Raah server to load the class.</Card></Shell>;
+  if (!cls) return <Shell title={t("teacher_dashboard")} role="teacher"><Card>{t("teacher_connect")}</Card></Shell>;
   const st = cls.students;
   return (
     <Shell title={t("teacher_dashboard")} role="teacher">
@@ -147,15 +148,15 @@ export default function Teacher() {
             {data.scholarships.filter((s: any) => s.rules.length).map((s: any) => <option key={s.id} value={s.id}>{s.id} · {s.name}</option>)}
           </select>
           <select value={planId} onChange={(e) => setPlanId(e.target.value)} className="w-full min-w-0 rounded-lg bg-[var(--bg)] p-2 text-sm">
-            <option value="">Students now (Class 10)</option>
-            {data.plans.map((p: any) => <option key={p.id} value={p.id}>If they choose: {p.label}</option>)}
+            <option value="">{t("teacher_students_now")}</option>
+            {data.plans.map((p: any) => <option key={p.id} value={p.id}>{t("teacher_if_choose", { name: p.label })}</option>)}
           </select>
         </div>
         <button onClick={recommend} disabled={!eligible?.students?.length} className="mt-3 w-full rounded-xl bg-[var(--accent)] py-3 font-semibold text-white disabled:opacity-40">
           {t("recommend_all")} ({eligible?.students?.length ?? 0})
         </button>
         {eligible?.students?.length > 0 && (
-          <p className="mt-2 text-xs text-[var(--muted)]">{eligible.students.filter((s: any) => s.status === "eligible_missing_docs").length} of them still need a document (mostly income certificate).
+          <p className="mt-2 text-xs text-[var(--muted)]">{t("teacher_need_docs", { n: eligible.students.filter((s: any) => s.status === "eligible_missing_docs").length })}
             {" "} {t("sent_to_app", { n: eligible.students.filter((s: any) => s.real).length })}</p>
         )}
       </Card>
@@ -163,16 +164,16 @@ export default function Teacher() {
         <div className="mb-2 flex items-center justify-between">
           <h2 className="font-bold">{t("students")}</h2>
           <div className="flex gap-1 text-xs">
-            {(["all", "risk", "talent"] as const).map((f) => <button key={f} onClick={() => setFilter(f)} className={`rounded-full px-2 py-1 ${filter === f ? "bg-[var(--brand)] text-white" : "bg-[var(--bg)]"}`}>{f}</button>)}
+            {(["all", "risk", "talent"] as const).map((f) => <button key={f} onClick={() => setFilter(f)} className={`rounded-full px-2 py-1 ${filter === f ? "bg-[var(--brand)] text-white" : "bg-[var(--bg)]"}`}>{t(`teacher_filter_${f}`)}</button>)}
           </div>
         </div>
-        <p className="mb-2 text-xs text-[var(--muted)]">Top interests: {cls.top_interests.map((x: any) => `${x[0]} (${x[1]})`).join(", ")}</p>
+        <p className="mb-2 text-xs text-[var(--muted)]">{t("teacher_top_interests", { interests: cls.top_interests.map((x: any) => `${x[0]} (${x[1]})`).join(", ") })}</p>
         <div ref={pg.top} />
         <div className="space-y-2">
           {pg.pageItems.map((s: any) => <StudentCard key={s.id} s={s} />)}
         </div>
         <Pager {...pg} shown={pg.pageItems.length} />
-        <p className="mt-2 text-xs text-[var(--muted)]">{cls.model_note} Class roster is synthetic.</p>
+        <p className="mt-2 text-xs text-[var(--muted)]">{cls.model_note} {t("teacher_synthetic")}</p>
       </Card>
       <MentorRequests />
       <ResetStudentPin />

@@ -30,6 +30,7 @@ from pydantic import BaseModel, Field
 
 from . import dataset, db
 from .auth import SIGNING_KEY, current_user
+from .languages import SELECTABLE_LANGUAGES, is_selectable_language
 
 router = APIRouter(prefix="/api/parent", tags=["parent"])
 
@@ -283,8 +284,9 @@ def summary(claims: dict = Depends(_family_user)):
 @router.post("/ask")
 def parent_ask(body: ParentAskIn, claims: dict = Depends(_family_user)):
     """Answer a family question using the student's saved profile and verified Raah data."""
-    if body.lang not in ("en", "hi", "mr"):
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "language must be en, hi or mr")
+    if not is_selectable_language(body.lang):
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY,
+                            "language must be one of " + ", ".join(sorted(SELECTABLE_LANGUAGES)))
     student_id = int(claims["sub"])
     saved_profile = {}
     with db.connect() as con:

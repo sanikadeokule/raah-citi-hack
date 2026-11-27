@@ -25,10 +25,14 @@ OFF_TOPIC_REPLY = {"en": "This is unrelated. I cannot answer this.",
 
 
 def off_topic_rule(lang: str) -> str:
+    from .languages import language_name
+    reply = (f'Reply with exactly this sentence and nothing else: "{OFF_TOPIC_REPLY[lang]}"\n'
+             if lang in OFF_TOPIC_REPLY else
+             f'Reply with one short sentence in {language_name(lang)} saying the question is unrelated and you cannot answer it. Do not reply in English.\n')
     return ("Stay on topic. If the student asks something completely unrelated to careers, studies, training, exams, "
             "scholarships, loans, fees, jobs or their own profile (for example politics, weather, entertainment, sport, "
             "general knowledge, jokes or anything else random), do not answer it and do not use any tool. "
-            f"Reply with exactly this sentence and nothing else: \"{OFF_TOPIC_REPLY.get(lang, OFF_TOPIC_REPLY['en'])}\"\n")
+            + reply)
 
 
 class LLMUnavailable(RuntimeError):

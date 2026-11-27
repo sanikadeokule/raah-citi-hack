@@ -49,6 +49,19 @@ def fake_llm(answer):
     return _chat
 
 
+def test_new_script_queries_get_english_search_keywords(monkeypatch):
+    monkeypatch.setattr(llm, "chat", lambda messages, **kwargs: ("scholarship college", "mock"))
+    for question in ("ছাত্রবৃত্তি", "உதவித்தொகை", "ఉపకార వేతనం", "શિષ્યવૃત્તિ",
+                     "ವಿದ್ಯಾರ್ಥಿವೇತನ", "സ്കോളർഷിപ്പ്", "ਵਜ਼ੀਫ਼ਾ", "ଛାତ୍ରବୃତ୍ତି", "বৃত্তি"):
+        assert "scholarship" in rag.english_keywords(question)
+
+
+def test_new_script_glossary_fallback_without_model(monkeypatch):
+    no_models(monkeypatch)
+    assert "scholarship" in rag.english_keywords("தமிழ் உதவித்தொகை")
+    assert "college" in rag.english_keywords("ଓଡ଼ିଆ କଲେଜ")
+
+
 # ------------------------------------------------------------------ chunking
 
 def test_one_chunk_per_row_with_path_row_and_source():

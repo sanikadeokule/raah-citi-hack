@@ -17,9 +17,9 @@ from typing import Annotated, TypedDict
 from langgraph.graph import END, START, StateGraph
 
 from . import agent, llm, today
+from .languages import language_name
 
 MAX_LOOKS = 3
-LANG_NAME = {"en": "English", "hi": "Hindi", "mr": "Marathi"}
 _EN: dict = {}
 
 
@@ -97,7 +97,7 @@ def decide(state: State) -> dict:
         why = "only one step applies" if len(opts) == 1 and not state.get("offline") else "no model reachable"
         return {"pick": opts[0], "mode": "rule", "reason": "", "trace": [f"decide: {opts[0]['key']} ({why})"]}
     listing = "\n".join(f"{i + 1}. {o['key']}: {_words(o['key'], o['vars'])}" for i, o in enumerate(opts))
-    lang = LANG_NAME.get(state.get("lang", "en"), "English")
+    lang = language_name(state.get("lang", "en"))
     prompt = ("Pick the ONE step this student should do today. Choose only from this list, using the key exactly:\n"
               f"{listing}\n\nReply with JSON only: {{\"step\": \"<key>\", \"reason\": \"<one short sentence in {lang} saying why this, "
               "using only facts you saw>\"}}." + (f"\nYour last answer was refused: {state['feedback']}" if state.get("feedback") else ""))

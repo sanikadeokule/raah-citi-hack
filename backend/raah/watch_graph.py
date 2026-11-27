@@ -18,9 +18,9 @@ from langgraph.graph import END, START, StateGraph
 
 from . import db, llm
 from .auth import notify
+from .languages import language_name
 
 MAX_DRAFTS = 30  # one model call per student, so a very popular exam falls back to the plain text beyond this
-LANG_NAME = {"en": "English", "hi": "Hindi", "mr": "Marathi"}
 _DATEISH = re.compile(r"\d{1,2}[/.\-]\d{1,2}[/.\-]\d{2,4}|\d{1,2}(?:st|nd|rd|th)?\s+[A-Za-z]{3,9}\.?\s*\d{0,4}|[A-Za-z]{3,9}\.?\s+\d{1,2}(?:st|nd|rd|th)?,?\s*\d{0,4}")
 
 
@@ -53,7 +53,7 @@ def draft(state: Watch) -> dict:
     published = "\n".join(state["lines"][:5])
     for uid in state["user_ids"][:MAX_DRAFTS]:
         s = state["students"][uid]
-        lang = LANG_NAME.get(s["language"], "English")
+        lang = language_name(s["language"])
         prompt = (f"An official site just published these lines about {state['exam']['name']}:\n{published}\n\n"
                   f"Student: class {s['class']}, chosen career {s['career'] or 'not chosen yet'}.\n"
                   f"Write one short message in {lang} telling them what changed. Use only dates and facts from the lines above. "

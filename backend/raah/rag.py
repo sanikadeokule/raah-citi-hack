@@ -28,6 +28,7 @@ import json
 import math
 import os
 import re
+import unicodedata
 import threading
 import time
 import uuid
@@ -41,6 +42,7 @@ from fastapi import APIRouter
 from pydantic import BaseModel, Field
 
 from . import dataset, embed, llm
+from .languages import language_name, normalize_language
 
 router = APIRouter(prefix="/api/ask", tags=["ai"])
 
@@ -64,15 +66,16 @@ SUMMARY_COLS = ("Amount", "Income limit", "Category", "Class / course", "Stipend
                 "Application fee (Open / General)", "Usual timing", "Fee", "Duration / level", "Value", "Unit",
                 "Revised minimum (per month, from 11 Sep 2025)", "Can help with")
 
-_TOKEN = re.compile(r"[\wऀ-ॿ]+")  # keep Devanagari vowel signs inside words
+_TOKEN = re.compile(r"[\wऀ-ൿ]+")  # keep Indic vowel signs inside words
 _NUM = re.compile(r"\d[\d,]*(?:\.\d+)?")
-_DEVANAGARI_DIGITS = str.maketrans("०१२३४५६७८९", "0123456789")
+def _ascii_digits(text: str) -> str:
+    return "".join(str(unicodedata.decimal(ch)) if ch.isdecimal() else ch for ch in text)
 _STOP = {"the", "a", "an", "of", "for", "to", "in", "on", "and", "or", "is", "are", "be", "can", "i", "me", "my",
          "what", "which", "who", "how", "do", "does", "with", "per", "any", "there", "it", "this", "that", "get"}
 
 
 def tokens(text: str) -> list[str]:
-    return [t for t in _TOKEN.findall((text or "").lower().translate(_DEVANAGARI_DIGITS)) if t not in _STOP]
+    return [t for t in _TOKEN.findall(_ascii_digits((text or "").lower())) if t not in _STOP]
 
 
 def _cell(v) -> str:
@@ -376,7 +379,6 @@ def search(query: str, k: int = TOP_K, keywords: str = "") -> dict:
 
 # ------------------------------------------------------------------ 5-6. grounded answer
 
-LANG_NAME = {"mr": "Marathi", "hi": "Hindi", "en": "English"}
 MSG = {
     "not_found": {"en": "I could not find this in Raah's data. Please ask your teacher, or try other words.",
                   "hi": "यह जानकारी राह के डेटा में नहीं मिली। कृपया अपने शिक्षक से पूछें या दूसरे शब्दों में पूछें।",
@@ -393,7 +395,7 @@ MSG = {
 
 
 def _digits(text: str) -> set[str]:
-    text = re.sub(r"\[\d+\]", " ", (text or "").translate(_DEVANAGARI_DIGITS))
+    text = re.sub(r"\[\d+\]", " ", _ascii_digits(text or ""))
     return {n.replace(",", "").rstrip(".") for n in _NUM.findall(text)}
 
 
@@ -452,6 +454,25 @@ GLOSSARY = {
     "कोर्स": "course", "अभ्यासक्रम": "course", "पाठ्यक्रम": "course", "केंद्र": "centre", "पुणे": "Pune",
     "अपंग": "disability", "दिव्यांग": "disability", "मोफत": "free", "मुफ्त": "free",
 }
+GLOSSARY.update({
+    "বৃত্তি": "scholarship", "স্কলারশিপ": "scholarship", "কলেজ": "college", "মহাবিদ্যালয়": "college",
+    "চাকরি": "job", "পৰীক্ষা": "exam", "পরীক্ষা": "exam", "খরচ": "cost fees", "খৰচ": "cost fees",
+    "ছাত্রবৃত্তি": "scholarship", "বৃত্ত": "scholarship", "নথি": "documents", "পাঠ্যক্ৰম": "course",
+    "உதவித்தொகை": "scholarship", "கல்லூரி": "college", "வேலை": "job", "தேர்வு": "exam",
+    "கட்டண": "fees", "செலவு": "cost", "விடுதி": "hostel", "படிப்பு": "course",
+    "ఉపకార": "scholarship", "కళాశాల": "college", "ఉద్యోగ": "job", "పరీక్ష": "exam",
+    "రుసుము": "fees", "ఖర్చు": "cost", "వసతి": "hostel", "కోర్సు": "course",
+    "શિષ્યવૃત્તિ": "scholarship", "કોલેજ": "college", "નોકરી": "job", "પરીક્ષા": "exam",
+    "ફી": "fees", "ખર્ચ": "cost", "છાત્રાલય": "hostel", "અભ્યાસક્રમ": "course",
+    "ವಿದ್ಯಾರ್ಥಿವೇತನ": "scholarship", "ಕಾಲೇಜು": "college", "ಉದ್ಯೋಗ": "job", "ಪರೀಕ್ಷೆ": "exam",
+    "ಶುಲ್ಕ": "fees", "ವೆಚ್ಚ": "cost", "ವಸತಿ": "hostel", "ಕೋರ್ಸ್": "course",
+    "സ്കോളർഷിപ്പ്": "scholarship", "കോളേജ്": "college", "ജോലി": "job", "പരീക്ഷ": "exam",
+    "ഫീസ്": "fees", "ചെലവ്": "cost", "ഹോസ്റ്റൽ": "hostel", "കോഴ്‌സ്": "course",
+    "ਵਜ਼ੀਫ਼": "scholarship", "ਕਾਲਜ": "college", "ਨੌਕਰੀ": "job", "ਪ੍ਰੀਖਿਆ": "exam",
+    "ਫ਼ੀਸ": "fees", "ਖਰਚ": "cost", "ਹੋਸਟਲ": "hostel", "ਕੋਰਸ": "course",
+    "ଛାତ୍ରବୃତ୍ତି": "scholarship", "କଲେଜ": "college", "ଚାକିରି": "job", "ପରୀକ୍ଷା": "exam",
+    "ଫିସ": "fees", "ଖର୍ଚ୍ଚ": "cost", "ହଷ୍ଟେଲ": "hostel", "ପାଠ୍ୟକ୍ରମ": "course",
+})
 
 
 def glossary_keywords(question: str) -> str:
@@ -460,9 +481,9 @@ def glossary_keywords(question: str) -> str:
 
 
 def english_keywords(question: str) -> str:
-    """For a Marathi/Hindi question, English search words for the BM25 half (the index text is English):
+    """For a question in another script, English search words for the BM25 half (the index text is English):
     the glossary always, plus an LLM rewrite when a model answers."""
-    if not re.search(r"[ऀ-ॿ]", question):
+    if not any(ord(ch) > 127 and unicodedata.category(ch).startswith("L") for ch in question):
         return ""
     gloss = glossary_keywords(question)
     try:
@@ -482,7 +503,7 @@ class AskIn(BaseModel):
 
 
 def answer(body: AskIn) -> dict:
-    lang = body.lang if body.lang in LANG_NAME else "en"
+    lang = normalize_language(body.lang)
     prev = [str(m.get("content", ""))[:300] for m in body.history[-4:] if m.get("role") == "user"]
     query = " ".join(prev[-1:] + [body.question])  # a follow-up ("what documents?") keeps the last topic
     kw = english_keywords(body.question)
@@ -492,7 +513,7 @@ def answer(body: AskIn) -> dict:
     retrieval = {"method": res["method"], "store": res["store"], "model": res["model"], "keywords": kw or None,
                  "hits": [{"id": idx.chunks[i]["id"], "score": s} for i, s in res["hits"]]}
     if not chunks:
-        return {"answer": MSG["not_found"][lang], "citations": [], "fallback": False, "grounded": True,
+        return {"answer": MSG["not_found"].get(lang, MSG["not_found"]["en"]), "citations": [], "fallback": False, "grounded": True,
                 "found": False, "provider": None, "retrieval": retrieval}
 
     sources = _source_block(chunks)
@@ -500,7 +521,7 @@ def answer(body: AskIn) -> dict:
                if k in ("class", "gender", "category", "family_income_annual", "taluka", "marks_pct", "can_stay_hostel", "age")}
     about = f"\nAbout the person asking (use it to judge what fits them): {json.dumps(profile, ensure_ascii=False)}" if profile else ""
     system = (f"You are Raah, a helpful guide for rural students, parents and teachers in Maharashtra. Answer entirely in "
-              f"{LANG_NAME[lang]} in short, simple sentences a Class 9 student understands. Do not switch languages mid-answer.\n"
+              f"{language_name(lang)} in short, simple sentences a Class 9 student understands. Do not switch languages mid-answer.\n"
               + llm.off_topic_rule(lang) +
               "Translate descriptive source content and spreadsheet field names into the requested language. Preserve only proper names, official scheme names, acronyms, codes, and exact figures in their original form. Never expose raw labels such as 'Topic ID', 'Career IDs', 'Step', or 'Kind'.\n"
               "In Hindi or Marathi always write the app name as राह, never as Raah.\n"

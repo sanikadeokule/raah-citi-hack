@@ -17,7 +17,7 @@ function PlanView() {
   const [opts, setOpts] = useState<PlanOptions>({});
   const plan = data?.plans.find((p: any) => p.id === id);
   const r = useMemo(() => (data && profile && plan ? computePlan(data, profile, id, opts) : null), [data, profile, id, opts, plan]);
-  if (!plan) return <Card>Plan {id} is not in the Plan_Inputs sheet.</Card>;
+  if (!plan) return <Card>{t("plan_missing", { id })}</Card>;
   if (!r) return null;
   const courses = coursesFor(data, r.career, plan);
   const others = data.plans.filter((p: any) => p.id !== id);
@@ -50,7 +50,7 @@ function PlanView() {
         <div className="space-y-2">
           {r.eligibility.filter((e: any) => e.status !== "not_eligible").slice(0, 5).map((e: any, i: number) => <SchemeResult key={e.id} e={e} open={i === 0} />)}
         </div>
-        <Link href="/eligibility/" className="mt-2 block text-sm text-[var(--brand-ink)] underline">All {data.scholarships.length} schemes →</Link>
+        <Link href="/eligibility/" className="mt-2 block text-sm text-[var(--brand-ink)] underline">{t("plan_all_schemes", { n: data.scholarships.length })} →</Link>
       </Card>
 
       <CentresCard centres={r.centres} />
@@ -61,11 +61,11 @@ function PlanView() {
         <h2 className="mb-2 font-bold">{t("compare")}</h2>
         <div className="flex flex-wrap gap-2">
           {others.map((p: any) => (
-            <Link key={p.id} href={`/compare/?a=${id}&b=${p.id}`} className="rounded-full bg-[var(--bg)] px-3 py-1.5 text-sm ring-1 ring-black/10">vs {p.label}</Link>
+            <Link key={p.id} href={`/compare/?a=${id}&b=${p.id}`} className="rounded-full bg-[var(--bg)] px-3 py-1.5 text-sm ring-1 ring-black/10">{t("plan_vs", { name: p.label })}</Link>
           ))}
         </div>
       </Card>
-      <p className="text-center text-xs text-[var(--muted)]">Net {inr(r.net_cost)} · all figures from {data.version.file}</p>
+      <p className="text-center text-xs text-[var(--muted)]">{t("plan_source_note", { amount: inr(r.net_cost), file: data.version.file })}</p>
     </>
   );
 }

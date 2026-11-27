@@ -46,10 +46,10 @@ export function PaybackCard({ r }: { r: any }) {
         {row(t("course_fees"), r.costs.course_fees, r.plan.fees_from !== "Plan_Inputs" ? <span className="ml-1 text-xs text-[var(--muted)]">({r.plan.fees_from})</span> : null)}
         {row(t("exam_fees"), r.costs.exam_fees)}
         {row(t("materials"), r.costs.materials)}
-        {row(t(r.costs.living_label), r.costs.living, <span className="ml-1 text-xs text-[var(--muted)]">{r.inputs.hostel ? "" : `${r.inputs.commute_km} km`}</span>)}
+        {row(t(r.costs.living_label), r.costs.living, <span className="ml-1 text-xs text-[var(--muted)]">{r.inputs.hostel ? "" : `${r.inputs.commute_km} ${t("distance_unit")}`}</span>)}
         <div className="flex justify-between py-2 font-bold"><span>{t("total_cost")}</span><span>{inr(r.costs.total)}</span></div>
         {r.scholarship.low > 0 && row(t("scholarship_cover"), r.scholarship.low,
-          <span className="ml-1 text-xs text-[var(--muted)]">{r.scholarship.chosen.join(", ")}{r.scholarship.high > r.scholarship.low ? ` (up to ${inr(r.scholarship.high)})` : ""}</span>, "− ")}
+          <span className="ml-1 text-xs text-[var(--muted)]">{r.scholarship.chosen.join(", ")}{r.scholarship.high > r.scholarship.low ? t("plan_scholarship_up_to", { amount: inr(r.scholarship.high) }) : ""}</span>, "− ")}
         {r.stipend.total > 0 && row(t("stipend_during_training"), r.stipend.total,
           <span className="ml-1 text-xs text-[var(--muted)]">{inr(r.stipend.per_month)} × {r.stipend.months}</span>, "− ")}
       </div>
@@ -64,14 +64,14 @@ export function PaybackCard({ r }: { r: any }) {
         {r.payback.median?.month_from_start != null && <div className="text-xs opacity-80">{t("month_from_start", { m: r.payback.median.month_from_start })}</div>}
         <div className="mt-1 text-xs opacity-90">{t("low")}: {paybackText(t, r.payback.low, data)}</div>
       </div>
-      {r.baseline_monthly > 0 && <p className="mt-2 text-xs text-[var(--muted)]">Gain measured against daily-wage work: {inr(r.baseline_monthly)}{t("per_month")} (PLFS casual wage × {A(data, "working_days_per_month")} days)</p>}
+      {r.baseline_monthly > 0 && <p className="mt-2 text-xs text-[var(--muted)]">{t("plan_gain_baseline", { amount: inr(r.baseline_monthly), perMonth: t("per_month"), days: A(data, "working_days_per_month") })}</p>}
       <div className="mt-2 space-y-0.5">
         {r.income && <div className="text-xs text-[var(--muted)]">{r.income.estimate && <Badge tone="amber">{t("estimate")}</Badge>} {t("income_note")}: {r.income.text}
-          {r.income.derived ? ` · low/high = ×${A(data, "income_low_factor")}/×${A(data, "income_high_factor")} (Assumptions)` : ""}
+          {r.income.derived ? t("plan_assumption_factors", { low: A(data, "income_low_factor"), high: A(data, "income_high_factor") }) : ""}
           {r.income.spread === "rural_urban" ? ` · ${t("spread_rural_urban")}` : ""}
           {r.income.path ? ` · ${t("fixed_pay")}: ${r.income.path.filter((v: any) => v != null).map((v: number) => inr(v)).join(" → ")}` : ""}</div>}
         <div><Source url={r.career.sources?.[0]} label={r.career.income_type} date={r.career.last_checked} /></div>
-        <div className="text-xs text-[var(--muted)]">Fees: {r.plan.status}</div>
+        <div className="text-xs text-[var(--muted)]">{t("plan_fees_status", { status: r.plan.status })}</div>
       </div>
     </Card>
   );
@@ -110,7 +110,7 @@ export function WhatIf({ r, opts, setOpts }: { r: any; opts: PlanOptions; setOpt
         </div>
       )}
       <label className="block py-2">
-        <div className="flex justify-between"><span>{t("commute_km")}</span><b>{r.inputs.commute_km} km</b></div>
+        <div className="flex justify-between"><span>{t("commute_km")}</span><b>{r.inputs.commute_km} {t("distance_unit")}</b></div>
         <input type="range" min={0} max={maxKm} step={1} className="w-full" disabled={r.inputs.hostel}
           value={r.inputs.commute_km} onChange={(e) => setOpts({ ...opts, commute_km: Number(e.target.value) })} />
       </label>

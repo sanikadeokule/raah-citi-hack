@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // The Discover questions, written for students who may be using a phone for the first time.
 // Each question says exactly what we need, gives an example answer, and offers tap-to-answer chips.
-// The wording lives in locales/{en,mr,hi}.json under q_* keys so all three languages stay in step.
+// The wording lives in the shared locale catalogs under q_* keys.
 
 export type T = (k: string, vars?: Record<string, string | number>) => string;
 /** patch: extra fields to store when this chip is tapped */
@@ -25,8 +25,12 @@ export type Q = {
 
 const isMissing = (v: any) => v === undefined || v === null || v === "" || (Array.isArray(v) && v.length === 0);
 
-/** Devanagari digits (०-९) to ASCII so "४१२/५००" reads like "412/500". */
-export const asciiDigits = (s: string) => s.replace(/[०-९]/g, (c) => String(c.charCodeAt(0) - 0x0966));
+/** Indic decimal digits to ASCII so marks and distances work in every selectable language. */
+export const asciiDigits = (s: string) => s.replace(/[०-९০-৯௦-௯౦-౯૦-૯೦-೯൦-൯੦-੯୦-୯]/g, (c) => {
+  const n = c.charCodeAt(0);
+  const start = [0x0966, 0x09e6, 0x0be6, 0x0c66, 0x0ae6, 0x0ce6, 0x0d66, 0x0a66, 0x0b66].find((base) => n >= base && n < base + 10)!;
+  return String(n - start);
+});
 
 const numbers = (s: string) => (asciiDigits(s).replace(/(\d),(\d)/g, "$1$2").match(/\d+(?:\.\d+)?/g) || []).map(Number);
 

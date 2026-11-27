@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { rankCareers } from "../lib/engine";
 import { allTagsOf, extractTags, reachable, refiners, sweetSpots } from "../lib/ikigai";
+import { SELECTABLE_LANGUAGES } from "../lib/languages";
 
 const d = JSON.parse(readFileSync(process.argv[2], "utf8"));
 const tags = allTagsOf(d);
@@ -18,6 +19,10 @@ assert.deepEqual(extractTags("zzz qqq", tags), []);
 
 // finer tags: what you do and how you work are in the dataset, and everyday words reach them
 for (const t of ["patient care", "protecting people", "using tools", "problem solving", "customer service"]) assert.ok(tags.includes(t), `${t} is a tag`);
+for (const { code } of SELECTABLE_LANGUAGES) {
+  const labels = JSON.parse(readFileSync(`locales/${code}.json`, "utf8"));
+  assert.ok(extractTags(labels["interest_patient care"], tags).includes("patient care"), `${code}: localized interest tag`);
+}
 assert.ok(extractTags("I like looking after patients in the hospital", tags).includes("patient care"));
 assert.ok(extractTags("fixing things with tools", tags).includes("using tools"));
 assert.ok((d.careers as any[]).filter((c) => c.tags.includes("helping people")).length <= 3, "helping people is not shared with every caring job");

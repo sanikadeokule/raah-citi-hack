@@ -34,17 +34,17 @@ export async function fetchAudio(lang: string, text: string, store: boolean): Pr
 }
 
 export type VoiceStatus = { tts: boolean; asr: boolean; providers: string[] };
-let statusP: Promise<VoiceStatus> | null = null;
+const statusCache = new Map<string, Promise<VoiceStatus>>();
 
 /** Which server speech services have keys (asked once per page load). */
-export function voiceStatus(): Promise<VoiceStatus> {
-  statusP ??= fetch(`${API}/api/voice/status`)
+export function voiceStatus(lang = "en"): Promise<VoiceStatus> {
+  if (!statusCache.has(lang)) statusCache.set(lang, fetch(`${API}/api/voice/status?lang=${encodeURIComponent(lang)}`)
     .then(async (r) => (r.ok ? ((await r.json()) as VoiceStatus) : { tts: false, asr: false, providers: [] }))
-    .catch(() => ({ tts: false, asr: false, providers: [] }));
-  return statusP;
+    .catch(() => ({ tts: false, asr: false, providers: [] })));
+  return statusCache.get(lang)!;
 }
 
-export const voiceAvailable = async () => (await voiceStatus()).tts;
+export const voiceAvailable = async (lang: string) => (await voiceStatus(lang)).tts;
 
 // ------------------------------------------------------------------ problems the student is told about
 /** Keys of the messages in locales/*.json (voice_err_<key>). */
@@ -158,11 +158,10 @@ export async function deviceVoices(): Promise<SpeechSynthesisVoice[]> {
   return ss.getVoices();
 }
 
-/** A voice for the language; Marathi falls back to a Hindi voice (same Devanagari script).
- *  `voice` is undefined when the browser reports no voices at all (let it try its default). */
+/** A matching device voice; Marathi can explicitly substitute Hindi. */
 export async function pickVoice(speechLang: string): Promise<{ voice?: SpeechSynthesisVoice; substitute?: string } | null> {
   const all = await deviceVoices();
-  if (!all.length) return {};
+  if (!all.length) return speechLang.toLowerCase().startsWith("en") ? {} : null;
   const norm = (l: string) => l.replace("_", "-").toLowerCase();
   const base = speechLang.slice(0, 2).toLowerCase();
   const exact = all.find((v) => norm(v.lang) === speechLang.toLowerCase()) ?? all.find((v) => norm(v.lang).startsWith(base));
