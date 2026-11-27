@@ -852,7 +852,7 @@
  "ik_short_good": "Good at",
  "ik_short_pays": "Pays",
  "ik_short_needed": "Needed",
- "ik_pct_how": "Match = love 25%, good at 25%, pays 30%, needed 20%.",
+ "ik_pct_how": "Fit = love 25%, good at 25%, pays 30%, needed 20%. The Careers page ranks with a different formula that also checks if you can get there.",
  "step_notice": "Read your new alert",
  "step_notice_why": "You have {n} unread: {what}.",
  "step_pick_path": "Pick the path you want to follow",
@@ -1170,5 +1170,7 @@
  "ask_heard": "What Raah heard",
  "ask_heard_empty": "Ask a question and Raah will show what it's working on here.",
  "ask_live_matches": "Live matches",
- "ask_live_matches_empty": "Matching schemes, centres and careers will show up here as Raah finds them."
+ "ask_live_matches_empty": "Matching schemes, centres and careers will show up here as Raah finds them.",
+ "pm_waiting_for_you": "Waiting for you",
+ "ik_fit_label": "fit"
 }
