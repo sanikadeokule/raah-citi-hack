@@ -1160,5 +1160,7 @@
  "fc_for_you_note": "Free courses that help with {career}. Your language comes first.",
  "fc_see_all": "See all {n} free courses",
  "fc_back_for_you": "Back to courses for you",
- "ik_said": "You said {a}."
+ "ik_said": "You said {a}.",
+ "nav_collapse": "Collapse menu",
+ "nav_expand": "Open menu"
 }

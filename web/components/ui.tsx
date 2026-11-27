@@ -9,9 +9,10 @@ import { Icon } from "@/components/icon";
 import { ROADMAP_HREF } from "@/lib/roadmap";
 import { cachedAudio, fetchAudio, micErrorKind, micProblem, pickVoice, startRecording, transcribe, voiceStatus, type Recording, type VoiceProblem } from "@/lib/audio";
 
-// the student's main places, shown as a row under the app bar on a big screen (laptop, projector)
+// the student's main places, shown as a side menu on a big screen (laptop, projector)
 const DESK_NAV = [
   { href: "/", key: "nav_home", icon: "home" },
+  { href: "/discover/", key: "home_discover", icon: "sparkle" },
   { href: "/careers/", key: "home_careers", icon: "compass" },
   { href: "/colleges/", key: "home_colleges", icon: "graduation" },
   { href: "/eligibility/", key: "home_eligibility", icon: "rupee" },
@@ -38,12 +39,18 @@ export function Shell({ title, back = "/", role = "any", publicPage = false, fit
   }, [needsLogin, path, role, router]);
   const wrongRole = !publicPage && auth && role === "teacher" && auth.user.role !== "teacher";
   const ready = publicPage || (authReady && auth);
+  // side menu (big screens): closed on Home, open everywhere else, and the person can flip it at any time.
+  // Navigating resets it to the page's own default.
+  const onHome = path === "/";
+  const [railOpen, setRailOpen] = useState(!onHome);
+  useEffect(() => { setRailOpen(!onHome); }, [onHome]);
+  const isStudent = auth?.user.role === "student";
   const onRoadmap = (path.endsWith("/") ? path : `${path}/`) === ROADMAP_HREF;
   return (
     <div className={`mx-auto max-w-md bg-[var(--bg)] lg:max-w-none ${fit ? "flex min-h-[100dvh] flex-col" : "min-h-screen pb-24"}`}>
       <div className="sticky top-0 z-20 shadow">
       <header className="bg-[var(--header-bg)] px-4 py-3 text-white">
-      <div className="mx-auto flex items-center gap-2 lg:max-w-6xl lg:px-4">
+      <div className="mx-auto flex items-center gap-2 lg:max-w-none lg:px-4">
         {back !== null && (
           <Link href={back} aria-label={t("back")} className="rounded-full px-2 text-2xl leading-none">‹</Link>
         )}
@@ -72,24 +79,30 @@ export function Shell({ title, back = "/", role = "any", publicPage = false, fit
       </div>
       </header>
       <div aria-hidden className="tricolour" />
-      {auth?.user.role === "student" && (
-        <nav aria-label={t("app_name")} className="hidden border-b border-black/10 bg-[var(--card)] lg:block">
-          <div className="mx-auto flex max-w-6xl gap-1 overflow-x-auto px-8 py-2">
-            {DESK_NAV.map((n) => {
-              const here = n.href === "/" ? path === "/" : path.startsWith(n.href.replace(/\/$/, ""));
-              return (
-                <Link key={n.href} href={n.href} aria-current={here ? "page" : undefined}
-                  className={`flex items-center gap-1.5 whitespace-nowrap rounded-full px-3.5 py-1.5 text-sm font-semibold ${here ? "bg-[var(--brand)] text-white" : "text-[var(--brand-ink)] hover:bg-[var(--brand-soft)]"}`}>
-                  <Icon name={n.icon} size={16} />{t(n.key)}
-                </Link>
-              );
-            })}
-          </div>
+      </div>
+      <div className={`flex min-w-0 flex-1 flex-col ${isStudent ? "lg:flex-row" : ""}`}>
+      {isStudent && (
+        <nav aria-label={t("app_name")} style={{ width: railOpen ? "15rem" : "4.75rem" }}
+          className="sticky top-[59px] hidden h-[calc(100dvh-59px)] shrink-0 flex-col gap-1 self-start overflow-y-auto border-r border-black/10 bg-[var(--card)] p-3 transition-[width] lg:flex">
+          {DESK_NAV.map((n) => {
+            const here = n.href === "/" ? path === "/" : path.startsWith(n.href.replace(/\/$/, ""));
+            return (
+              <Link key={n.href} href={n.href} aria-current={here ? "page" : undefined} title={railOpen ? undefined : t(n.key)} aria-label={railOpen ? undefined : t(n.key)}
+                className={`flex items-center gap-3 rounded-xl py-2.5 text-base font-semibold ${railOpen ? "px-3" : "justify-center px-0"} ${here ? "bg-[var(--brand)] text-white" : "text-[var(--brand-ink)] hover:bg-[var(--brand-soft)]"}`}>
+                <Icon name={n.icon} size={22} />{railOpen && <span className="truncate">{t(n.key)}</span>}
+              </Link>
+            );
+          })}
+          <div className="flex-1" />
+          <button type="button" onClick={() => setRailOpen(!railOpen)} aria-expanded={railOpen} aria-label={t(railOpen ? "nav_collapse" : "nav_expand")} title={t(railOpen ? "nav_collapse" : "nav_expand")}
+            className="flex items-center justify-center gap-2 rounded-xl border border-black/15 py-2 text-sm font-semibold text-[var(--brand-ink)] hover:bg-[var(--brand-soft)]">
+            <span aria-hidden className="text-lg leading-none">{railOpen ? "‹" : "›"}</span>{railOpen && t("nav_collapse")}
+          </button>
         </nav>
       )}
-      </div>
+      <div className="flex min-w-0 flex-1 flex-col">
       {!online && <div className="bg-amber-500 px-4 py-2 text-center text-sm font-medium text-black"><Icon name="offline" size={16} className="mr-1 align-[-3px]" />{t("offline_banner")}</div>}
-      <main className={`${fit ? "flex flex-1 flex-col gap-3 p-3" : "space-y-4 p-4"} lg:mx-auto lg:w-full lg:px-8 lg:py-6 ${wide ? "lg:max-w-6xl" : "lg:max-w-3xl"}`}>
+      <main className={`${fit ? "flex flex-1 flex-col gap-3 p-3" : "space-y-4 p-4"} lg:mx-auto lg:w-full lg:px-8 lg:py-6 ${wide ? "lg:max-w-[1600px]" : "lg:max-w-5xl"}`}>
         {!ready ? <Loading /> : wrongRole ? (
           <Card>
             <p><Icon name="lock" size={16} className="mr-1 align-[-3px]" />{t("teacher_only")}</p>
@@ -98,6 +111,8 @@ export function Shell({ title, back = "/", role = "any", publicPage = false, fit
           </Card>
         ) : data || publicPage ? children : <Loading />}
       </main>
+      </div>
+      </div>
       {toast && (
         <div role="status" className="fixed bottom-6 left-1/2 z-50 w-max max-w-[min(92vw,28rem)] -translate-x-1/2 rounded-2xl bg-black/85 px-5 py-3 text-center text-sm text-white shadow-lg">{toast}</div>
       )}

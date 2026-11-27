@@ -80,6 +80,31 @@ function ClassDashboardCard() {
   );
 }
 
+// big screens only: the latest things Raah did for the student, from the same log as the activity page
+function RaahDid() {
+  const { t, data, auth, authFetch } = useApp();
+  const [rows, setRows] = useState<any[]>([]);
+  useEffect(() => {
+    if (!auth) return;
+    authFetch("/api/activity").then((r) => (r.ok ? r.json() : [])).then((j) => Array.isArray(j) && setRows(j.slice(0, 5))).catch(() => {});
+  }, [auth, authFetch]);
+  if (!rows.length) return null;
+  const name = (id?: string) => data?.careers?.find((c: any) => c.id === id)?.name ?? id ?? "";
+  const text = (r: any) => {
+    const v = { ...r.vars, ...(r.vars?.career ? { career: name(r.vars.career) } : {}) };
+    return r.kind === "today" ? t("act_today", { step: t(r.text_key, v) }) : t(r.text_key, v);
+  };
+  return (
+    <section className="hidden rounded-2xl bg-[var(--card)] p-4 shadow-sm ring-1 ring-black/10 lg:block">
+      <h2 className="text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">{t("act_title")}</h2>
+      <ul className="mt-2 space-y-1.5">
+        {rows.map((r) => <li key={r.id} className="rounded-xl bg-[var(--bg)] px-3 py-2 text-sm leading-snug">{text(r)}</li>)}
+      </ul>
+      <Link href="/activity/" className="mt-2 inline-block text-sm font-semibold text-[var(--brand-ink)] underline">{t("act_open")}</Link>
+    </section>
+  );
+}
+
 export default function Home() {
   const { t, profile, setProfile, data, auth, authFetch, lang, showToast } = useApp();
   const router = useRouter();
@@ -215,15 +240,16 @@ export default function Home() {
             <Link href={BUILD_ROADMAP_HREF} className="shrink-0 text-sm font-semibold text-[var(--brand-ink)] underline">{t("change")}</Link>
           </div>
         )}
+        <RaahDid />
         {/* a big screen has room for Maina at the fork in the raah, under the day's step */}
-        <div className="hidden justify-center pt-4 lg:flex">
+        <div className="hidden justify-center pt-2 lg:flex">
           <Mascot pose="wave" size={150} stack scene speak={t("mascot_hi")}><p className="text-base font-semibold leading-snug">{t("mascot_hi")}</p></Mascot>
         </div>
 
         </div>
         <div className="flex flex-1 flex-col gap-3 lg:col-span-7">
         {/* tiles grow to fill the free height on tall screens and shrink (never below a big tap target) on short ones */}
-        <div className="grid max-h-[30rem] min-h-[14rem] flex-1 grid-cols-3 gap-2 lg:max-h-none lg:flex-none lg:auto-rows-[10rem] lg:gap-4">
+        <div className="grid max-h-[30rem] min-h-[14rem] flex-1 grid-cols-3 gap-2 lg:max-h-none lg:flex-none lg:auto-rows-[16rem] lg:gap-4">
           {STUDENT_TILES.map((x) => (
             // each module keeps its own colour, the same one its page banner uses
             <Link key={x.href} href={x.href} className="flex flex-col items-center justify-center rounded-2xl border-b-4 bg-[var(--card)] px-1 py-2 text-center text-[var(--brand-ink)] shadow-sm ring-1 ring-black/10 active:scale-95"
