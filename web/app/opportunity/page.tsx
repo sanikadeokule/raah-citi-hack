@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Badge, Card, Shell, Source } from "@/components/ui";
 import { inr, rankCareers } from "@/lib/engine";
-import { pickForCareers, tradeMatches, type CareerChoice } from "@/lib/listings";
+import { chosenCareers, pickForCareers, tradeMatches, type CareerChoice } from "@/lib/listings";
 import { useApp } from "@/lib/store";
 import { myCareer } from "@/lib/tailor";
 import { Mentors } from "@/components/mentors";
@@ -27,6 +27,9 @@ export default function Opportunity() {
   const searched = (p: { items: any[]; related: any[] | null }, keep: (n: any) => boolean) => ({ ...p, items: p.items.filter(keep) });
   const naps = searched(pickForCareers(data, data?.naps || [], career, top, tradeMatches), (n) => match(n.trade) || match(n.employer) || match(n.location));
   const rail = searched(pickForCareers(data, data?.railway || [], career, top, tradeMatches), (n) => match(n.trade) || match(n.employer));
+  // "Because..." chip: the career (from the filter above) this listing's trade belongs to
+  const chosen = chosenCareers(data, career, top);
+  const because = (n: any) => (career === "all" ? null : chosen.find((c: any) => tradeMatches(n, c))?.name ?? null);
   const reset = `${career}|${q}`;
   const napsPg = usePaged(naps.items, PAGE, reset);
   const railPg = usePaged(rail.items, PAGE, reset);
@@ -59,6 +62,7 @@ export default function Opportunity() {
         <ul className="divide-y divide-black/5 lg:grid lg:grid-cols-2 lg:gap-x-8 lg:divide-y-0">
           {napsPg.pageItems.map((n: any) => (
             <li key={n.id} className="py-2 text-sm lg:border-b lg:border-black/5">
+              {because(n) && <span className="mb-1 inline-block rounded-full bg-[var(--brand-soft)] px-2 py-0.5 text-[11px] font-semibold text-[var(--brand-ink)]">{t("because_trade", { career: because(n) })}</span>}
               <div className="flex justify-between gap-2"><b>{n.trade}</b><span className="whitespace-nowrap">{n.stipend ? `${inr(n.stipend.low)}–${inr(n.stipend.high)}` : n.stipend_text}</span></div>
               {n.stipend?.high ? <Meter value={n.stipend.high} max={maxStipend} color={MODULE_COLOR.jobs} /> : null}
               <div className="text-xs text-[var(--muted)]">{n.employer} · {n.location} · {n.duration}</div>
@@ -76,6 +80,7 @@ export default function Opportunity() {
         <ul className="divide-y divide-black/5 lg:grid lg:grid-cols-2 lg:gap-x-8 lg:divide-y-0">
           {railPg.pageItems.map((n: any) => (
             <li key={n.id} className="py-2 text-sm lg:border-b lg:border-black/5">
+              {because(n) && <span className="mb-1 inline-block rounded-full bg-[var(--brand-soft)] px-2 py-0.5 text-[11px] font-semibold text-[var(--brand-ink)]">{t("because_trade", { career: because(n) })}</span>}
               <div className="flex justify-between gap-2"><b>{n.trade}</b><span>{n.seats} seats · {inr(n.stipend)}{t("per_month")}</span></div>
               {n.stipend ? <Meter value={n.stipend} max={maxStipend} color={MODULE_COLOR.jobs} /> : null}
               <div className="text-xs text-[var(--muted)]">{n.employer} · {n.notice}</div>

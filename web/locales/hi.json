@@ -1145,5 +1145,13 @@
  "interest_women's health": "महिला स्वास्थ्य",
  "ik_f_love0": "थोड़ा और बताइए। इसमें आपको क्या अच्छा लगता है?",
  "ik_f_good0": "थोड़ा और बताइए। जब वे पूछते हैं तो आप असल में क्या करते हैं?",
- "interest_cooking": "खाना बनाना"
+ "interest_cooking": "खाना बनाना",
+ "because_first": "क्योंकि यह {career} की ओर पहला क़दम है",
+ "because_gap": "{tag} सिखाता है, जो {career} के लिए ज़रूरी है",
+ "because_about": "{career} के बारे में, आपका मैच",
+ "because_enjoy": "आपकी पसंद से मेल: {tag}",
+ "because_trade": "आपके {career} रास्ते से मेल",
+ "fc_for_you_note": "{career} में मदद करने वाले मुफ़्त कोर्स। आपकी भाषा पहले।",
+ "fc_see_all": "सभी {n} मुफ़्त कोर्स देखें",
+ "fc_back_for_you": "आपके लिए कोर्स पर वापस जाएँ"
 }
