@@ -10,8 +10,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ChatInput } from "@/components/chatinput";
 import { Icon, Mark } from "@/components/icon";
 import { MicButton, Shell, SpeakButton } from "@/components/ui";
-import { inr } from "@/lib/engine";
-import { GOOD_CHIPS, LOVE_CHIPS, ikigaiWeights, type Semantic, allTagsOf, extractTags, phrasesOf, reachable, sweetSpots, type Circle, type Check, type Spot, refiners } from "@/lib/ikigai";
+import { inr, rankCareers } from "@/lib/engine";
+import { GOOD_CHIPS, LOVE_CHIPS, type Semantic, allTagsOf, extractTags, phrasesOf, reachable, sweetSpots, type Circle, type Check, type Spot, refiners } from "@/lib/ikigai";
 import { tagLabel } from "@/lib/questions";
 import { useApp } from "@/lib/store";
 
@@ -101,6 +101,14 @@ export default function Discover() {
     return () => { live = false; };
   }, [screen, love, good, loveWords, goodWords]);
   const spots = useMemo(() => (screen === "sweet" || screen === "checking" || screen === "reach") && data && profile ? sweetSpots(data, profile, love, good, semantic) : [], [screen, data, profile, love, good, semantic]);
+  // the real career-match % (same formula the Careers page ranks with), keyed by career id, for the sweet-spot cards
+  const matchPct = useMemo(() => {
+    const m = new Map<string, number>();
+    if (!((screen === "sweet" || screen === "checking" || screen === "reach") && data && profile)) return m;
+    for (const r of rankCareers(data, profile, data.careers?.length || 50)) m.set(r.career.id, Math.round(r.score * 100));
+    return m;
+  }, [screen, data, profile]);
+  const ranked = useMemo(() => [...spots].sort((a, b) => (matchPct.get(b.career.id) ?? 0) - (matchPct.get(a.career.id) ?? 0)), [spots, matchPct]);
   const reach = useMemo(() => (pick && data && profile ? reachable(data, profile, pick) : null), [pick, data, profile]);
   useEffect(() => { end.current?.scrollIntoView({ block: "nearest", behavior: "smooth" }); }, [msgs, screen]);
 
@@ -323,28 +331,23 @@ export default function Discover() {
       {screen === "sweet" && (
         <div className="flex flex-1 flex-col gap-3">
           <p className="text-sm text-[var(--muted)]">{t("ik_sweet_sub")}</p>
-          {spots.length === 0 && <p className="rounded-2xl bg-[var(--card)] p-4 text-sm ring-1 ring-black/10">{t("ik_none_found")}</p>}
+          {ranked.length === 0 && <p className="rounded-2xl bg-[var(--card)] p-4 text-sm ring-1 ring-black/10">{t("ik_none_found")}</p>}
           <div className="flex flex-col gap-3 xl:grid xl:grid-cols-2">
-          {spots.slice(0, 5).map((s, i) => (
+          {ranked.slice(0, 5).map((s, i) => (
             <button key={s.career.id} onClick={() => setSel(i)} aria-pressed={sel === i} className={`rounded-2xl bg-[var(--card)] p-4 text-left ${sel === i ? "ring-[3px] ring-[var(--brand)]" : "ring-2 ring-black/10"}`}>
               <span className="flex items-baseline justify-between gap-2">
                 <span className="text-lg font-extrabold leading-snug">{s.career.name}</span>
-                {i === 0 && <span className="shrink-0 inline-block rounded-full border-2 border-[var(--brand)] px-2 py-0.5 text-[11px] font-bold uppercase text-[var(--brand-ink)]">{t("ik_best")}</span>}
-              </span>
-              <span className="mt-3 grid grid-cols-4 gap-2">
-                {CIRCLES.map((c) => (
-                  <span key={c} className="block text-[10px] font-semibold leading-tight text-[var(--muted)]">
-                    <span className="block h-1.5 overflow-hidden rounded-full bg-black/10"><span className="block h-full rounded-full bg-[var(--brand)]" style={{ width: `${Math.round(s.parts[c] * 100)}%` }} /></span>
-                    <span className="mt-1 block">{t(`ik_short_${c}`)} {Math.round(ikigaiWeights(data)[c] * 100)}%</span>
-                  </span>
-                ))}
+                <span className="shrink-0 text-right">
+                  <span className="block text-2xl font-extrabold leading-none text-[var(--brand-ink)]">{matchPct.get(s.career.id) ?? 0}%</span>
+                  {i === 0 && <span className="mt-1 inline-block rounded-full border-2 border-[var(--brand)] px-2 py-0.5 text-[11px] font-bold uppercase text-[var(--brand-ink)]">{t("ik_best")}</span>}
+                </span>
               </span>
               <span className="mt-2 grid grid-cols-2 gap-1.5">{CIRCLES.map((c) => checkRow(s.checks[c], c))}</span>
             </button>
           ))}
           </div>
           <p className="text-[11px] text-[var(--muted)]">{t("ik_estimates")}</p>
-          {spots[sel] && <button onClick={() => { setPick(spots[sel]); setScreen("reach"); }} className="mt-auto w-full rounded-2xl bg-[var(--brand)] py-4 text-base font-bold text-white active:scale-[.98]">{t("ik_see_reach", { career: spots[sel].career.name })}</button>}
+          {ranked[sel] && <button onClick={() => { setPick(ranked[sel]); setScreen("reach"); }} className="mt-auto w-full rounded-2xl bg-[var(--brand)] py-4 text-base font-bold text-white active:scale-[.98]">{t("ik_see_reach", { career: ranked[sel].career.name })}</button>}
         </div>
       )}
 
