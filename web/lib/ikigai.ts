@@ -92,7 +92,12 @@ const fitLevel = (fit?: string): Level => (fit === "direct" ? "yes" : fit === "r
 const pts = (l: Level) => (l === "yes" ? 1 : l === "part" ? 0.5 : 0);
 
 /** The four checks for every career, best sweet spot first. `profile` carries class, marks, category, income, taluka. */
-export function sweetSpots(data: any, profile: any, love: string[], good: string[]): Spot[] {
+/** Interest = 30% keyword match + 70% match by meaning (when a model could score the student's words; otherwise keywords alone). */
+export const KEYWORD_SHARE = 0.3;
+export type Semantic = { love?: Record<string, number>; good?: Record<string, number> };
+const blend = (keyword: number, sem?: number) => (sem === undefined ? keyword : Math.min(1, KEYWORD_SHARE * keyword + (1 - KEYWORD_SHARE) * sem));
+
+export function sweetSpots(data: any, profile: any, love: string[], good: string[], semantic: Semantic = {}): Spot[] {
   const byId = (list: any[]) => new Map(list.map((s: any) => [s.career.id, s]));
   const n = (data.careers ?? []).length;
   const lovers = byId(love.length ? rankCareers(data, { ...profile, interests: love }, n) : []);
@@ -114,7 +119,8 @@ export function sweetSpots(data: any, profile: any, love: string[], good: string
     const { plan, r, openings } = plansOf.get(career.id);
     const lv = lovers.get(career.id), gd = goods.get(career.id);
     // how much of what the student said this career covers (0 to 1); a related career counts for less
-    const loveP = Math.min(1, lv?.breakdown?.interest ?? 0), goodP = Math.min(1, gd?.breakdown?.interest ?? 0);
+    const loveP = blend(Math.min(1, lv?.breakdown?.interest ?? 0), semantic.love?.[career.id]);
+    const goodP = blend(Math.min(1, gd?.breakdown?.interest ?? 0), semantic.good?.[career.id]);
     let pays: Check = { level: "unknown", key: "ik_pays_unknown", text: "ik_pays_unknown" };
     let paysP = 0;
     if (r?.income?.median) {
@@ -127,8 +133,8 @@ export function sweetSpots(data: any, profile: any, love: string[], good: string
     const neededP = Math.max(demand, maxOpen ? Math.min(1, openings / maxOpen) : 0);
     const needed: Check = { level: levelOf(neededP), key: "ik_needed", text: "ik_needed", vars: { n: openings } };
     const checks: Record<Circle, Check> = {
-      love: { level: loveP > 0 ? fitLevel(lv?.fit) : "no", key: "ik_love", text: "ik_love", vars: { tags: (lv?.matched ?? []).slice(0, 2).join(", ") } },
-      good: { level: goodP > 0 ? fitLevel(gd?.fit) : "no", key: "ik_good", text: "ik_good", vars: { tags: (gd?.matched ?? []).slice(0, 2).join(", ") } },
+      love: { level: loveP > 0 ? (lv?.fit && lv.fit !== "none" ? fitLevel(lv.fit) : levelOf(loveP)) : "no", key: "ik_love", text: "ik_love", vars: { tags: (lv?.matched ?? []).slice(0, 2).join(", ") } },
+      good: { level: goodP > 0 ? (gd?.fit && gd.fit !== "none" ? fitLevel(gd.fit) : levelOf(goodP)) : "no", key: "ik_good", text: "ik_good", vars: { tags: (gd?.matched ?? []).slice(0, 2).join(", ") } },
       pays, needed,
     };
     const parts: Record<Circle, number> = { love: loveP, good: goodP, pays: Math.min(1, paysP), needed: neededP };

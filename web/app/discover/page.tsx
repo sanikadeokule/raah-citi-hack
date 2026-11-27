@@ -11,7 +11,7 @@ import { ChatInput } from "@/components/chatinput";
 import { Icon, Mark } from "@/components/icon";
 import { MicButton, Shell, SpeakButton } from "@/components/ui";
 import { inr } from "@/lib/engine";
-import { GOOD_CHIPS, LOVE_CHIPS, IKIGAI_WEIGHTS, allTagsOf, extractTags, phrasesOf, reachable, sweetSpots, type Circle, type Check, type Spot, refiners } from "@/lib/ikigai";
+import { GOOD_CHIPS, LOVE_CHIPS, IKIGAI_WEIGHTS, type Semantic, allTagsOf, extractTags, phrasesOf, reachable, sweetSpots, type Circle, type Check, type Spot, refiners } from "@/lib/ikigai";
 import { tagLabel } from "@/lib/questions";
 import { useApp } from "@/lib/store";
 
@@ -77,7 +77,22 @@ export default function Discover() {
   const chips = (stage === "good" ? GOOD_CHIPS : LOVE_CHIPS).filter((x) => tags.includes(x)).slice(0, 5);
   // reply chips for the follow-up: each one stands for topics the dataset knows
 
-  const spots = useMemo(() => (screen === "sweet" || screen === "checking" || screen === "reach") && data && profile ? sweetSpots(data, profile, love, good) : [], [screen, data, profile, love, good]);
+  // closeness in meaning of what they said to every career (backend embedding model); empty when none is available
+  const [semantic, setSemantic] = useState<Semantic>({});
+  useEffect(() => {
+    if (screen !== "checking") return;
+    let live = true;
+    const words = (tagList: string[], free: string[]) => [...tagList, ...free].join(", ");
+    (async () => {
+      const [l, g] = await Promise.all([
+        words(love, loveWords) ? postAi("/api/interests/careers", { text: words(love, loveWords) }) : null,
+        words(good, goodWords) ? postAi("/api/interests/careers", { text: words(good, goodWords) }) : null,
+      ]);
+      if (live) setSemantic({ love: l?.scores && Object.keys(l.scores).length ? l.scores : undefined, good: g?.scores && Object.keys(g.scores).length ? g.scores : undefined });
+    })();
+    return () => { live = false; };
+  }, [screen, love, good, loveWords, goodWords]);
+  const spots = useMemo(() => (screen === "sweet" || screen === "checking" || screen === "reach") && data && profile ? sweetSpots(data, profile, love, good, semantic) : [], [screen, data, profile, love, good, semantic]);
   const reach = useMemo(() => (pick && data && profile ? reachable(data, profile, pick) : null), [pick, data, profile]);
   useEffect(() => { end.current?.scrollIntoView({ block: "nearest", behavior: "smooth" }); }, [msgs, screen]);
 

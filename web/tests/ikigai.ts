@@ -38,6 +38,16 @@ for (const s of spots) {
   for (const c of ["love", "good", "pays", "needed"] as const) assert.ok(["yes", "part", "no", "unknown"].includes(s.checks[c].level));
   assert.ok(s.checks.love.level !== "no" || s.checks.good.level !== "no", "never a career that matches nothing said");
 }
+// meaning match: 30% keywords + 70% meaning. A career the keywords miss still shows up when the meaning is close
+const kw = sweetSpots(d, profile, ["helping people"], []);
+const target = d.careers.find((c: any) => !kw.some((x: any) => x.career.id === c.id))!;
+const sem = sweetSpots(d, profile, ["helping people"], [], { love: { [target.id]: 1 } });
+const found = sem.find((x: any) => x.career.id === target.id);
+assert.ok(found && found.parts.love > 0.6 && found.parts.love <= 0.7 + 1e-9, "meaning alone counts for 70%");
+const both = sweetSpots(d, profile, ["helping people"], [], { love: Object.fromEntries(d.careers.map((c: any) => [c.id, 0])) });
+const top = kw[0].career.id;
+assert.ok(both.find((x: any) => x.career.id === top)!.parts.love <= kw[0].parts.love * 0.3 + 1e-9, "keywords alone count for 30% when the meaning says no");
+assert.deepEqual(sweetSpots(d, profile, ["helping people"], [], {}).map((x: any) => x.pct), kw.map((x: any) => x.pct), "no model: keywords only, nothing changes");
 // someone who says nothing gets no sweet spots instead of a made-up match
 assert.equal(sweetSpots(d, profile, [], []).length, 0);
 
