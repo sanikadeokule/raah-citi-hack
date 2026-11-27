@@ -4,7 +4,9 @@ import { Icon, Mark } from "@/components/icon";
 import { useEffect, useMemo, useState } from "react";
 import { Card, MicButton, Shell, SpeakButton } from "@/components/ui";
 import { ChatInput } from "@/components/chatinput";
-import { FOR_YOU, forYou, lessonTopics, lessons, quiz } from "@/lib/lessons";
+import { FOR_YOU, forYouRanked, lessonTopics, lessons, quiz } from "@/lib/lessons";
+import { becauseText } from "@/lib/gaps";
+import { tagLabel } from "@/lib/questions";
 import { useApp } from "@/lib/store";
 import { StudentModules } from "@/components/modules";
 import { FreeCourses } from "@/components/freecourses";
@@ -19,13 +21,15 @@ export default function Learn() {
   const { data, profile, lang, setLang, t, queueAction } = useApp();
   const all = useMemo(() => (data ? lessons(data, lang) : []), [data, lang]);
   const topics = useMemo(() => (data ? lessonTopics(data, lang, all) : []), [data, lang, all]);
-  const mine = useMemo(() => (data ? forYou(data, profile, all) : []), [data, profile, all]);
+  const [done, setDone] = useState<string[]>([]);
+  const ranked = useMemo(() => (data ? forYouRanked(data, profile, all, done) : []), [data, profile, all, done]);
+  const mine = useMemo(() => ranked.map((x) => x.item), [ranked]);
+  const reasonOf = useMemo(() => new Map(ranked.map((x) => [x.item.id, x.reason])), [ranked]);
   // the dropdown opens on the student's own careers; until we know their interests, on the basics
   const [picked, setPicked] = useState<string | null>(null);
   const topic = picked ?? (mine.length ? FOR_YOU : "basics");
   const ls = useMemo(() => (topic === FOR_YOU ? mine : all.filter((l) => l.topic === topic)), [topic, mine, all]);
   const qs = useMemo(() => quiz(ls), [ls]);
-  const [done, setDone] = useState<string[]>([]);
   const [ans, setAns] = useState<Record<number, number>>({});
   const [checked, setChecked] = useState(false);
   const [learnQuestion, setLearnQuestion] = useState("");
@@ -126,6 +130,7 @@ export default function Learn() {
                   <span aria-hidden className="shrink-0 text-lg text-[var(--muted)] transition-transform group-open:rotate-90">›</span>
                 </summary>
                 <div className="space-y-2 px-3 pb-3">
+                  {topic === FOR_YOU && reasonOf.has(l.id) && <span className="block w-fit rounded-full bg-[var(--brand-soft)] px-2 py-0.5 text-[11px] font-semibold text-[var(--brand-ink)]">{becauseText(t, tagLabel, reasonOf.get(l.id)!)}</span>}
                   <span onClick={() => markDone(l.id)} className="inline-block"><SpeakButton text={l.text} cache /></span>
                   <p className="text-sm leading-relaxed text-[var(--muted)]">{l.text}</p>
                 </div>

@@ -1145,5 +1145,13 @@
  "interest_women's health": "women's health",
  "ik_f_love0": "Tell me a little more. What is it about that you enjoy?",
  "ik_f_good0": "Tell me a little more. What do you actually do when they ask?",
- "interest_cooking": "cooking"
+ "interest_cooking": "cooking",
+ "because_first": "Because it is a first step for {career}",
+ "because_gap": "Builds {tag}, which {career} needs",
+ "because_about": "About {career}, your match",
+ "because_enjoy": "Matches what you enjoy: {tag}",
+ "because_trade": "Matches your {career} path",
+ "fc_for_you_note": "Free courses that help with {career}. Your language comes first.",
+ "fc_see_all": "See all {n} free courses",
+ "fc_back_for_you": "Back to courses for you"
 }
