@@ -363,16 +363,14 @@ def _tokens(items) -> set[str]:
     return out
 
 
-RELATED_WEIGHT = 0.5  # a career that only shares tags with the direct matches counts at most half a direct match
 
 
 # Top-5 scoring: interest match is 60% of the score, and careers are also grouped by how well they match the interest
 # (direct, then related, then none) BEFORE the score is compared, so a better interest match always ranks first.
-W_INTEREST, W_ELIG, W_AFFORD, W_DEMAND = 0.6, 0.15, 0.15, 0.1
+# All numbers below are rows of the Assumptions sheet (rank_*, elig_*, afford_*); the values here are only the defaults
+# used when a row is missing. The four rank weights are scaled to add up to 1, so editing one cannot break the 0-1 score.
 # When Discover saved how close the student's words are in meaning to each career (profile.interest_meaning, 0 to 1),
 # interest = 30% keyword match + 70% meaning. Without it (no model, or interests changed since) interest is the keyword match.
-KEYWORD_SHARE = 0.3
-MEANING_RELATED = 0.3  # a career at least this close in meaning counts as related even with no shared tag
 
 
 def meaning_scores(profile: dict) -> dict:
@@ -400,6 +398,12 @@ def rank_careers(data: dict, profile: dict, n: int = 5) -> list[dict]:
                 word_tags.setdefault(w, set()).add(_phrase(t))
     distinctive = {w for w, ts in word_tags.items() if len(ts) == 1}
     meaning = meaning_scores(profile)
+    w = [A(data, k, d) for k, d in (("rank_w_interest", 0.6), ("rank_w_eligibility", 0.15), ("rank_w_affordability", 0.15), ("rank_w_demand", 0.1))]
+    wsum = sum(w) or 1
+    w_interest, w_elig, w_afford, w_demand = (x / wsum for x in w)
+    related_weight = A(data, "rank_related_weight", 0.5)  # a career that only shares tags counts at most this much of a direct match
+    keyword_share = A(data, "rank_keyword_share", 0.3)
+    meaning_related = A(data, "rank_meaning_related", 0.3)  # this close in meaning counts as related even with no shared tag
     scored = []
     for c in data["careers"]:
         tags = _tokens(c.get("tags")) & distinctive
@@ -408,12 +412,13 @@ def rank_careers(data: dict, profile: dict, n: int = 5) -> list[dict]:
         loose = {p for p in phrases - exact if _tokens([p]) & tags}
         direct = (len(exact) + 0.5 * len(loose)) / len(phrases) if phrases else 0
         min_c = c.get("min_class") or 0
-        elig = 1.0 if cls >= min_c else (0.7 if min_c - cls <= 2 else 0.3)
-        afford = 0.5
+        elig = 1.0 if cls >= min_c else (A(data, "elig_near_score", 0.7) if min_c - cls <= A(data, "elig_near_classes", 2) else A(data, "elig_far_score", 0.3))
+        afford = A(data, "afford_no_plan_score", 0.5)
         p = plans_by_career.get(c["id"])
         if p:
             cost = p["fees"] + p["exam_fees"] + p["materials"]
-            afford = 1.0 if cost <= 0.25 * fam else (0.6 if cost <= fam else 0.2)
+            afford = (A(data, "afford_low_score", 1.0) if cost <= A(data, "afford_low_share", 0.25) * fam
+                      else (A(data, "afford_ok_score", 0.6) if cost <= fam else A(data, "afford_high_score", 0.2)))
         demand = (c.get("demand") or 3) / 5
         scored.append({"career": c, "plan_id": p["id"] if p else None, "direct": direct, "elig": elig,
                        "afford": afford, "demand": demand, "by_phrase": by_phrase,
@@ -427,15 +432,15 @@ def rank_careers(data: dict, profile: dict, n: int = 5) -> list[dict]:
     near -= phrases
     for s in scored:
         rel = sorted(v for k, v in s["by_phrase"].items() if k in near) if s["direct"] == 0 else []
-        interest = s["direct"] or (RELATED_WEIGHT * len(rel) / len(s["by_phrase"]) if rel else 0)
+        interest = s["direct"] or (related_weight * len(rel) / len(s["by_phrase"]) if rel else 0)
         sem = meaning.get(s["career"]["id"])
         if sem is not None:
-            interest = KEYWORD_SHARE * interest + (1 - KEYWORD_SHARE) * sem
+            interest = keyword_share * interest + (1 - keyword_share) * sem
         s["related"] = rel
         s["meaning"] = round(sem, 2) if sem is not None else None
         s["fit"] = ("direct" if s["direct"] > 0 else
-                    "related" if rel or (sem is not None and sem >= MEANING_RELATED) else "none")
-        raw = W_INTEREST * interest + W_ELIG * s["elig"] + W_AFFORD * s["afford"] + W_DEMAND * s["demand"]
+                    "related" if rel or (sem is not None and sem >= meaning_related) else "none")
+        raw = w_interest * interest + w_elig * s["elig"] + w_afford * s["afford"] + w_demand * s["demand"]
         s["raw"] = raw
         s["score"] = math.floor(raw * 1000 + 0.5) / 1000  # same half-up rounding as Math.round in engine.ts
         s["breakdown"] = {"interest": round(interest, 2), "eligibility": s["elig"], "affordability": s["afford"],

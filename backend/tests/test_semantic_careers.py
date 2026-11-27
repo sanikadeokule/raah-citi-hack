@@ -54,3 +54,21 @@ def test_top_five_blends_keyword_and_meaning():
     stale = {**prof, "interests": ["machines"]}
     assert [s["career"]["id"] for s in engine.rank_careers(d, stale)] == \
            [s["career"]["id"] for s in engine.rank_careers(d, {**base, "interests": ["machines"]})]
+
+
+def test_ranking_numbers_come_from_the_assumptions_sheet():
+    import copy
+    from raah import engine
+    d = dataset.load()
+    for key in ("rank_w_interest", "rank_w_eligibility", "rank_w_affordability", "rank_w_demand", "rank_keyword_share",
+                "elig_near_score", "afford_low_share", "ikigai_w_pays"):
+        assert key in d["assumptions"], key
+    prof = {"class": 10, "family_income_annual": 180000, "interests": ["helping people"]}
+    base = engine.rank_careers(d, prof, 3)
+    d2 = copy.deepcopy(d)
+    d2["assumptions"]["rank_w_demand"]["value"] = 0.9  # demand now dominates the non-interest part
+    changed = engine.rank_careers(d2, prof, 3)
+    assert [s["score"] for s in changed] != [s["score"] for s in base]
+    # weights are scaled to add up to 1, so a score stays between 0 and 1
+    d2["assumptions"]["rank_w_interest"]["value"] = 5
+    assert all(0 <= s["score"] <= 1 for s in engine.rank_careers(d2, prof, 10))

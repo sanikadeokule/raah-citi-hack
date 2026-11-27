@@ -13,8 +13,13 @@ export type Circle = "love" | "good" | "pays" | "needed";
 export interface Check { level: Level; text: string; vars?: Record<string, string | number>; key: string }
 export interface Spot { career: any; plan: any; checks: Record<Circle, Check>; score: number; parts: Record<Circle, number>; pct: number }
 
-/** How much each circle counts towards the match percentage (love 25, good at 25, pays 30, needed 20). */
-export const IKIGAI_WEIGHTS: Record<Circle, number> = { love: 0.25, good: 0.25, pays: 0.3, needed: 0.2 };
+/** How much each circle counts towards the match percentage: Assumptions rows ikigai_w_*, scaled to add up to 1 (defaults 25, 25, 30, 20). */
+export function ikigaiWeights(data: any): Record<Circle, number> {
+  const get = (k: string, d: number) => { const v = Number(data?.assumptions?.[k]?.value); return Number.isFinite(v) && data?.assumptions?.[k]?.value !== null ? v : d; };
+  const w = { love: get("ikigai_w_love", 0.25), good: get("ikigai_w_good", 0.25), pays: get("ikigai_w_pays", 0.3), needed: get("ikigai_w_needed", 0.2) };
+  const sum = w.love + w.good + w.pays + w.needed || 1;
+  return { love: w.love / sum, good: w.good / sum, pays: w.pays / sum, needed: w.needed / sum };
+}
 const levelOf = (x: number): Level => (x >= 0.6 ? "yes" : x >= 0.3 ? "part" : "no");
 
 /** Tags offered as quick answers; any of the dataset's tags can still be typed, spoken or added. */
@@ -93,11 +98,12 @@ const pts = (l: Level) => (l === "yes" ? 1 : l === "part" ? 0.5 : 0);
 
 /** The four checks for every career, best sweet spot first. `profile` carries class, marks, category, income, taluka. */
 /** Interest = 30% keyword match + 70% match by meaning (when a model could score the student's words; otherwise keywords alone). */
-export const KEYWORD_SHARE = 0.3;
 export type Semantic = { love?: Record<string, number>; good?: Record<string, number> };
-const blend = (keyword: number, sem?: number) => (sem === undefined ? keyword : Math.min(1, KEYWORD_SHARE * keyword + (1 - KEYWORD_SHARE) * sem));
 
 export function sweetSpots(data: any, profile: any, love: string[], good: string[], semantic: Semantic = {}): Spot[] {
+  const weights = ikigaiWeights(data);
+  const keywordShare = Number(data?.assumptions?.rank_keyword_share?.value ?? 0.3);  // Assumptions row rank_keyword_share
+  const blend = (keyword: number, sem?: number) => (sem === undefined ? keyword : Math.min(1, keywordShare * keyword + (1 - keywordShare) * sem));
   const byId = (list: any[]) => new Map(list.map((s: any) => [s.career.id, s]));
   const n = (data.careers ?? []).length;
   const lovers = byId(love.length ? rankCareers(data, { ...profile, interests: love }, n) : []);
@@ -138,7 +144,7 @@ export function sweetSpots(data: any, profile: any, love: string[], good: string
       pays, needed,
     };
     const parts: Record<Circle, number> = { love: loveP, good: goodP, pays: Math.min(1, paysP), needed: neededP };
-    const pct = Math.round(100 * (Object.keys(parts) as Circle[]).reduce((sum, c) => sum + IKIGAI_WEIGHTS[c] * parts[c], 0));
+    const pct = Math.round(100 * (Object.keys(parts) as Circle[]).reduce((sum, c) => sum + weights[c] * parts[c], 0));
     spots.push({ career, plan, checks, parts, pct, score: (Object.values(checks) as Check[]).reduce((sum, c) => sum + pts(c.level), 0) });
   }
   // a career that matches nothing the student said is not a sweet spot; the rest go by match percentage

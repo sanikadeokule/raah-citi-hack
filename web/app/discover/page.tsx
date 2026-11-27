@@ -11,7 +11,7 @@ import { ChatInput } from "@/components/chatinput";
 import { Icon, Mark } from "@/components/icon";
 import { MicButton, Shell, SpeakButton } from "@/components/ui";
 import { inr } from "@/lib/engine";
-import { GOOD_CHIPS, LOVE_CHIPS, IKIGAI_WEIGHTS, type Semantic, allTagsOf, extractTags, phrasesOf, reachable, sweetSpots, type Circle, type Check, type Spot, refiners } from "@/lib/ikigai";
+import { GOOD_CHIPS, LOVE_CHIPS, ikigaiWeights, type Semantic, allTagsOf, extractTags, phrasesOf, reachable, sweetSpots, type Circle, type Check, type Spot, refiners } from "@/lib/ikigai";
 import { tagLabel } from "@/lib/questions";
 import { useApp } from "@/lib/store";
 
@@ -330,7 +330,7 @@ export default function Discover() {
                 {CIRCLES.map((c) => (
                   <span key={c} className="block text-[10px] font-semibold leading-tight text-[var(--muted)]">
                     <span className="block h-1.5 overflow-hidden rounded-full bg-black/10"><span className="block h-full rounded-full bg-[var(--brand)]" style={{ width: `${Math.round(s.parts[c] * 100)}%` }} /></span>
-                    <span className="mt-1 block">{t(`ik_short_${c}`)} {Math.round(IKIGAI_WEIGHTS[c] * 100)}%</span>
+                    <span className="mt-1 block">{t(`ik_short_${c}`)} {Math.round(ikigaiWeights(data)[c] * 100)}%</span>
                   </span>
                 ))}
               </span>

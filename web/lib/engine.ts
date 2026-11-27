@@ -342,11 +342,8 @@ const tokens = (items: any[]) => {
 };
 
 // a career that only shares tags with the direct matches counts at most half a direct match
-const RELATED_WEIGHT = 0.5;
 // When Discover saved how close the student's words are in meaning to each career (profile.interest_meaning, 0 to 1),
 // interest = 30% keyword match + 70% meaning. Without it (no model, or interests changed since) interest is the keyword match.
-const KEYWORD_SHARE = 0.3;
-const MEANING_RELATED = 0.3; // a career at least this close in meaning counts as related even with no shared tag
 function meaningScores(profile: any): Record<string, number> {
   const m = profile?.interest_meaning;
   if (!m || typeof m.scores !== "object" || !m.scores) return {};
@@ -356,7 +353,7 @@ function meaningScores(profile: any): Record<string, number> {
   return Object.fromEntries(Object.entries(m.scores).filter(([, v]) => typeof v === "number")) as Record<string, number>;
 }
 // interest match is 60% of the score; careers are also grouped direct > related > none before the score is compared
-const W_INTEREST = 0.6, W_ELIG = 0.15, W_AFFORD = 0.15, W_DEMAND = 0.1;
+// All weights and cut-offs below are rows of the Assumptions sheet (rank_*, elig_*, afford_*); the numbers here are only defaults.
 const TIER: Record<string, number> = { direct: 0, related: 1, none: 2 };
 
 export function rankCareers(data: Data, profile: Profile, n = 5) {
@@ -372,6 +369,12 @@ export function rankCareers(data: Data, profile: Profile, n = 5) {
   for (const c of data.careers) for (const t of c.tags || []) for (const w of tokens([t])) (wordTags[w] ||= new Set()).add(phrase(t));
   const distinctive = new Set(Object.keys(wordTags).filter((w) => wordTags[w].size === 1));
   const meaning = meaningScores(profile);
+  const w = [A(data, "rank_w_interest", 0.6), A(data, "rank_w_eligibility", 0.15), A(data, "rank_w_affordability", 0.15), A(data, "rank_w_demand", 0.1)];
+  const wsum = w.reduce((a, b) => a + b, 0) || 1;
+  const [wInterest, wElig, wAfford, wDemand] = w.map((x) => x / wsum);
+  const relatedWeight = A(data, "rank_related_weight", 0.5);
+  const keywordShare = A(data, "rank_keyword_share", 0.3);
+  const meaningRelated = A(data, "rank_meaning_related", 0.3);
   const scored: any[] = data.careers.map((c: any) => {
     const tags = new Set([...tokens(c.tags)].filter((w) => distinctive.has(w)));
     const byPhrase: Record<string, string> = {};
@@ -380,12 +383,12 @@ export function rankCareers(data: Data, profile: Profile, n = 5) {
     const loose = [...phrases].filter((p) => !exact.includes(p) && [...tokens([p])].some((t) => tags.has(t)));
     const direct = phrases.size ? (exact.length + 0.5 * loose.length) / phrases.size : 0;
     const minC = c.min_class || 0;
-    const elig = cls >= minC ? 1.0 : minC - cls <= 2 ? 0.7 : 0.3;
-    let afford = 0.5;
+    const elig = cls >= minC ? 1.0 : minC - cls <= A(data, "elig_near_classes", 2) ? A(data, "elig_near_score", 0.7) : A(data, "elig_far_score", 0.3);
+    let afford = A(data, "afford_no_plan_score", 0.5);
     const p = plansByCareer[c.id];
     if (p) {
       const cost = p.fees + p.exam_fees + p.materials;
-      afford = cost <= 0.25 * fam ? 1.0 : cost <= fam ? 0.6 : 0.2;
+      afford = cost <= A(data, "afford_low_share", 0.25) * fam ? A(data, "afford_low_score", 1.0) : cost <= fam ? A(data, "afford_ok_score", 0.6) : A(data, "afford_high_score", 0.2);
     }
     const demand = (c.demand || 3) / 5;
     return {
@@ -401,14 +404,14 @@ export function rankCareers(data: Data, profile: Profile, n = 5) {
   const ranked = scored.map((s: any) => {
     const keys = Object.keys(s.byPhrase);
     const related = s.direct === 0 ? keys.filter((k) => near.has(k)).map((k) => s.byPhrase[k]).sort() : [];
-    let interest = s.direct || (related.length ? (RELATED_WEIGHT * related.length) / keys.length : 0);
+    let interest = s.direct || (related.length ? (relatedWeight * related.length) / keys.length : 0);
     const sem: number | undefined = meaning[s.career.id];
-    if (sem !== undefined) interest = KEYWORD_SHARE * interest + (1 - KEYWORD_SHARE) * sem;
-    const score = W_INTEREST * interest + W_ELIG * s.elig + W_AFFORD * s.afford + W_DEMAND * s.demand;
+    if (sem !== undefined) interest = keywordShare * interest + (1 - keywordShare) * sem;
+    const score = wInterest * interest + wElig * s.elig + wAfford * s.afford + wDemand * s.demand;
     return {
       career: s.career, plan_id: s.plan_id, matched: s.matched, related,
       meaning: sem !== undefined ? Math.round(sem * 100) / 100 : null,
-      fit: s.direct > 0 ? "direct" : related.length || (sem !== undefined && sem >= MEANING_RELATED) ? "related" : "none",
+      fit: s.direct > 0 ? "direct" : related.length || (sem !== undefined && sem >= meaningRelated) ? "related" : "none",
       score: Math.round(score * 1000) / 1000, raw: score,
       breakdown: { interest: Math.round(interest * 100) / 100, eligibility: s.elig, affordability: s.afford, demand: Math.round(s.demand * 100) / 100 },
       diversity: false, has_interests: phrases.size > 0,
