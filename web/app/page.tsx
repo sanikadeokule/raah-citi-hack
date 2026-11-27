@@ -117,7 +117,7 @@ export default function Home() {
   };
   const details = profile ? [profile.class && t("class_n", { n: profile.class }), placeLabel(t, profile.taluka), categoryLabel(profile.category, lang)].filter(Boolean).join(" · ") : "";
   return (
-    <Shell back={null} fit>
+    <Shell back={null} fit wide>
       {/* language is switched from the header; the home screen fits one phone screen without scrolling */}
       {auth && (
         <Card className="space-y-2 !p-3">
@@ -173,7 +173,9 @@ export default function Home() {
         </>}
         </>
       ) : (
-        <>
+        // big screen: today's step on the left, the modules on the right; a phone keeps one column in the same order
+        <div className="flex flex-1 flex-col gap-3 lg:grid lg:grid-cols-12 lg:items-start lg:gap-6">
+        <div className="flex flex-col gap-3 lg:col-span-5">
         <TeacherInbox />
 
         {/* one step chosen for the student today, with the reason and the source */}
@@ -213,17 +215,23 @@ export default function Home() {
             <Link href={BUILD_ROADMAP_HREF} className="shrink-0 text-sm font-semibold text-[var(--brand-ink)] underline">{t("change")}</Link>
           </div>
         )}
+        {/* a big screen has room for Maina at the fork in the raah, under the day's step */}
+        <div className="hidden justify-center pt-4 lg:flex">
+          <Mascot pose="wave" size={150} stack scene speak={t("mascot_hi")}><p className="text-base font-semibold leading-snug">{t("mascot_hi")}</p></Mascot>
+        </div>
 
+        </div>
+        <div className="flex flex-1 flex-col gap-3 lg:col-span-7">
         {/* tiles grow to fill the free height on tall screens and shrink (never below a big tap target) on short ones */}
-        <div className="grid max-h-[30rem] min-h-[14rem] flex-1 grid-cols-3 gap-2">
+        <div className="grid max-h-[30rem] min-h-[14rem] flex-1 grid-cols-3 gap-2 lg:max-h-none lg:flex-none lg:auto-rows-[10rem] lg:gap-4">
           {STUDENT_TILES.map((x) => (
             // each module keeps its own colour, the same one its page banner uses
             <Link key={x.href} href={x.href} className="flex flex-col items-center justify-center rounded-2xl border-b-4 bg-[var(--card)] px-1 py-2 text-center text-[var(--brand-ink)] shadow-sm ring-1 ring-black/10 active:scale-95"
               style={{ borderBottomColor: x.color }}>
-              <span className="tile-icon grid h-12 w-12 place-items-center rounded-2xl" style={{ background: `color-mix(in srgb, ${x.color} 16%, transparent)`, color: x.color }}>
+              <span className="tile-icon grid h-12 w-12 place-items-center rounded-2xl lg:h-16 lg:w-16" style={{ background: `color-mix(in srgb, ${x.color} 16%, transparent)`, color: x.color }}>
                 <Icon name={x.icon} size={28} />
               </span>
-              <span className="mt-2 font-semibold leading-tight text-sm">{t(x.key)}</span>
+              <span className="mt-2 font-semibold leading-tight text-sm lg:text-base">{t(x.key)}</span>
             </Link>
           ))}
         </div>
@@ -238,8 +246,8 @@ export default function Home() {
           </span>
           <Icon name="mic" size={20} />
         </Link>
-
-        </>
+        </div>
+        </div>
       )}
       {cheer && (
         <div role="status" className="pointer-events-none fixed inset-x-0 bottom-8 z-50 flex justify-center px-4">

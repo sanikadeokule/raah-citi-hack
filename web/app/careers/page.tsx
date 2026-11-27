@@ -65,7 +65,7 @@ export default function CareersPage() {
       className={`flex-1 rounded-full px-3 py-2 text-sm font-semibold ${tab === id ? "bg-[var(--brand)] text-white" : "bg-[var(--bg)] ring-1 ring-black/10"}`}>{label}</button>
   );
   return (
-    <Shell title={t("home_careers")}>
+    <Shell title={t("home_careers")} wide>
       <ModuleHero color={MODULE_COLOR.careers} item="compass"
         line={top.length ? t("hero_careers", { n: top.length }) : t("hero_careers_none")}
         stats={[
@@ -83,7 +83,7 @@ export default function CareersPage() {
         </div>
         <p className="text-xs text-[var(--muted)]">{(profile?.interests || []).map((x: string) => tagLabel(t, x)).join(", ")}</p>
         <p className="mt-1 text-xs font-medium text-[var(--brand-ink)]">{t("rm_tap_hint")}</p>
-        <ul className="mt-2 space-y-2">
+        <ul className="mt-2 space-y-2 lg:grid lg:grid-cols-2 lg:items-start lg:gap-3 lg:space-y-0">
           {top.map((s: any, i: number) => {
             const r = s.plan_id ? quick(s.plan_id) : null;
             return (
@@ -130,9 +130,9 @@ export default function CareersPage() {
         <h2 className="text-lg font-bold">{t("all_careers", { n: all.length })}</h2>
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search" className="mt-2 w-full rounded-lg bg-[var(--bg)] p-2" />
         <div ref={pg.top} />
-        <ul className="mt-2 divide-y divide-black/5">
+        <ul className="mt-2 divide-y divide-black/5 lg:grid lg:grid-cols-2 lg:gap-x-6 lg:divide-y-0">
           {pg.pageItems.map((c: any) => (
-            <li key={c.id} {...cardProps(c.id)} className="cursor-pointer py-2 hover:bg-[var(--bg)]">
+            <li key={c.id} {...cardProps(c.id)} className="cursor-pointer py-2 hover:bg-[var(--bg)] lg:border-b lg:border-black/5">
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <div className="font-medium">{c.name}</div>

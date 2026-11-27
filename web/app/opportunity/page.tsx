@@ -36,7 +36,7 @@ export default function Opportunity() {
   // the profile menu's "My Mentor" links here with ?tab=mentors
   useEffect(() => { if (new URLSearchParams(location.search).get("tab") === "mentors") setTab("mentors"); }, []);
   return (
-    <Shell title={t("opportunities")}>
+    <Shell title={t("opportunities")} wide>
       <ModuleHero color={MODULE_COLOR.jobs} item="bag"
         line={t("hero_jobs", { n: naps.items.length + rail.items.length })}
         stats={[
@@ -56,9 +56,9 @@ export default function Opportunity() {
         <div ref={napsPg.top} />
         <h2 className="mb-2 font-bold">NAPS apprenticeships · Pune <Badge>{naps.items.length}</Badge></h2>
         {!q && <RelatedNote picked={naps} />}
-        <ul className="divide-y divide-black/5">
+        <ul className="divide-y divide-black/5 lg:grid lg:grid-cols-2 lg:gap-x-8 lg:divide-y-0">
           {napsPg.pageItems.map((n: any) => (
-            <li key={n.id} className="py-2 text-sm">
+            <li key={n.id} className="py-2 text-sm lg:border-b lg:border-black/5">
               <div className="flex justify-between gap-2"><b>{n.trade}</b><span className="whitespace-nowrap">{n.stipend ? `${inr(n.stipend.low)}–${inr(n.stipend.high)}` : n.stipend_text}</span></div>
               {n.stipend?.high ? <Meter value={n.stipend.high} max={maxStipend} color={MODULE_COLOR.jobs} /> : null}
               <div className="text-xs text-[var(--muted)]">{n.employer} · {n.location} · {n.duration}</div>
@@ -73,9 +73,9 @@ export default function Opportunity() {
         <div ref={railPg.top} />
         <h2 className="mb-2 font-bold">Central Railway (Pune cluster) <Badge>{rail.items.length}</Badge></h2>
         {!q && <RelatedNote picked={rail} />}
-        <ul className="divide-y divide-black/5">
+        <ul className="divide-y divide-black/5 lg:grid lg:grid-cols-2 lg:gap-x-8 lg:divide-y-0">
           {railPg.pageItems.map((n: any) => (
-            <li key={n.id} className="py-2 text-sm">
+            <li key={n.id} className="py-2 text-sm lg:border-b lg:border-black/5">
               <div className="flex justify-between gap-2"><b>{n.trade}</b><span>{n.seats} seats · {inr(n.stipend)}{t("per_month")}</span></div>
               {n.stipend ? <Meter value={n.stipend} max={maxStipend} color={MODULE_COLOR.jobs} /> : null}
               <div className="text-xs text-[var(--muted)]">{n.employer} · {n.notice}</div>

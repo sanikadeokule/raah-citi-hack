@@ -78,7 +78,7 @@ export default function Learn() {
   };
   const doneCount = all.filter((l) => done.includes(l.id)).length;
   return (
-    <Shell title={t("home_learn")}>
+    <Shell title={t("home_learn")} wide>
       <ModuleHero color={MODULE_COLOR.learn} item="book" pose={doneCount && doneCount === all.length ? "cheer" : "wave"}
         line={doneCount ? t("hero_learn", { d: doneCount, n: all.length }) : t("hero_learn_start")}>
         <HeroBar value={doneCount} max={all.length} label={t("hero_learn_bar", { d: doneCount, n: all.length })} />
@@ -117,7 +117,7 @@ export default function Learn() {
           <p className="mb-3 text-xs text-[var(--muted)]">{t("device_voice_note")}</p>
         )}
         {/* titles only; tap one to read or play it */}
-        <ul className="space-y-2">
+        <ul className="space-y-2 lg:grid lg:grid-cols-2 lg:items-start lg:gap-3 lg:space-y-0">
           {ls.map((l) => (
             <li key={l.id}>
               <details className="group rounded-xl bg-[var(--bg)]">

@@ -123,19 +123,19 @@ function Start() {
   const canSave = phoneOk && pinOk && nameOk && (!under18 || parentOk);
   // Maina asks each question in her speech bubble; her pose follows what the screen is about
   const head = (title: string, hint?: string, pose: Pose = "clipboard") => react ? (
-    <Mascot pose={react.pose} size={76} say={react.say}>
-      <p role="status" className="text-xl font-extrabold leading-tight text-[var(--brand-ink)]">{t(react.say)}</p>
+    <Mascot pose={react.pose} size={76} say={react.say} className="lg:[&_svg.m-in]:size-[110px]">
+      <p role="status" className="text-xl font-extrabold leading-tight text-[var(--brand-ink)] lg:text-2xl">{t(react.say)}</p>
     </Mascot>
   ) : (
-    <Mascot pose={pose} size={76} say={title} speak={hint ? `${title} ${hint}` : title}>
-      <h2 className="text-xl font-extrabold leading-tight text-[var(--brand-ink)]">{title}</h2>
+    <Mascot pose={pose} size={76} say={title} speak={hint ? `${title} ${hint}` : title} className="lg:[&_svg.m-in]:size-[110px]">
+      <h2 className="text-xl font-extrabold leading-tight text-[var(--brand-ink)] lg:text-2xl">{title}</h2>
       {hint && <p className="mt-0.5 text-sm text-[var(--muted)]">{hint}</p>}
     </Mascot>
   );
   const qHead = (key: string) => { const a = question(key).ask(t, p); return head(a.text, a.hint); };
 
   return (
-    <div className="flex min-h-[70dvh] flex-col gap-4">
+    <div className="flex min-h-[70dvh] flex-col gap-4 lg:mx-auto lg:w-full lg:max-w-2xl lg:gap-5">
       {step !== "welcome" && (
         <div className="flex items-center gap-3">
           <button onClick={back} aria-label={t("back")} className="grid h-9 w-9 place-items-center rounded-full bg-[var(--card)] ring-1 ring-black/10"><Icon name="arrowright" size={18} className="rotate-180" /></button>
@@ -147,7 +147,7 @@ function Start() {
 
       {step === "welcome" && (
         <div className="flex flex-1 flex-col justify-center gap-6 text-center">
-          <Mascot pose="wave" size={132} stack scene speak={t("mascot_hi")}>
+          <Mascot pose="wave" size={132} stack scene speak={t("mascot_hi")} className="lg:[&_svg.m-in]:h-[230px] lg:[&_svg.m-in]:w-auto">
             <p className="text-base font-semibold leading-snug">{t("mascot_hi")}</p>
           </Mascot>
           <div>

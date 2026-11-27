@@ -126,7 +126,7 @@ export function ExamsList() {
         </div>
       )}
       <div ref={pg.top} />
-      <div className="space-y-2">
+      <div className="space-y-2 lg:grid lg:grid-cols-2 lg:items-start lg:gap-3 lg:space-y-0">
         {pg.pageItems.map((r) => <ExamTile key={r.item.id} e={r.item} paths={usedBy(r.item.id)} reason={r.reason} />)}
       </div>
       {tab === "you" && <button onClick={() => setTab("all")} className="w-full text-center text-sm font-semibold text-[var(--brand-ink)] underline">{t("see_all")}</button>}

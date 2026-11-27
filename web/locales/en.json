@@ -1115,5 +1115,6 @@
  "ap_continue": "Continue",
  "step_why": "Why: {reason}",
  "step_trace": "How Raah decided",
- "act_exam_alert": "Raah told you about a new date for {exam}."
+ "act_exam_alert": "Raah told you about a new date for {exam}.",
+ "nav_home": "Home"
 }

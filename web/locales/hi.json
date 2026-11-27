@@ -1115,5 +1115,6 @@
  "ap_continue": "जारी रखें",
  "step_why": "क्यों: {reason}",
  "step_trace": "Raah ने कैसे तय किया",
- "act_exam_alert": "Raah ने {exam} की नई तारीख के बारे में बताया।"
+ "act_exam_alert": "Raah ने {exam} की नई तारीख के बारे में बताया।",
+ "nav_home": "होम"
 }
