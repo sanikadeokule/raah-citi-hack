@@ -2,7 +2,7 @@
 // (run by backend/tests/test_ikigai.py with the parsed spreadsheet)
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { allTagsOf, extractTags, reachable, sweetSpots } from "../lib/ikigai";
+import { allTagsOf, extractTags, reachable, refiners, sweetSpots } from "../lib/ikigai";
 
 const d = JSON.parse(readFileSync(process.argv[2], "utf8"));
 const tags = allTagsOf(d);
@@ -14,6 +14,18 @@ assert.ok(extractTags("मला प्राण्यांची आवड आ
 assert.ok(extractTags("मुझे कंप्यूटर पसंद है", tags).includes("computers"), "Hindi tag name");
 assert.deepEqual(extractTags("   ", tags), []);
 assert.deepEqual(extractTags("zzz qqq", tags), []);
+
+// finer tags: what you do and how you work are in the dataset, and everyday words reach them
+for (const t of ["patient care", "protecting people", "using tools", "problem solving", "customer service"]) assert.ok(tags.includes(t), `${t} is a tag`);
+assert.ok(extractTags("I like looking after patients in the hospital", tags).includes("patient care"));
+assert.ok(extractTags("fixing things with tools", tags).includes("using tools"));
+assert.ok((d.careers as any[]).filter((c) => c.tags.includes("helping people")).length <= 3, "helping people is not shared with every caring job");
+assert.ok((d.careers as any[]).every((c) => c.tags.length >= 5), "every career has enough tags to tell it apart");
+// the follow-up question offers what sits beside what the student named, never what they already said
+const near = refiners(d, ["health"], ["biology"]);
+assert.equal(near.length, 3);
+assert.ok(!near.includes("health") && !near.includes("biology") && new Set(near).size === 3);
+assert.deepEqual(refiners(d, ["zzz"], []), []);
 
 const profile = { class: 10, marks_pct: 68, category: "OBC", family_income_annual: 180000, taluka: "Haveli", gender: "F", interests: [] };
 const spots = sweetSpots(d, profile, ["helping people", "health"], ["talking to people"]);

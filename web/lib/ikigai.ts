@@ -22,7 +22,7 @@ export const LOVE_CHIPS = ["helping people", "machines", "computers", "animals",
 export const GOOD_CHIPS = ["talking to people", "fixing things", "maths", "organising", "teamwork", "reading", "leadership", "hands-on", "typing", "languages", "discipline", "precision"];
 
 // words people say that are not the dataset's own tag
-const SAYS: Record<string, string | string[]> = {
+const SAYS_BASE: Record<string, string | string[]> = {
   logical: ["maths", "science"], logic: ["maths", "science"], puzzle: "maths", puzzles: "maths", calculation: "maths", thinking: "research", think: "research",
   medicine: ["health", "biology"], medical: ["health", "biology"], medicines: ["health", "biology"], hospital: "health", patient: "helping people", patients: "helping people",
   household: ["organising", "hands-on"], housework: ["organising", "hands-on"], home: ["organising", "hands-on"], kitchen: "hands-on", cleaning: "organising",
@@ -42,6 +42,25 @@ const SAYS: Record<string, string | string[]> = {
   lead: "leadership", team: "teamwork", plan: "organising", organise: "organising", write: "typing", type: "typing", english: "languages",
   hindi: "languages", marathi: "languages", electric: "electrical", wiring: "electrical", wood: "wood", carpenter: "wood", welding: "metal",
 };
+
+/** Words for the finer tags added to Career_Profile (what you do, how you work). They override the base map where both name a word. */
+const SAYS_MORE: Record<string, string | string[]> = {
+  patient: ["helping people", "patient care"], patients: ["helping people", "patient care"], nurse: ["health", "patient care"], nursing: ["health", "patient care"],
+  hospital: ["health", "hospital work"], injury: "first aid", bandage: "first aid", pregnancy: "women's health", midwife: "women's health", mothers: "women's health",
+  protect: "protecting people", security: "protecting people", guard: "protecting people", police: ["government job", "protecting people", "uniform"],
+  army: ["government job", "protecting people", "uniform"], uniform: "uniform", government: "government job", public: "public service",
+  customer: "customer service", customers: "customer service", solve: "problem solving", solving: "problem solving", puzzle: ["maths", "problem solving"],
+  logical: ["maths", "problem solving"], creative: "creativity", ideas: "creativity", imagination: "creativity", craft: "handicrafts", handmade: "handicrafts",
+  tools: "using tools", tool: "using tools", install: "installing", fitting: "installing", safe: "safety", safety: "safety",
+  weld: ["welding", "metal"], welding: ["welding", "metal"], wire: ["wiring", "electrical"], wiring: ["wiring", "electrical"],
+  paint: ["art", "painting"], painting: ["art", "painting"], colours: "painting", engine: "repairing engines", engines: "repairing engines", motor: "repairing engines",
+  factory: "assembly line", assembly: "assembly line", production: "assembly line", quality: "quality checking", inspect: "quality checking",
+  records: "record keeping", files: "record keeping", paperwork: "paperwork", forms: "paperwork", excel: "data entry", bank: ["accounts", "banking"],
+  savings: "banking", boss: "being your own boss", cow: ["animals", "animal care"], goat: ["animals", "animal care"], dog: ["animals", "animal care"], milk: "animal care",
+  drive: ["vehicles", "driving"], driving: ["vehicles", "driving"], driver: ["vehicles", "driving"], gym: "physical fitness",
+  fitness: ["sports", "physical fitness"], exercise: ["sports", "physical fitness"], running: ["sports", "physical fitness"],
+};
+const SAYS: Record<string, string | string[]> = { ...SAYS_BASE, ...SAYS_MORE };
 
 const LOCALES: Record<string, Record<string, string>> = { en, hi, mr };
 const norm = (s: string) => s.toLowerCase().replace(/[.,!?;:()]/g, " ").replace(/\bhouse hold\b/g, "household").replace(/\s+/g, " ").trim();
@@ -130,4 +149,18 @@ export function reachable(data: any, profile: any, spot: Spot) {
   const gain = (r.income?.median || 0) - (r.baseline_monthly || 0);
   const payback = gain > 0 ? Math.max(1, Math.ceil((r.net_cost || 0) / gain)) : 0;
   return { payback, total: r.costs.total, net: r.net_cost, perMonth: Math.round(r.family_gap / months), schol, centre: r.centres?.[0] ?? null, steps: plan.steps as string[], planId: plan.id };
+}
+
+
+/** The tags that most often sit beside the ones the student just named, taken from the careers themselves.
+ * They become the reply chips of the follow-up question, so the next answer narrows things down. */
+export function refiners(data: any, anchor: string[], have: string[], n = 3): string[] {
+  const seen = new Map<string, number>();
+  for (const c of data?.careers ?? []) {
+    const tags: string[] = c.tags ?? [];
+    const hits = tags.filter((t) => anchor.includes(t)).length;
+    if (!hits) continue;
+    for (const t of tags) if (!anchor.includes(t) && !have.includes(t)) seen.set(t, (seen.get(t) ?? 0) + hits);
+  }
+  return [...seen.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, n).map(([t]) => t);
 }

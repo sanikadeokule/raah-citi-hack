@@ -11,7 +11,7 @@ import { ChatInput } from "@/components/chatinput";
 import { Icon, Mark } from "@/components/icon";
 import { MicButton, Shell, SpeakButton } from "@/components/ui";
 import { inr } from "@/lib/engine";
-import { GOOD_CHIPS, LOVE_CHIPS, IKIGAI_WEIGHTS, allTagsOf, extractTags, phrasesOf, reachable, sweetSpots, type Circle, type Check, type Spot } from "@/lib/ikigai";
+import { GOOD_CHIPS, LOVE_CHIPS, IKIGAI_WEIGHTS, allTagsOf, extractTags, phrasesOf, reachable, sweetSpots, type Circle, type Check, type Spot, refiners } from "@/lib/ikigai";
 import { tagLabel } from "@/lib/questions";
 import { useApp } from "@/lib/store";
 
@@ -60,6 +60,7 @@ export default function Discover() {
   const [text, setText] = useState("");
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [turn, setTurn] = useState(0); // 0: the open question, 1: the follow-up
+  const [follow, setFollow] = useState<string[]>([]); // the follow-up's reply chips: tags that sit beside what the student named
   const [voice, setVoice] = useState(false);
   const [adding, setAdding] = useState<"love" | "good" | null>(null);
   const [sel, setSel] = useState(0);
@@ -75,9 +76,6 @@ export default function Discover() {
   const stage = screen === "good" ? "good" : "love";
   const chips = (stage === "good" ? GOOD_CHIPS : LOVE_CHIPS).filter((x) => tags.includes(x)).slice(0, 5);
   // reply chips for the follow-up: each one stands for topics the dataset knows
-  const followUp: { k: string; tags: string[] }[] = stage === "good"
-    ? [{ k: "ik_fc_hands", tags: ["hands-on", "fixing things"] }, { k: "ik_fc_head", tags: ["maths", "reading"] }, { k: "ik_fc_both", tags: ["hands-on", "maths"] }]
-    : [{ k: "ik_fc_make", tags: ["design", "hands-on"] }, { k: "ik_fc_people", tags: ["helping people", "talking to people"] }, { k: "ik_fc_both", tags: ["design", "helping people"] }];
 
   const spots = useMemo(() => (screen === "sweet" || screen === "checking" || screen === "reach") && data && profile ? sweetSpots(data, profile, love, good) : [], [screen, data, profile, love, good]);
   const reach = useMemo(() => (pick && data && profile ? reachable(data, profile, pick) : null), [pick, data, profile]);
@@ -114,7 +112,12 @@ export default function Discover() {
     const loose = forced.length ? [] : phrasesOf(said).filter((w) => extractTags(w, tags).length === 0 && !found.some((f) => w.toLowerCase().includes(f)));
     if (loose.length && !(reply && found.length)) setWords((w) => [...new Set([...w, ...loose])]);
     if (turn === 0) {
-      say({ from: "raah", text: `${reply || t("ik_nice")} ${t(stage === "good" ? "ik_f_good" : "ik_f_love")}` });
+      // the follow-up is about what they just said: it names it and offers what usually goes with it in the dataset
+      const anchor = found.length ? found : list.slice(-2);
+      const chipsFor = anchor.length ? refiners(data, anchor, [...list, ...found]) : [];
+      const named = anchor.length ? tagLabel(t, anchor[0]) : said.slice(0, 40);
+      setFollow(chipsFor);
+      say({ from: "raah", text: `${reply || t("ik_nice")} ${t(`${stage === "good" ? "ik_f_good" : "ik_f_love"}${chipsFor.length ? "" : "0"}`, { a: named })}` });
       setTurn(1);
     } else {
       setTurn(0); setMsgs([]);
@@ -224,7 +227,7 @@ export default function Discover() {
             <div className="flex flex-wrap gap-2">
               {turn === 0
                 ? chips.map((x) => <Chip key={x} onClick={() => submit(tagLabel(t, x), [x])}>{tagLabel(t, x)}</Chip>)
-                : followUp.map((f) => <Chip key={f.k} onClick={() => submit(t(f.k), f.tags)}>{t(f.k)}</Chip>)}
+                : (follow.length ? follow : chips).map((x) => <Chip key={x} onClick={() => submit(tagLabel(t, x), [x])}>{tagLabel(t, x)}</Chip>)}
             </div>
             <div className="flex items-end gap-2">
               <MicButton onText={(s) => setText((x) => `${x} ${s}`.trim())} />
