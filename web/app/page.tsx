@@ -79,7 +79,7 @@ function ClassDashboardCard() {
 }
 
 export default function Home() {
-  const { t, profile, setProfile, data, auth, authFetch, lang, showToast } = useApp();
+  const { t, profile, setProfile, data, auth, authFetch, showToast } = useApp();
   const router = useRouter();
   const [stepRun, setStepRun] = useState(0);
   const [tTab, setTTab] = useState<"class" | "tools">("class");
@@ -109,7 +109,7 @@ export default function Home() {
     setAgentStep(null);
     setStepRun((n) => n + 1);
   };
-  const details = profile ? [profile.class && t("class_n", { n: profile.class }), placeLabel(t, profile.taluka), categoryLabel(profile.category, lang)].filter(Boolean).join(" · ") : "";
+  const details = profile ? [profile.class && t("class_n", { n: profile.class }), placeLabel(t, profile.taluka), categoryLabel(profile.category, t)].filter(Boolean).join(" · ") : "";
   return (
     <Shell back={null} fit>
       {/* language is switched from the header; the home screen fits one phone screen without scrolling */}

@@ -64,7 +64,7 @@ function NotifCard({ n, onRead, t }: { n: any; onRead: (id: number) => void; t: 
             <span className="text-[11px] text-[var(--muted)]">{date}</span>
           </div>
         </div>
-        {!n.read && <span className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full bg-[var(--brand)]" aria-label="unread" />}
+        {!n.read && <span className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full bg-[var(--brand)]" aria-label={t("notif_unread")} />}
       </Link>
       {/* outside the link, so reading it aloud does not open it */}
       <div className="shrink-0 py-2 pr-2"><SpeakButton text={n.body ? `${title}. ${n.body}` : title} label="" /></div>

@@ -5,59 +5,6 @@ import { Card, Shell } from "@/components/ui";
 import { useApp } from "@/lib/store";
 import { eligibility } from "@/lib/engine";
 
-const COPY: Record<string, Record<string, string>> = {
-  en: {
-    title: "Scholarship application", intro: "Check eligibility, prepare documents, review prefilled details, then track your own submission.",
-    choose: "Choose a scholarship", start: "Start application chain", sign_in: "Sign in to save an application", profile: "Complete your profile first",
-    eligible: "Eligible", missing: "Eligible once documents are ready", not_eligible: "Raah cannot start this application yet. Check the eligibility details first.",
-    steps: "Your application steps", eligibility: "Eligibility checked against Raah's rules", documents: "Document checklist",
-    ready: "I have this document", missing_doc: "Still need this", get: "Where to get it", none_docs: "No document requirements are listed in Raah's data.",
-    prefill: "Review your prefilled details", prefill_note: "These details are copied from your profile. Review them before using the official portal.",
-    name: "Name", age: "Age", gender: "Gender", class: "Class", taluka: "District / taluka", marks_pct: "Marks (%)", category: "Category",
-    family_income_annual: "Family income per year", school_type: "School type", domicile: "Domicile", documents_list: "Documents you have", religion: "Religion",
-    parent_construction_worker: "Parent is a registered construction worker", parent_ex_serviceman: "Parent is an ex-serviceman",
-    save: "Save details", copy: "Copy details", copied: "Details copied", official: "Open official application", source: "Official source",
-    tracking: "Application tracking", status: "Status", preparing: "Preparing", docs_submitted: "Documents submitted", applied: "Applied", waiting: "Waiting", result: "Result received",
-    submitted: "I submitted this on the official portal", parent_title: "Share an update with your parent", parent_note: "Review this draft. Raah shares it in Parent mode only after you approve.",
-    message: "Message for parent", share: "Approve and share", shared: "Approved and shared with your parent", set_pin: "Set a family PIN in Parent mode first", parent_link: "Open Parent mode",
-    compare: "Compare courses and costs", source_note: "Eligibility and scholarship details come from Raah's dataset. Raah does not submit the official form for you.",
-    load_error: "Could not load your applications. Please sign in again.", save_error: "Could not save. Please retry.",
-  },
-  hi: {
-    title: "छात्रवृत्ति आवेदन", intro: "पात्रता जाँचें, दस्तावेज़ तैयार करें, पहले से भरी जानकारी देखें और अपने आवेदन की स्थिति रखें।",
-    choose: "छात्रवृत्ति चुनें", start: "आवेदन प्रक्रिया शुरू करें", sign_in: "आवेदन सहेजने के लिए साइन इन करें", profile: "पहले अपनी प्रोफ़ाइल पूरी करें",
-    eligible: "पात्र", missing: "दस्तावेज़ मिलने पर पात्र", not_eligible: "अभी आवेदन शुरू नहीं हो सकता। पहले पात्रता की जानकारी देखें।",
-    steps: "आवेदन के चरण", eligibility: "Raah के नियमों के अनुसार पात्रता जाँची गई", documents: "दस्तावेज़ सूची",
-    ready: "यह दस्तावेज़ मेरे पास है", missing_doc: "यह दस्तावेज़ चाहिए", get: "कहाँ मिलेगा", none_docs: "Raah के डेटा में दस्तावेज़ की सूची नहीं है।",
-    prefill: "पहले से भरी जानकारी जाँचें", prefill_note: "यह जानकारी आपकी प्रोफ़ाइल से ली गई है। आधिकारिक पोर्टल पर इस्तेमाल करने से पहले जाँचें।",
-    name: "नाम", age: "उम्र", gender: "लिंग", class: "कक्षा", taluka: "ज़िला / तालुका", marks_pct: "अंक (%)", category: "श्रेणी",
-    family_income_annual: "परिवार की सालाना आय", school_type: "स्कूल का प्रकार", domicile: "निवास प्रमाण", documents_list: "आपके दस्तावेज़", religion: "धर्म",
-    parent_construction_worker: "माता-पिता पंजीकृत निर्माण मज़दूर हैं", parent_ex_serviceman: "माता-पिता पूर्व सैनिक हैं",
-    save: "जानकारी सहेजें", copy: "जानकारी कॉपी करें", copied: "जानकारी कॉपी हो गई", official: "आधिकारिक आवेदन खोलें", source: "आधिकारिक स्रोत",
-    tracking: "आवेदन की स्थिति", status: "स्थिति", preparing: "तैयारी", docs_submitted: "दस्तावेज़ जमा", applied: "आवेदन किया", waiting: "प्रतीक्षा", result: "नतीजा मिला",
-    submitted: "मैंने आधिकारिक पोर्टल पर आवेदन जमा किया", parent_title: "माता-पिता को जानकारी भेजें", parent_note: "पहले संदेश जाँचें। आपकी मंज़ूरी के बाद ही यह Parent mode में दिखेगा।",
-    message: "माता-पिता के लिए संदेश", share: "मंज़ूरी देकर साझा करें", shared: "आपकी मंज़ूरी से माता-पिता के साथ साझा किया", set_pin: "पहले Parent mode में family PIN सेट करें", parent_link: "Parent mode खोलें",
-    compare: "कोर्स और खर्च की तुलना करें", source_note: "पात्रता और छात्रवृत्ति की जानकारी Raah के डेटा से है। Raah आधिकारिक फॉर्म जमा नहीं करता।",
-    load_error: "आवेदन नहीं खुले। फिर से साइन इन करें।", save_error: "सहेजा नहीं जा सका। फिर से कोशिश करें।",
-  },
-  mr: {
-    title: "शिष्यवृत्ती अर्ज", intro: "पात्रता तपासा, कागदपत्रे तयार करा, आधी भरलेली माहिती पाहा आणि अर्जाचा मागोवा ठेवा.",
-    choose: "शिष्यवृत्ती निवडा", start: "अर्जाची प्रक्रिया सुरू करा", sign_in: "अर्ज साठवण्यासाठी साइन इन करा", profile: "आधी तुमची प्रोफाइल पूर्ण करा",
-    eligible: "पात्र", missing: "कागदपत्रे मिळाल्यावर पात्र", not_eligible: "सध्या अर्ज सुरू करता येत नाही. आधी पात्रतेची माहिती तपासा.",
-    steps: "अर्जाचे टप्पे", eligibility: "Raah च्या नियमांनुसार पात्रता तपासली", documents: "कागदपत्रांची यादी",
-    ready: "हे कागदपत्र माझ्याकडे आहे", missing_doc: "हे कागदपत्र हवे आहे", get: "कुठे मिळेल", none_docs: "Raah च्या डेटामध्ये कागदपत्रांची यादी नाही.",
-    prefill: "आधी भरलेली माहिती तपासा", prefill_note: "ही माहिती तुमच्या प्रोफाइलमधून घेतली आहे. अधिकृत पोर्टलवर वापरण्यापूर्वी तपासा.",
-    name: "नाव", age: "वय", gender: "लिंग", class: "इयत्ता", taluka: "जिल्हा / तालुका", marks_pct: "गुण (%)", category: "प्रवर्ग",
-    family_income_annual: "कुटुंबाचे वार्षिक उत्पन्न", school_type: "शाळेचा प्रकार", domicile: "अधिवास", documents_list: "तुमच्याकडील कागदपत्रे", religion: "धर्म",
-    parent_construction_worker: "पालक नोंदणीकृत बांधकाम कामगार आहेत", parent_ex_serviceman: "पालक माजी सैनिक आहेत",
-    save: "माहिती साठवा", copy: "माहिती कॉपी करा", copied: "माहिती कॉपी झाली", official: "अधिकृत अर्ज उघडा", source: "अधिकृत स्रोत",
-    tracking: "अर्जाचा मागोवा", status: "स्थिती", preparing: "तयारी", docs_submitted: "कागदपत्रे जमा", applied: "अर्ज केला", waiting: "प्रतीक्षा", result: "निकाल मिळाला",
-    submitted: "मी अधिकृत पोर्टलवर अर्ज जमा केला", parent_title: "पालकांना माहिती सांगा", parent_note: "मजकूर तपासा. तुमची परवानगी दिल्यावरच तो Parent mode मध्ये दिसेल.",
-    message: "पालकांसाठी संदेश", share: "मंजुरी देऊन शेअर करा", shared: "तुमच्या मंजुरीने पालकांशी शेअर केले", set_pin: "आधी Parent mode मध्ये family PIN सेट करा", parent_link: "Parent mode उघडा",
-    compare: "अभ्यासक्रम आणि खर्चाची तुलना करा", source_note: "पात्रता आणि शिष्यवृत्तीची माहिती Raah च्या डेटामधून आहे. Raah अधिकृत अर्ज जमा करत नाही.",
-    load_error: "अर्ज लोड झाले नाहीत. पुन्हा साइन इन करा.", save_error: "साठवता आले नाही. पुन्हा प्रयत्न करा.",
-  },
-};
 
 const FIELDS = ["name", "age", "gender", "class", "taluka", "marks_pct", "category", "family_income_annual", "school_type", "domicile", "documents", "religion", "parent_construction_worker", "parent_ex_serviceman"];
 const STAGES = ["researching", "docs_submitted", "applied", "waiting", "result"];
@@ -70,8 +17,8 @@ function parentDraft(lang: string, name: string, scholarship: string, amount: st
 }
 
 export default function ApplyPage() {
-  const { data, profile, auth, authReady, authFetch, lang } = useApp();
-  const t = (key: string) => COPY[lang]?.[key] ?? COPY.en[key] ?? key;
+  const { data, profile, auth, authReady, authFetch, lang, t: appT } = useApp();
+  const t = (key: string) => appT(`apply_${key}`);
   const [apps, setApps] = useState<AppRecord[]>([]);
   const [selected, setSelected] = useState("");
   const [active, setActive] = useState<AppRecord | null>(null);
@@ -105,7 +52,7 @@ export default function ApplyPage() {
 
   useEffect(() => {
     if (!active || active.scheme_id !== selected) return;
-    setMessage(active.parent_message || parentDraft(lang, profile?.name || auth?.user?.name || "", active.title, scheme?.amount_text || "see the official details"));
+    setMessage(active.parent_message || parentDraft(lang, profile?.name || auth?.user?.name || "", active.title, scheme?.amount_text || t("see_official")));
   }, [active, selected, lang, profile?.name, auth?.user?.name, scheme?.amount_text]);
 
   async function start() {

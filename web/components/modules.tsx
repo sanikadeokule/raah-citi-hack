@@ -9,6 +9,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Badge, Card, SpeakButton, Stat } from "./ui";
 import { inr } from "@/lib/engine";
 import { useApp } from "@/lib/store";
+import { REGISTERED_LANGUAGES } from "@/lib/languages";
 
 declare global {
   interface Window { Razorpay?: new (options: any) => { open: () => void } }
@@ -55,10 +56,10 @@ export function StudentModules({ emptyText }: { emptyText?: string } = {}) {
     try {
       const r = await authFetch(`/api/modules/${m.id}/enrol`, { method: "POST" });
       const j = await r.json();
-      if (!r.ok) throw new Error(typeof j.detail === "string" ? j.detail : "Could not start enrolment");
+      if (!r.ok) throw new Error(typeof j.detail === "string" ? j.detail : t("module_enrol_error"));
       if (j.enrolled) { load(); setOpen(m.id); setAns({}); return; }
-      if (!j.payment_required) throw new Error("Payment setup is incomplete");
-      if (!(await loadRazorpay()) || !window.Razorpay) throw new Error("Razorpay Checkout could not be loaded. Check your internet connection.");
+      if (!j.payment_required) throw new Error(t("module_payment_setup_error"));
+      if (!(await loadRazorpay()) || !window.Razorpay) throw new Error(t("module_razorpay_error"));
       const checkout = new window.Razorpay({
         key: j.key_id, amount: j.order.amount, currency: j.order.currency,
         name: j.name, description: j.description, order_id: j.order.id,
@@ -71,16 +72,16 @@ export function StudentModules({ emptyText }: { emptyText?: string } = {}) {
                 payment_id: response.razorpay_payment_id, signature: response.razorpay_signature }),
             });
             const confirmation = await verified.json();
-            if (!verified.ok) throw new Error(typeof confirmation.detail === "string" ? confirmation.detail : "Payment verification failed");
-            showToast("Payment confirmed. Module unlocked.");
+            if (!verified.ok) throw new Error(typeof confirmation.detail === "string" ? confirmation.detail : t("module_payment_verify_error"));
+            showToast(t("module_payment_confirmed"));
             load(); setOpen(m.id); setAns({});
-          } catch (err) { showToast(err instanceof Error ? err.message : "Payment verification failed"); }
+          } catch (err) { showToast(err instanceof Error ? err.message : t("module_payment_verify_error")); }
         },
         modal: { ondismiss: () => setPaying(null) },
       });
       checkout.open();
     } catch (err) {
-      showToast(err instanceof Error ? err.message : "Could not start enrolment");
+      showToast(err instanceof Error ? err.message : t("module_enrol_error"));
     } finally { setPaying(null); }
   };
   const finish = async (m: any) => {
@@ -114,7 +115,7 @@ export function StudentModules({ emptyText }: { emptyText?: string } = {}) {
               ) : (
                 <button onClick={() => setOpen(shown ? null : m.id)} className="mt-2 text-sm underline">{shown ? t("close") : t("open_module")}</button>
               )}
-              {m.enrolment && m.enrolment.paid > 0 && <div className="mt-1 text-xs text-[var(--muted)]">Paid via Razorpay · {inr(m.enrolment.paid)}</div>}
+              {m.enrolment && m.enrolment.paid > 0 && <div className="mt-1 text-xs text-[var(--muted)]">{t("module_paid_via", { amount: inr(m.enrolment.paid) })}</div>}
               {shown && m.enrolment && (
                 <div className="mt-2 space-y-2">
                   <p className="leading-relaxed">{m.lesson}</p>
@@ -278,7 +279,7 @@ export function TeacherModules() {
           </div>
           <p className="mt-2 text-xs text-[var(--muted)]">{t("earnings_rule", { pct: Math.round(earn.share_of_sales * 100), p: inr(earn.payout_per_completion) })}</p>
           <button onClick={payOut} disabled={earn.unpaid <= 0} className="mt-2 w-full rounded-xl bg-[var(--brand)] py-2 font-semibold text-white disabled:opacity-40"> {t("pay_out")} {inr(earn.unpaid)}</button>
-          <Link href="/teacher/payouts/" className="mt-2 block text-center text-sm font-semibold text-[var(--brand-ink)] underline">View payout history →</Link>
+          <Link href="/teacher/payouts/" className="mt-2 block text-center text-sm font-semibold text-[var(--brand-ink)] underline">{t("module_view_payout")} →</Link>
           {payout && <p className="mt-2 text-xs">pain.001 {payout.msg_id} · <Mark kind={payout.validation.valid ? "yes" : "no"} size={14} /> {payout.validation.method}</p>}
         </Card>
       )}
@@ -296,7 +297,6 @@ export function TeacherModuleDetail({ id }: { id: number }) {
   if (mods === null) return <Card>…</Card>;
   const m = mods.find((x) => x.id === id);
   if (!m) return <Card>{t("module_not_found")}</Card>;
-  const langName: Record<string, string> = { mr: "मराठी", hi: "हिन्दी", en: "English" };
   return (
     <>
       <Card className="space-y-2">
@@ -305,7 +305,7 @@ export function TeacherModuleDetail({ id }: { id: number }) {
           <Badge tone={m.price_model === "free" ? "green" : "blue"}>{priceText(m, t)}</Badge>
         </div>
         <div className="text-xs text-[var(--muted)]">
-          {langName[m.lang] ?? m.lang} · {t("module_published_on", { d: new Date(m.created_at * 1000).toLocaleDateString() })}
+          {REGISTERED_LANGUAGES.find((language) => language.code === m.lang)?.nativeName ?? m.lang} · {t("module_published_on", { d: new Date(m.created_at * 1000).toLocaleDateString() })}
         </div>
         <div className="grid grid-cols-3 gap-2">
           <Stat label={t("enrolled")} value={String(m.enrolled)} />
@@ -349,7 +349,7 @@ export function MentorRequests() {
       <h2 className="font-bold">{t("mentor_connections")}</h2>
       <ul className="mt-2 divide-y divide-black/5 text-sm">
         {rows.map((r, i) => (
-          <li key={i} className="py-1.5">{r.student.first_name || "—"} (Class {r.student.class ?? "?"}, {r.student.taluka ?? "?"}) → <b>{r.mentor}</b>
+          <li key={i} className="py-1.5">{r.student.first_name || "—"} ({t("module_class_n", { n: r.student.class ?? "?" })}, {r.student.taluka ?? "?"}) → <b>{r.mentor}</b>
             <span className="text-xs text-[var(--muted)]"> · {new Date(r.at * 1000).toLocaleDateString()}</span></li>
         ))}
       </ul>

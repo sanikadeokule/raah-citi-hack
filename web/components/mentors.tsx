@@ -11,6 +11,7 @@ import { chosenCareers, mentorMatches, pickForCareers, type CareerChoice } from 
 import { useApp } from "@/lib/store";
 import { placeLabel } from "@/lib/questions";
 import { RelatedNote } from "./careerfilter";
+import { languageName } from "@/lib/languages";
 
 export function Mentors({ career, top }: { career: CareerChoice; top: string[] }) {
   const { data, profile, t, authFetch, online, auth, lang } = useApp();
@@ -30,7 +31,7 @@ export function Mentors({ career, top }: { career: CareerChoice; top: string[] }
     .filter((m: any) => m.km === null || m.km <= maxKm)
     .sort((a: any, b: any) => (a.km ?? 999) - (b.km ?? 999)), [data, profile, maxKm]);
   const picked = pickForCareers(data, nearby, career, top, mentorMatches);
-  const speaks = { en: "English", hi: "Hindi", mr: "Marathi" }[lang as "en" | "hi" | "mr"] ?? "Marathi";
+  const speaks = languageName(lang);
   const list = useMemo(() => {
     const own = chosenCareers(data, career, top);
     return picked.items.map((m: any) => {
@@ -49,7 +50,7 @@ export function Mentors({ career, top }: { career: CareerChoice; top: string[] }
     setError(null);
     const r = await authFetch(`/api/mentors/${id}/request`, { method: "POST", body: JSON.stringify({ accept_sharing: true, name: profile?.name, class: profile?.class, taluka: profile?.taluka }) });
     const j = await r.json();
-    if (!r.ok) { setError(typeof j.detail === "string" ? j.detail : "Error"); return; }
+    if (!r.ok) { setError(typeof j.detail === "string" ? j.detail : t("mentor_error")); return; }
     setContacts((c) => ({ ...c, [id]: j.contact?.phone }));
     setAsking(null);
   };
@@ -68,7 +69,7 @@ export function Mentors({ career, top }: { career: CareerChoice; top: string[] }
           <li key={m.id} className="rounded-xl bg-[var(--bg)] p-3 text-sm">
             <div className="flex items-start justify-between gap-2">
               <div><b>{m.name}</b>{i === 0 && list.length > 1 && m.score > 0 && <> <Badge tone="green">{t("mentor_best")}</Badge></>}<div className="text-xs text-[var(--muted)]">{m.works_as}</div></div>
-              <span className="whitespace-nowrap text-xs text-[var(--muted)]">{placeLabel(t, m.taluka)}{m.km !== null ? ` · ~${Math.round(m.km)} km` : ""}</span>
+              <span className="whitespace-nowrap text-xs text-[var(--muted)]">{placeLabel(t, m.taluka)}{m.km !== null ? ` · ~${Math.round(m.km)} ${t("distance_unit")}` : ""}</span>
             </div>
             {m.reasons.length > 0 && <div className="mt-1 text-xs font-semibold text-[var(--brand-ink)]">{t("mentor_why", { reasons: m.reasons.join(" · ") })}</div>}
             <div className="mt-1">{m.helps_with}</div>

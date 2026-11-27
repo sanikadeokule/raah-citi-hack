@@ -47,7 +47,7 @@ export function Shell({ title, back = "/", role = "any", publicPage = false, fit
           <Link href="/notifications/" title={t("alerts")} aria-label={t("alerts")}
             className="grid h-8 w-8 place-items-center rounded-full bg-white/15 active:scale-90"><Icon name="bell" size={18} /></Link>
         )}
-        <select aria-label="language" value={lang} onChange={(e) => setLang(e.target.value)}
+        <select aria-label={t("language_select")} value={lang} onChange={(e) => setLang(e.target.value)}
           className="h-8 rounded-full bg-white/15 px-2 text-sm font-semibold">
           {LANGS.map((l) => <option key={l.code} value={l.code} title={l.label} className="text-black">{l.short}</option>)}
         </select>

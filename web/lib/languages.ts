@@ -20,3 +20,5 @@ export const normalizeLanguage = (code: unknown): string =>
   typeof code === "string" && isSelectableLanguage(code) ? code : DEFAULT_LANGUAGE;
 export const languageName = (code: unknown): string =>
   REGISTERED_LANGUAGES.find((language) => language.code === normalizeLanguage(code))?.name ?? "English";
+export const languageLocale = (code: unknown): string =>
+  REGISTERED_LANGUAGES.find((language) => language.code === normalizeLanguage(code))?.locale ?? "en-IN";

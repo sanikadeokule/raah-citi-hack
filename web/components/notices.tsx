@@ -9,6 +9,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Card, SpeakButton } from "@/components/ui";
 import { getKV, setKV } from "@/lib/db";
 import { useApp } from "@/lib/store";
+import { languageLocale } from "@/lib/languages";
 
 type T = (k: string, vars?: Record<string, string | number>) => string;
 
@@ -29,7 +30,7 @@ export function fmtDate(iso?: string | null, lang = "en"): string {
   if (!iso) return "";
   const parts = iso.split("-").map(Number);
   const dt = new Date(Date.UTC(parts[0], (parts[1] || 1) - 1, parts[2] || 1));
-  const loc = lang === "en" ? "en-IN" : `${lang}-IN`;
+  const loc = languageLocale(lang);
   return dt.toLocaleDateString(loc, parts.length === 3 ? { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }
     : { month: "short", year: "numeric", timeZone: "UTC" });
 }
@@ -80,7 +81,7 @@ export function NoticeCard({ n, unread, onOpen }: { n: any; unread?: boolean; on
         <span className="rounded-md bg-[var(--header-bg)] px-1.5 py-0.5 font-bold text-white">{n.source_short}</span>
         <span className="text-[var(--muted)]"><Icon name={CAT_ICON[cat] ?? "bell"} size={14} className="mr-1 align-[-2px]" />{catLabel === `notice_cat_${cat}` ? cat : catLabel}</span>
         {n.published && <span className="text-[var(--muted)]">· {t("notice_published", { date: fmtDate(n.published, lang) })}</span>}
-        {unread && <span className="ml-auto h-2.5 w-2.5 rounded-full bg-[var(--brand)]" aria-label="unread" />}
+        {unread && <span className="ml-auto h-2.5 w-2.5 rounded-full bg-[var(--brand)]" aria-label={t("notif_unread")} />}
       </div>
 
       <p className={`mt-1.5 text-sm leading-snug ${unread ? "font-semibold" : "font-medium"}`}>{title}</p>
@@ -113,7 +114,7 @@ export function SourcesFooter({ sources, lastChecked }: { sources: any[]; lastCh
   const { t, lang } = useApp();
   if (!sources?.length) return null;
   if (!lastChecked) return <p className="px-1 text-center text-xs text-[var(--muted)]">{t("notices_never")}</p>;
-  const loc = lang === "en" ? "en-IN" : `${lang}-IN`;
+  const loc = languageLocale(lang);
   const time = new Date(lastChecked * 1000).toLocaleString(loc, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
   const stale = sources.filter((s) => s.status === "snapshot" || s.status === "error");
   return (

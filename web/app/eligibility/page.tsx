@@ -48,7 +48,7 @@ export default function EligibilityPage() {
       <Card>
         <label className="text-sm">{t("plan_for")}:
           <select value={planId} onChange={(e) => setPlanId(e.target.value)} className="ml-2 rounded bg-[var(--bg)] p-1">
-            <option value="">Now (Class {profile?.class})</option>
+            <option value="">{t("elig_now_class", { n: profile?.class ?? "" })}</option>
             {data?.plans.map((p: any) => <option key={p.id} value={p.id}>{p.label}</option>)}
           </select>
         </label>

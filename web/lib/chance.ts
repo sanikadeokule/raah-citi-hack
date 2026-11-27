@@ -31,9 +31,3 @@ export function chanceFor(centre: { type?: string; distance_km?: number | null }
   if (far) rank = Math.max(0, rank - 1);
   return { level: (["reach", "good", "safe"] as Chance[])[rank], margin, farAway: !!far, needsMarks: false };
 }
-
-export const CHANCE_TEXT: Record<string, Record<Chance | "no_marks" | "far", string>> = {
-  en: { safe: "Safe", good: "Good chance", reach: "Reach", no_marks: "Add your class 12 percentile for a sharper estimate", far: "Far for your commute limit" },
-  hi: { safe: "सुरक्षित", good: "अच्छा मौका", reach: "कठिन", no_marks: "बेहतर अनुमान के लिए 12वीं का पर्सेंटाइल जोड़ें", far: "आपकी यात्रा सीमा से दूर" },
-  mr: { safe: "सुरक्षित", good: "चांगली संधी", reach: "कठीण", no_marks: "अचूक अंदाजासाठी १२वीचा पर्सेंटाइल जोडा", far: "तुमच्या प्रवास मर्यादेपेक्षा दूर" },
-};

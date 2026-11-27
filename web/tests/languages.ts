@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 import {
   DEFAULT_LANGUAGE, REGISTERED_LANGUAGES, SELECTABLE_LANGUAGES,
-  isRegisteredLanguage, isSelectableLanguage, languageName, normalizeLanguage,
+  isRegisteredLanguage, isSelectableLanguage, languageLocale, languageName, normalizeLanguage,
 } from "../lib/languages";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
@@ -21,6 +21,7 @@ for (const language of REGISTERED_LANGUAGES) {
   assert.equal(isRegisteredLanguage(language.code), true);
   assert.equal(isSelectableLanguage(language.code), language.selectable);
   assert.equal(normalizeLanguage(language.code), language.selectable ? language.code : "en");
+  assert.equal(languageLocale(language.code), language.selectable ? language.locale : "en-IN");
 }
 assert.equal(isRegisteredLanguage("xx"), false);
 assert.equal(isSelectableLanguage("xx"), false);
@@ -49,11 +50,11 @@ function catalog(code: string): Record<string, string> {
 const placeholders = (value: string) =>
   [...new Set([...value.matchAll(/\{([A-Za-z_][A-Za-z0-9_]*)\}/g)].map((m) => m[1]))].sort();
 const english = catalog("en");
-for (const language of SELECTABLE_LANGUAGES) {
-  const translated = catalog(language.code);
-  assert.deepEqual(Object.keys(translated).sort(), Object.keys(english).sort(), `${language.code}: key mismatch`);
+for (const code of [...SELECTABLE_LANGUAGES.map((language) => language.code), "ta"]) {
+  const translated = catalog(code);
+  assert.deepEqual(Object.keys(translated).sort(), Object.keys(english).sort(), `${code}: key mismatch`);
   for (const [key, value] of Object.entries(english)) {
-    assert.deepEqual(placeholders(translated[key]), placeholders(value), `${language.code}.${key}: placeholders differ`);
+    assert.deepEqual(placeholders(translated[key]), placeholders(value), `${code}.${key}: placeholders differ`);
   }
 }
 console.log("languages ok");

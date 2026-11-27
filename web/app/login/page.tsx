@@ -29,7 +29,7 @@ function LoginForm() {
   useState(() => {
     const token = sp.get("token");
     const oauthError = sp.get("error");
-    if (oauthError) { setError(`Google sign-in failed: ${oauthError}`); return; }
+    if (oauthError) { setError(t("login_google_error_detail", { error: oauthError })); return; }
     if (token) {
       (async () => {
         try {
@@ -40,9 +40,9 @@ function LoginForm() {
             await signIn(token, user as AuthUser);
             router.replace(next);
           } else {
-            setError("Google sign-in failed, please try again");
+            setError(t("login_google_error"));
           }
-        } catch { setError("Google sign-in failed, please try again"); }
+        } catch { setError(t("login_google_error")); }
       })();
     }
   });
@@ -137,7 +137,7 @@ function LoginForm() {
       </button>
 
       <div className="flex items-center gap-2 text-xs text-[var(--muted)]">
-        <hr className="flex-1 border-[var(--muted)]/30" />or<hr className="flex-1 border-[var(--muted)]/30" />
+        <hr className="flex-1 border-[var(--muted)]/30" />{t("login_or")}<hr className="flex-1 border-[var(--muted)]/30" />
       </div>
 
       <button type="button" onClick={() => { window.location.assign(`${API}/api/auth/google?role=${role}`); }}
@@ -148,7 +148,7 @@ function LoginForm() {
           <path fill="#FBBC05" d="M24 46c5.9 0 10.9-1.9 14.5-5.2l-6.7-5.5C29.7 37 27 38 24 38c-5.9 0-10.9-3.6-13.2-8.8l-7 5.4C7.9 41.7 15.3 46 24 46z" transform="translate(0,-1)"/>
           <path fill="#EA4335" d="M44.5 20H24v8.5h11.8c-.8 2.5-2.4 4.6-4.5 6l6.7 5.5C42 36.5 45 31.1 45 24c0-1.3-.2-2.7-.5-4z" transform="translate(-0.5,0)"/>
         </svg>
-        Sign in with Google
+        {t("login_google")}
       </button>
 
       {error && <p className="rounded-lg bg-rose-50 p-2 text-sm text-rose-800">{error}</p>}

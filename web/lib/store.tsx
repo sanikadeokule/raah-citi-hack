@@ -7,11 +7,12 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import en from "@/locales/en.json";
 import mr from "@/locales/mr.json";
 import hi from "@/locales/hi.json";
+import ta from "@/locales/ta.json";
 import { normalizeLanguage, SELECTABLE_LANGUAGES } from "./languages";
 import { db, enqueue, getKV, setKV } from "./db";
 
 export const API = process.env.NEXT_PUBLIC_API_BASE || "";
-const LOCALES: Record<string, Record<string, string>> = { en, mr, hi };
+const LOCALES: Record<string, Record<string, string>> = { en, mr, hi, ta };
 const SHORT_LABELS: Record<string, string> = { mr: "मरा", hi: "हिं", en: "Eng" };
 const DISPLAY_ORDER = ["mr", "hi", "en"];
 export const LANGS = SELECTABLE_LANGUAGES.map((language) => ({
@@ -181,7 +182,7 @@ export function Provider({ children }: { children: React.ReactNode }) {
     setLangState(code);
     setKV("lang", code);
   }, []);
-  useEffect(() => { document.title = lang === "hi" || lang === "mr" ? "राह" : "Raah"; }, [lang]);
+  useEffect(() => { document.title = t("app_title"); }, [t]);
   const queueAction = useCallback(async (kind: string, payload: unknown) => {
     await enqueue(kind, payload);
     await flushQueue(false);

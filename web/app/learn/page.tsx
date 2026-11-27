@@ -149,7 +149,7 @@ export default function Learn() {
         ) : (
           <div className="mt-3 rounded-xl bg-[var(--brand-soft)] p-3 text-center text-lg font-bold">{t("score")}: {score} / {qs.length}</div>
         )}
-        <p className="mt-2 text-xs text-[var(--muted)]">Answers are saved on the phone and sync when you are back online.</p>
+        <p className="mt-2 text-xs text-[var(--muted)]">{t("learn_sync_note")}</p>
         <Link href="/progress/" className="mt-3 inline-block text-sm font-semibold text-[var(--brand-ink)] underline">{t("progress_view_dashboard")}</Link>
       </Card>}
 
