@@ -6,3 +6,4 @@ __pycache__/
 *.pyc
 backend/data/
 web/tsconfig.tsbuildinfo
+backend/raah_graph.db*

@@ -13,6 +13,8 @@ _n = [0]
 @pytest.fixture(autouse=True)
 def _forget_students():
     """These students must not linger as eligible candidates for other tests' recommendation scans."""
+    from raah import chain_graph
+    chain_graph._graph = None  # sqlite reuses application ids once rows are deleted; a fresh graph keeps tests apart
     yield
     with db.connect() as con:
         con.execute("DELETE FROM users WHERE phone LIKE '91000001%'")
@@ -101,3 +103,33 @@ def test_parent_plan_card_shows_monthly_total_scholarship_payback():
     ptok = c.post("/api/parent/token", json={"phone": str(9100000100 + _n[0]), "family_pin": "5678"}).json()["access_token"]
     card = c.get("/api/parent/plan-card", headers={"Authorization": f"Bearer {ptok}"}).json()["plan"]
     assert card["per_month"] > 0 and card["total"] >= card["net"] and "payback_months" in card
+
+
+def test_graph_waits_for_student_then_parent_then_submit_and_refuses_out_of_order():
+    from raah import chain_graph
+    h, uid = _student(age=16)
+    a = _start(h)
+    base = f"/api/scholarship-applications/{a['id']}"
+    assert c.get(f"{base}/graph", headers=h).json()["waiting_for"] == "student_approve"
+    c.post(f"{base}/approve", headers=h)
+    assert c.get(f"{base}/graph", headers=h).json()["waiting_for"] == "parent_agree"
+    c.post("/api/parent/set-pin", json={"family_pin": "5678"}, headers=h)
+    c.post(f"{base}/ask-parent", json={"message": "May I apply for this?"}, headers=h)
+    ptok = c.post("/api/parent/token", json={"phone": str(9100000100 + _n[0]), "family_pin": "5678"}).json()["access_token"]
+    c.post(f"/api/parent/applications/{a['id']}/agree", headers={"Authorization": f"Bearer {ptok}"})
+    assert c.get(f"{base}/graph", headers=h).json()["waiting_for"] == "student_submit"
+    c.patch(base, json={"stage": "applied"}, headers=h)
+    st = c.get(f"{base}/graph", headers=h).json()
+    assert st["waiting_for"] is None and st["path"][-1] == "done"
+    with pytest.raises(Exception):
+        chain_graph.advance(a["id"], "student_submit")
+
+
+def test_an_application_started_before_the_graph_existed_is_caught_up():
+    import json as _json, time as _time
+    h, uid = _student(age=19)
+    a = _start(h)
+    with db.connect() as con:
+        con.execute("UPDATE applications SET student_approved_at = ? WHERE id = ?", (int(_time.time()), a["id"]))
+    r = c.get(f"/api/scholarship-applications/{a['id']}/graph", headers=h).json()
+    assert r["waiting_for"] == "student_submit"

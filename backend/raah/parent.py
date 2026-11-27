@@ -314,7 +314,12 @@ def agree(app_id: int, claims: dict = Depends(_family_user)):
             raise HTTPException(status.HTTP_404_NOT_FOUND, "application not found")
         if not row["parent_message_approved_at"]:
             raise HTTPException(status.HTTP_409_CONFLICT, "The student has not asked yet")
-        con.execute("UPDATE applications SET parent_agreed_at = ?, updated_at = ? WHERE id = ?", (now, now, app_id))
+        from . import application_chain, chain_graph
+        full = con.execute("SELECT * FROM applications WHERE id = ?", (app_id,)).fetchone()
+        application_chain.sync_graph(full)
+        if not full["parent_agreed_at"]:
+            chain_graph.advance(app_id, "parent_agree")
+        con.execute("UPDATE applications SET parent_agreed_at = ?, updated_at = ? WHERE id = ?", (full["parent_agreed_at"] or now, now, app_id))
     log_activity(student_id, "chose", "act_parent_agreed", {"title": row["title"]}, "/apply/")
     return {"id": app_id, "parent_agreed_at": now}
 

@@ -1112,5 +1112,7 @@
  "act_parent_agreed": "पालकांनी {title} साठी संमती दिली.",
  "act_submitted": "तुम्ही {title} जमा केल्याचे नोंदवले.",
  "act_remind": "Raah {title} साठी राहिलेल्या कागदपत्रांची आठवण करेल.",
- "ap_continue": "पुढे चला"
+ "ap_continue": "पुढे चला",
+ "step_why": "का: {reason}",
+ "step_trace": "Raah ने कसे ठरवले"
 }
