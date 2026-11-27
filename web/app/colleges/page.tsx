@@ -45,21 +45,67 @@ function cleanCourses(courses: string | undefined): string | null {
 
 const CHANCE_TONE = { safe: "green", good: "blue", reach: "amber" } as const;
 
-function CentreCard({ c, t, profile, lang }: { c: any; t: (k: string) => string; profile: any; lang: string }) {
-  const [open, setOpen] = useState(false);
-  const chance = chanceFor(c, profile);
-  const ct = CHANCE_TEXT[lang] ?? CHANCE_TEXT.en;
-  const color = typeColor(c.type);
+// the detail panel (its own column on very wide screens, or the accordion body below lg) for one centre
+function CentreDetail({ c, t }: { c: any; t: (k: string) => string }) {
   const fees = cleanFees(c.fees_text);
   const courses = cleanCourses(c.courses);
   const distLabel = c.distance_km != null
     ? `${c.approximate ? "~" : ""}${c.distance_km} ${t("colleges_km")}${c.approximate ? ` (${t("colleges_approx")})` : ""}`
     : null;
+  return (
+    <div className="space-y-2">
+      {distLabel && (
+        <div className="flex items-center gap-2 text-xs text-[var(--muted)]">
+          <Icon name="pin" size={16} />
+          <span>{distLabel}</span>
+        </div>
+      )}
+      {fees ? (
+        <div className="flex items-center gap-2 text-xs">
+          <Icon name="rupee" size={16} />
+          <span className={fees.isFree ? "font-semibold text-green-700 dark:text-green-400" : "text-[var(--muted)]"}>{fees.label}</span>
+        </div>
+      ) : (
+        <div className="flex items-center gap-2 text-xs text-[var(--muted)]">
+          <Icon name="rupee" size={16} />
+          <span>{t("fees_not_listed")}</span>
+        </div>
+      )}
+      {courses && (
+        <div className="flex items-start gap-2 text-xs text-[var(--muted)]">
+          <Icon name="graduation" size={16} className="mt-0.5" />
+          <span>{courses}</span>
+        </div>
+      )}
+      {c.address && (
+        <div className="flex items-start gap-2 text-xs text-[var(--muted)]">
+          <Icon name="building" size={16} className="mt-0.5" />
+          <span>{c.address}</span>
+        </div>
+      )}
+      {c.source && (
+        <div className="pt-1">
+          <Source url={c.source} date={c.last_checked} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CentreCard({ c, t, profile, lang, selected, onSelect }: { c: any; t: (k: string) => string; profile: any; lang: string; selected?: boolean; onSelect?: () => void }) {
+  const [open, setOpen] = useState(false);
+  const chance = chanceFor(c, profile);
+  const ct = CHANCE_TEXT[lang] ?? CHANCE_TEXT.en;
+  const color = typeColor(c.type);
+  const fees = cleanFees(c.fees_text);
+  const distLabel = c.distance_km != null
+    ? `${c.approximate ? "~" : ""}${c.distance_km} ${t("colleges_km")}${c.approximate ? ` (${t("colleges_approx")})` : ""}`
+    : null;
 
   return (
-    <li className="rounded-2xl bg-[var(--card)] ring-1 ring-black/8 overflow-hidden shadow-sm">
+    <li className={`rounded-2xl bg-[var(--card)] ring-1 overflow-hidden shadow-sm ${selected ? "ring-2 ring-[var(--brand)]" : "ring-black/8"}`}>
       <button
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => { setOpen((v) => !v); onSelect?.(); }}
         className="w-full flex items-start gap-3 px-4 py-3 text-left"
       >
         {/* left color accent */}
@@ -102,41 +148,8 @@ function CentreCard({ c, t, profile, lang }: { c: any; t: (k: string) => string;
       </button>
 
       {open && (
-        <div className="border-t border-black/6 px-4 py-3 space-y-2 bg-[var(--bg)]">
-          {distLabel && (
-            <div className="flex items-center gap-2 text-xs text-[var(--muted)]">
-              <Icon name="pin" size={16} />
-              <span>{distLabel}</span>
-            </div>
-          )}
-          {fees ? (
-            <div className="flex items-center gap-2 text-xs">
-              <Icon name="rupee" size={16} />
-              <span className={fees.isFree ? "font-semibold text-green-700 dark:text-green-400" : "text-[var(--muted)]"}>{fees.label}</span>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2 text-xs text-[var(--muted)]">
-              <Icon name="rupee" size={16} />
-              <span>{t("fees_not_listed")}</span>
-            </div>
-          )}
-          {courses && (
-            <div className="flex items-start gap-2 text-xs text-[var(--muted)]">
-              <Icon name="graduation" size={16} className="mt-0.5" />
-              <span>{courses}</span>
-            </div>
-          )}
-          {c.address && (
-            <div className="flex items-start gap-2 text-xs text-[var(--muted)]">
-              <Icon name="building" size={16} className="mt-0.5" />
-              <span>{c.address}</span>
-            </div>
-          )}
-          {c.source && (
-            <div className="pt-1">
-              <Source url={c.source} date={c.last_checked} />
-            </div>
-          )}
+        <div className="border-t border-black/6 px-4 py-3 bg-[var(--bg)] xl:hidden">
+          <CentreDetail c={c} t={t} />
         </div>
       )}
     </li>
@@ -154,6 +167,8 @@ export default function CollegesPage() {
   const [loading, setLoading] = useState(false);
   const [centrePage, setCentrePage] = useState(0);
   const [tab, setTab] = useState<"colleges" | "exams">("colleges");
+  const [chanceFilter, setChanceFilter] = useState<"all" | "safe" | "good" | "reach">("all");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!careerId || !profile) return;
@@ -177,12 +192,15 @@ export default function CollegesPage() {
   }, [careerId, lang, profile]);
 
   const noRoadmap = !careerId;
-  const centres: any[] = result?.centres ?? [];
+  const allCentres: any[] = result?.centres ?? [];
   const courses: any[] = result?.courses ?? [];
   const summary: string | null = result?.summary ?? null;
+  const centres = chanceFilter === "all" ? allCentres : allCentres.filter((c) => chanceFor(c, profile).level === chanceFilter);
+  const chanceCount = (lvl: "safe" | "good" | "reach") => allCentres.filter((c) => chanceFor(c, profile).level === lvl).length;
 
   const totalCentrePages = Math.ceil(centres.length / PAGE_SIZE);
   const pagedCentres = centres.slice(centrePage * PAGE_SIZE, (centrePage + 1) * PAGE_SIZE);
+  const selected = pagedCentres.find((c: any) => c.id === selectedId) ?? pagedCentres[0] ?? null;
 
   return (
     <Shell title={t("colleges_title")} wide>
@@ -209,23 +227,40 @@ export default function CollegesPage() {
           </Card>
 
           <Card>
-            <h2 className="mb-3 font-bold">{t("colleges_centres")}</h2>
-            {loading && <p className="text-sm text-[var(--muted)] animate-pulse">Loading…</p>}
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h2 className="font-bold">{t("colleges_centres")}</h2>
+              <div className="flex flex-wrap gap-1.5">
+                {([["all", t("colleges_filter_all"), allCentres.length], ["safe", CHANCE_TEXT[lang]?.safe ?? CHANCE_TEXT.en.safe, chanceCount("safe")], ["good", CHANCE_TEXT[lang]?.good ?? CHANCE_TEXT.en.good, chanceCount("good")], ["reach", CHANCE_TEXT[lang]?.reach ?? CHANCE_TEXT.en.reach, chanceCount("reach")]] as const).map(([key, label, n]) => (
+                  <button key={key} onClick={() => { setChanceFilter(key); setCentrePage(0); setSelectedId(null); }}
+                    className={`rounded-full px-3 py-1.5 text-xs font-semibold ring-1 ${chanceFilter === key ? "bg-[var(--brand)] text-white ring-[var(--brand)]" : "bg-[var(--bg)] text-[var(--muted)] ring-black/10"}`}>
+                    {label}{key !== "all" ? ` (${n})` : ""}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {loading && <p className="mt-3 text-sm text-[var(--muted)] animate-pulse">Loading…</p>}
             {!loading && centres.length === 0 && (
-              <p className="text-sm text-[var(--muted)]">{t("colleges_no_centres")}</p>
+              <p className="mt-3 text-sm text-[var(--muted)]">{t("colleges_no_centres")}</p>
             )}
-            <div className="lg:grid lg:grid-cols-2 lg:items-start lg:gap-5">
+            <div className="mt-3 lg:grid lg:grid-cols-2 lg:items-start lg:gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_20rem]">
             {!loading && pagedCentres.some((c: any) => c.lat != null) && (
 <div className="lg:sticky lg:top-32">
-              <CentreMap centres={pagedCentres.filter((c: any) => c.lat != null).map((c: any) => ({ ...c, approximate: c.approximate ?? c.coord_source !== "exact" }))}
+              <CentreMap centres={pagedCentres.filter((c: any) => c.lat != null).map((c: any) => ({ ...c, approximate: c.approximate ?? c.coord_source !== "exact", highlighted: c.id === selected?.id }))}
                 home={{ lat: profile?.lat, lon: profile?.lon, label: placeLabel(t, profile?.taluka) || t("your_profile") }} />
               </div>
             )}
             <ul className="space-y-2">
               {pagedCentres.map((c: any) => (
-                <CentreCard key={c.id} c={c} t={t} profile={profile} lang={lang} />
+                <CentreCard key={c.id} c={c} t={t} profile={profile} lang={lang} selected={c.id === selected?.id} onSelect={() => setSelectedId(c.id)} />
               ))}
             </ul>
+            {selected && (
+              <div className="hidden rounded-2xl bg-[var(--bg)] p-4 ring-1 ring-black/8 xl:block xl:sticky xl:top-32">
+                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">{centreTypeLabel(selected.type, lang) || t("colleges_centres")}</p>
+                <p className="mt-0.5 text-lg font-bold leading-snug">{selected.name}</p>
+                <div className="mt-2"><CentreDetail c={selected} t={t} /></div>
+              </div>
+            )}
             </div>
             {totalCentrePages > 1 && (
               <div className="mt-3 flex items-center justify-between gap-2">
