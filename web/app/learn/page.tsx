@@ -13,6 +13,7 @@ import { getKV, setKV } from "@/lib/db";
 import { cachedAudio, fetchAudio, voiceAvailable } from "@/lib/audio";
 import Link from "next/link";
 import { postAi } from "@/lib/ai";
+import { HeroBar, MODULE_COLOR, ModuleHero } from "@/components/modulehero";
 
 export default function Learn() {
   const { data, profile, lang, setLang, t, queueAction } = useApp();
@@ -75,8 +76,13 @@ export default function Learn() {
     }]);
     setAsking(false);
   };
+  const doneCount = all.filter((l) => done.includes(l.id)).length;
   return (
     <Shell title={t("home_learn")}>
+      <ModuleHero color={MODULE_COLOR.learn} item="book" pose={doneCount && doneCount === all.length ? "cheer" : "wave"}
+        line={doneCount ? t("hero_learn", { d: doneCount, n: all.length }) : t("hero_learn_start")}>
+        <HeroBar value={doneCount} max={all.length} label={t("hero_learn_bar", { d: doneCount, n: all.length })} />
+      </ModuleHero>
       <Tabs value={tab} onChange={setTab} tabs={[
         { key: "lessons", label: `${t("learn_tab_lessons")}`, count: ls.length },
         { key: "courses", label: `${t("learn_tab_courses")}` },

@@ -1,9 +1,10 @@
 "use client";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Icon } from "@/components/icon";
+import { Mascot } from "@/components/mascot";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Badge, Card, Shell, Source } from "@/components/ui";
 import { buildRoadmap, computePlan, inr, nearestCentres, rankCareers } from "@/lib/engine";
 import { coursesFor } from "@/lib/helpers";
@@ -41,6 +42,10 @@ function RoadmapView() {
   const profileClass = Math.min(13, Math.max(9, Math.trunc(Number(profile?.class) || 10)));
   const [cls, setCls] = useState<number | null>(null);
   const [tab, setTab] = useState<"road" | "other" | "start">("road");
+  // Maina cheers for a moment when the student makes this road theirs
+  const [cheer, setCheer] = useState(false);
+  const cheerTimer = useRef<number | undefined>(undefined);
+  useEffect(() => () => window.clearTimeout(cheerTimer.current), []);
   const startClass = cls ?? profileClass;
   const r = useMemo(() => (data && profile && careerId ? buildRoadmap(data, profile, careerId, startClass) : null),
     [data, profile, careerId, startClass]);
@@ -56,6 +61,9 @@ function RoadmapView() {
     const next = { ...profile, roadmap_career: careerId, roadmap_at: new Date().toISOString() };
     setProfile(next);
     queueAction("profile", next);
+    setCheer(true);
+    window.clearTimeout(cheerTimer.current);
+    cheerTimer.current = window.setTimeout(() => setCheer(false), 3200);
   };
   const tot = r.totals;
   const classLabel = (c: number) => (c >= 13 ? t("rm_12_pass") : t("rm_class_n", { n: c }));
@@ -190,7 +198,15 @@ function RoadmapView() {
               return (
                 <li key={i} className="relative flex gap-3 pb-5 last:pb-0">
                   {!last && <span aria-hidden className="absolute left-[19px] top-10 bottom-0 w-1 rounded-full" style={{ background: `linear-gradient(${k.color}, ${KIND[r.stages[i + 1].kind]?.color})` }} />}
-                  <span className={`relative z-10 grid h-10 w-10 shrink-0 place-items-center rounded-full text-lg shadow ${s.now ? "ring-4 ring-amber-300" : ""}`} style={{ background: k.color }}><Icon name={k.icon} size={20} className="text-white" /></span>
+                  {s.now ? (
+                    // Maina stands on the road where the student is now
+                    <span className="relative z-10 h-10 w-10 shrink-0">
+                      <span aria-hidden className="absolute inset-x-1 bottom-0 h-2 rounded-full bg-amber-300/70" />
+                      <Mascot pose="wave" size={60} className="absolute -left-2.5 -top-5" />
+                    </span>
+                  ) : (
+                    <span className="relative z-10 grid h-10 w-10 shrink-0 place-items-center rounded-full text-lg shadow" style={{ background: k.color }}><Icon name={k.icon} size={20} className="text-white" /></span>
+                  )}
                   <div className="min-w-0 flex-1 rounded-xl bg-[var(--bg)] p-3">
                     <div className="flex flex-wrap items-center gap-1.5 text-xs text-[var(--muted)]">
                       {s.now && <span className="rounded-full bg-amber-300 px-2 py-0.5 font-bold text-black">{t("rm_you_are_here")}</span>}
@@ -239,17 +255,25 @@ function RoadmapView() {
               );
             })}
           </ol>
-          <div className="mt-3 rounded-xl bg-[var(--brand-soft)] p-3 text-center text-sm font-semibold text-[var(--brand-ink)]">{t("rm_finish", { y: year0 + Math.ceil(tot.months_to_job / 12) })}</div>
+          {/* the end of the road: Maina plants her flag */}
+          <Mascot pose="flag" size={68} className="mt-3">
+            <p className="text-sm font-semibold text-[var(--brand-ink)]">{t("rm_finish", { y: year0 + Math.ceil(tot.months_to_job / 12) })}</p>
+          </Mascot>
         </Card>
 
         <button onClick={makeMine}
           disabled={isMine}
           className={`w-full rounded-xl py-3 font-semibold ${isMine ? "bg-emerald-100 text-emerald-900" : "bg-[var(--brand)] text-white"}`}>
-          {isMine ? `✓ ${t("rm_saved")}` : `${t("rm_make_mine")}`}
+          {isMine ? t("rm_saved") : t("rm_make_mine")}
         </button>
 
       </>)}
       <p className="text-center text-xs text-[var(--muted)]">{t("rm_footer", { file: data.version.file })}</p>
+      {cheer && (
+        <div role="status" className="pointer-events-none fixed inset-x-0 bottom-8 z-50 flex justify-center px-4">
+          <Mascot pose="cheer" size={110} stack><p className="text-base font-bold">{t("rm_saved")}</p></Mascot>
+        </div>
+      )}
     </>
   );
 }

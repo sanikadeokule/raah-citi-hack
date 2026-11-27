@@ -9,6 +9,7 @@ import { Card, MicButton, Shell, SpeakButton } from "@/components/ui";
 import { ChatInput } from "@/components/chatinput";
 import { postAi } from "@/lib/ai";
 import { useApp } from "@/lib/store";
+import { Mascot } from "@/components/mascot";
 
 type Cite = { n: number; sheet: string; row_id: string; title: string; excel_rows: number[]; source: string; summary: string };
 type Step = { n: number; tool: string; label: string; summary?: string; done?: boolean };
@@ -141,7 +142,7 @@ export default function AskPage() {
         {busy && (
           <div className="flex flex-col items-start gap-1">
             {live.map((s) => <StepBubble key={s.n} s={s} label={stepLabel(s)} />)}
-            <div className="text-sm text-[var(--muted)]">{live.length ? t("agent_thinking") : t("ask_searching")}</div>
+            <Mascot pose="think" size={56}><p className="text-sm text-[var(--muted)]">{live.length ? t("agent_thinking") : t("ask_searching")}</p></Mascot>
           </div>
         )}
         <div ref={end} />

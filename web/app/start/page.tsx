@@ -4,8 +4,9 @@
 // first result, with a "Later" button. Everything the student taps becomes the profile the rest of the app uses.
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Icon } from "@/components/icon";
+import { Mascot, type Pose } from "@/components/mascot";
 import { Shell, SpeakButton } from "@/components/ui";
 import { computePlan, eligibility, inr, nearestCentres, rankCareers } from "@/lib/engine";
 import { QUESTIONS } from "@/lib/questions";
@@ -17,6 +18,11 @@ const FLOW: Step[] = ["welcome", "language", "class", "goal", "marks", "category
 const QUESTION_STEPS: Record<string, string> = { class: "class", category: "category", income: "family_income_annual", taluka: "taluka" };
 // a marks band stands in for the exact percentage: the middle of the band
 const MARKS: [string, number][] = [["marks_b1", 45], ["marks_b2", 55], ["marks_b3", 68], ["marks_b4", 82], ["marks_b5", 93]];
+// how Maina answers each tap before the next question: a nod by default, a cheer for good news, a kind word when it is hard
+type Reaction = { pose: Pose; say: string };
+const GOT_IT: Reaction = { pose: "happy", say: "mascot_got_it" };
+const MARKS_REACT = (v: number): Reaction => (v >= 80 ? { pose: "cheer", say: "mascot_great" } : v >= 60 ? { pose: "happy", say: "mascot_good" } : { pose: "comfort", say: "mascot_ok" });
+const GOAL_REACT: Record<string, Reaction> = { career: { pose: "happy", say: "mascot_path" }, scholarship: { pose: "cheer", say: "mascot_money" }, college: { pose: "happy", say: "mascot_college" } };
 const GOALS: [string, string, string][] = [["career", "goal_career", "compass"], ["scholarship", "goal_scholarship", "rupee"], ["college", "goal_college", "school"]];
 const ACHIEVE: [string, string][] = [["ach_1", "compass"], ["ach_2", "rupee"], ["ach_3", "school"], ["ach_4", "bell"]];
 
@@ -50,6 +56,17 @@ function Start() {
   const [error, setError] = useState<string | null>(null);
   const step = FLOW[i];
   const next = (patch: Record<string, any> = {}) => { setP((x) => ({ ...x, ...patch })); setI((n) => Math.min(n + 1, FLOW.length - 1)); };
+  // the answer is saved at once; Maina reacts for a moment, then the next question comes (or she just nods, for toggles)
+  const [react, setReact] = useState<Reaction | null>(null);
+  const timer = useRef<number | undefined>(undefined);
+  useEffect(() => () => window.clearTimeout(timer.current), []);
+  const choose = (patch: Record<string, any> = {}, r: Reaction = GOT_IT, advance = true) => {
+    if (react && advance) return; // one answer per question, even on a double tap
+    setP((x) => ({ ...x, ...patch }));
+    setReact(r);
+    window.clearTimeout(timer.current);
+    timer.current = window.setTimeout(() => { setReact(null); if (advance) setI((n) => Math.min(n + 1, FLOW.length - 1)); }, advance ? 1100 : 900);
+  };
   const back = () => (i === 0 ? router.push("/login/") : setI(i - 1));
 
   const question = (key: string) => QUESTIONS.find((q) => q.key === key)!;
@@ -104,11 +121,16 @@ function Start() {
 
   const phoneOk = phone.length === 10, pinOk = pin.length >= 4, nameOk = name.trim().length >= 2;
   const canSave = phoneOk && pinOk && nameOk && (!under18 || parentOk);
-  const head = (title: string, hint?: string) => (
-    <div className="space-y-1">
-      <h2 className="text-2xl font-extrabold leading-tight text-[var(--brand-ink)]">{title}</h2>
-      {hint && <p className="text-sm text-[var(--muted)]">{hint}</p>}
-    </div>
+  // Maina asks each question in her speech bubble; her pose follows what the screen is about
+  const head = (title: string, hint?: string, pose: Pose = "clipboard") => react ? (
+    <Mascot pose={react.pose} size={76} say={react.say}>
+      <p role="status" className="text-xl font-extrabold leading-tight text-[var(--brand-ink)]">{t(react.say)}</p>
+    </Mascot>
+  ) : (
+    <Mascot pose={pose} size={76} say={title} speak={hint ? `${title} ${hint}` : title}>
+      <h2 className="text-xl font-extrabold leading-tight text-[var(--brand-ink)]">{title}</h2>
+      {hint && <p className="mt-0.5 text-sm text-[var(--muted)]">{hint}</p>}
+    </Mascot>
   );
   const qHead = (key: string) => { const a = question(key).ask(t, p); return head(a.text, a.hint); };
 
@@ -125,7 +147,9 @@ function Start() {
 
       {step === "welcome" && (
         <div className="flex flex-1 flex-col justify-center gap-6 text-center">
-          <Icon name="compass" size={64} className="mx-auto text-[var(--brand)]" />
+          <Mascot pose="wave" size={132} stack scene speak={t("mascot_hi")}>
+            <p className="text-base font-semibold leading-snug">{t("mascot_hi")}</p>
+          </Mascot>
           <div>
             <h1 className="text-3xl font-extrabold text-[var(--brand-ink)]">{t("app_name")}</h1>
             <p className="mt-2 text-base text-[var(--muted)]">{t("tagline")}</p>
@@ -139,11 +163,11 @@ function Start() {
 
       {step === "language" && (
         <>
-          {head(t("choose_language"))}
+          {head(t("choose_language"), undefined, "wave")}
           <div className="space-y-2">
             {LANGS.map((l) => (
               <div key={l.code} className="flex items-center gap-2">
-                <div className="flex-1"><Big on={lang === l.code} onClick={() => { setLang(l.code); next(); }}>{l.label}</Big></div>
+                <div className="flex-1"><Big on={lang === l.code} onClick={() => { setLang(l.code); choose({}, { pose: "wave", say: "mascot_hello" }); }}>{l.label}</Big></div>
                 <SpeakButton text={l.label} lang={l.code} label={t("play")} />
               </div>
             ))}
@@ -154,23 +178,23 @@ function Start() {
       {step === "class" && (
         <>
           {qHead("class")}
-          <div className="grid grid-cols-2 gap-2">{opts("class").map((o: any) => <Big key={o.label} on={p.class === o.v} onClick={() => next({ class: o.v })}>{o.label}</Big>)}</div>
+          <div className="grid grid-cols-2 gap-2">{opts("class").map((o: any) => <Big key={o.label} on={p.class === o.v} onClick={() => choose({ class: o.v })}>{o.label}</Big>)}</div>
         </>
       )}
 
       {step === "goal" && (
         <>
-          {head(t("start_q_goal"))}
-          <div className="space-y-2">{GOALS.map(([k, label, icon]) => <Big key={k} icon={icon} on={goal === k} onClick={() => { setGoal(k); next(); }}>{t(label)}</Big>)}</div>
+          {head(t("start_q_goal"), undefined, "think")}
+          <div className="space-y-2">{GOALS.map(([k, label, icon]) => <Big key={k} icon={icon} on={goal === k} onClick={() => { setGoal(k); choose({}, GOAL_REACT[k]); }}>{t(label)}</Big>)}</div>
         </>
       )}
 
       {step === "marks" && (
         <>
-          {head(t("start_q_marks"), t("start_q_marks_hint"))}
+          {head(t("start_q_marks"), t("start_q_marks_hint"), "think")}
           <div className="space-y-2">
-            {MARKS.map(([k, v]) => <Big key={k} on={p.marks_pct === v} onClick={() => next({ marks_pct: v })}>{t(k)}</Big>)}
-            <Big onClick={() => next({ marks_exam: "unknown" })}>{t("opt_dont_remember")}</Big>
+            {MARKS.map(([k, v]) => <Big key={k} on={p.marks_pct === v} onClick={() => choose({ marks_pct: v }, MARKS_REACT(v))}>{t(k)}</Big>)}
+            <Big onClick={() => choose({ marks_exam: "unknown" }, { pose: "comfort", say: "mascot_later" })}>{t("opt_dont_remember")}</Big>
           </div>
         </>
       )}
@@ -179,7 +203,7 @@ function Start() {
         <>
           {qHead(QUESTION_STEPS[step])}
           <div className={step === "category" ? "grid grid-cols-2 gap-2" : "space-y-2"}>
-            {opts(QUESTION_STEPS[step]).map((o: any) => <Big key={o.label} on={p[QUESTION_STEPS[step]] === o.v} onClick={() => next({ [QUESTION_STEPS[step]]: o.v })}>{o.label}</Big>)}
+            {opts(QUESTION_STEPS[step]).map((o: any) => <Big key={o.label} on={p[QUESTION_STEPS[step]] === o.v} onClick={() => choose({ [QUESTION_STEPS[step]]: o.v })}>{o.label}</Big>)}
           </div>
         </>
       )}
@@ -187,13 +211,13 @@ function Start() {
       {step === "taluka" && (
         <>
           {qHead("taluka")}
-          <div className="grid grid-cols-2 gap-2">{opts("taluka").map((o: any) => <Big key={o.label} on={p.taluka === o.v} onClick={() => next({ taluka: o.v })}>{o.label}</Big>)}</div>
+          <div className="grid grid-cols-2 gap-2">{opts("taluka").map((o: any) => <Big key={o.label} on={p.taluka === o.v} onClick={() => choose({ taluka: o.v })}>{o.label}</Big>)}</div>
         </>
       )}
 
       {step === "achieve" && (
         <>
-          {head(t("start_achieve_title"))}
+          {head(t("start_achieve_title"), undefined, "wave")}
           <ul className="space-y-2">
             {ACHIEVE.map(([k, icon]) => (
               <li key={k} className="flex items-center gap-3 rounded-2xl bg-[var(--card)] p-4 ring-1 ring-black/10"><Icon name={icon} size={22} className="text-[var(--brand)]" /><span className="text-base font-medium">{t(k)}</span></li>
@@ -205,7 +229,7 @@ function Start() {
 
       {step === "result" && (
         <>
-          {head(t("start_result_title"))}
+          {head(t("start_result_title"), undefined, result ? "flag" : "think")}
           {!result && <p className="rounded-2xl bg-[var(--card)] p-4 text-sm ring-1 ring-black/10">{t("start_result_none")}</p>}
           {result?.kind === "career" && (
             <div className="space-y-3 rounded-2xl bg-[var(--card)] p-4 ring-2 ring-[var(--brand)]">
@@ -245,10 +269,10 @@ function Start() {
         <>
           {head(t("start_reminders_title"), t("start_reminders_hint"))}
           <div className="space-y-2">
-            {([["app", "ch_app", "bell"], ["sms", "ch_sms", "chat"], ["whatsapp", "ch_whatsapp", "send"]] as const).map(([k, label, icon]) => <Big key={k} icon={icon} on={channel === k} onClick={() => setChannel(k)}>{t(label)}</Big>)}
+            {([["app", "ch_app", "bell"], ["sms", "ch_sms", "chat"], ["whatsapp", "ch_whatsapp", "send"]] as const).map(([k, label, icon]) => <Big key={k} icon={icon} on={channel === k} onClick={() => { setChannel(k); choose({}, GOT_IT, false); }}>{t(label)}</Big>)}
           </div>
           <div className="space-y-2">
-            {([["important", "freq_important"], ["weekly", "freq_weekly"]] as const).map(([k, label]) => <Big key={k} on={freq === k} onClick={() => setFreq(k)}>{t(label)}</Big>)}
+            {([["important", "freq_important"], ["weekly", "freq_weekly"]] as const).map(([k, label]) => <Big key={k} on={freq === k} onClick={() => { setFreq(k); choose({}, GOT_IT, false); }}>{t(label)}</Big>)}
           </div>
           <div className="mt-auto"><Primary onClick={() => next()}>{t("continue")}</Primary></div>
         </>
