@@ -1114,5 +1114,6 @@
  "act_remind": "Raah will remind you about the missing documents for {title}.",
  "ap_continue": "Continue",
  "step_why": "Why: {reason}",
- "step_trace": "How Raah decided"
+ "step_trace": "How Raah decided",
+ "act_exam_alert": "Raah told you about a new date for {exam}."
 }

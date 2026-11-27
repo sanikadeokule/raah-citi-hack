@@ -8,13 +8,9 @@ parent's yes before the student's, a submit before both) is refused. Raah never 
 """
 from __future__ import annotations
 
-import os
-import sqlite3
-import tempfile
 from typing import TypedDict
 
 from fastapi import HTTPException, status
-from langgraph.checkpoint.sqlite import SqliteSaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import Command, interrupt
 
@@ -57,7 +53,7 @@ def done(state: Chain) -> dict:
     return {"path": state["path"] + ["done"]}
 
 
-def build(checkpointer):
+def build(checkpointer=None):
     g = StateGraph(Chain)
     for name, fn in (("check_documents", check_documents), ("wait_for_student", wait_for_student), ("wait_for_parent", wait_for_parent),
                      ("wait_for_submit", wait_for_submit), ("done", done)):
@@ -71,16 +67,10 @@ def build(checkpointer):
     return g.compile(checkpointer=checkpointer)
 
 
-_graph = None
-
-
 def graph():
-    global _graph
-    if _graph is None:
-        path = os.environ.get("RAAH_GRAPH_DB") or (":memory:" if os.environ.get("RAAH_TESTING") else
-                                                    os.path.join(os.path.dirname(os.path.dirname(__file__)), "raah_graph.db"))
-        _graph = build(SqliteSaver(sqlite3.connect(path, check_same_thread=False)))
-    return _graph
+    """The root graph; the application flow is its subgraph, so its pauses are saved with the root's checkpoint."""
+    from . import raah_graph
+    return raah_graph.root()
 
 
 def _cfg(app_id: int) -> dict:
@@ -100,7 +90,7 @@ def ensure(app_id: int, minor: bool, approved: bool, parent_agreed: bool, submit
     g, cfg = graph(), _cfg(app_id)
     if g.get_state(cfg).values:
         return
-    g.invoke({"app_id": app_id, "minor": minor, "path": []}, cfg)
+    g.invoke({"intent": "application", "app_id": app_id, "minor": minor, "path": []}, cfg)
     for flag, event in ((approved, "student_approve"), (parent_agreed and minor, "parent_agree"), (submitted, "student_submit")):
         if flag and waiting_for(app_id) == event:
             g.invoke(Command(resume=True), cfg)

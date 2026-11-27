@@ -14,7 +14,8 @@ _n = [0]
 def _forget_students():
     """These students must not linger as eligible candidates for other tests' recommendation scans."""
     from raah import chain_graph
-    chain_graph._graph = None  # sqlite reuses application ids once rows are deleted; a fresh graph keeps tests apart
+    from raah import raah_graph
+    raah_graph.reset()  # sqlite reuses application ids once rows are deleted; a fresh graph keeps tests apart
     yield
     with db.connect() as con:
         con.execute("DELETE FROM users WHERE phone LIKE '91000001%'")

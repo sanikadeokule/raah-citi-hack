@@ -1,0 +1,65 @@
+flowchart TD
+  req(["A request: student, parent or the exam watcher"])
+  route{{Route by intent}}
+  req --> route
+  subgraph TODAY["Today's step"]
+    today__observe["observe"]
+    today__options["options"]
+    today__decide["decide"]
+    today__check["check"]
+  end
+  route --> today__observe
+  today__check --> done
+  today__check -.-> today__decide
+  today__decide --> today__check
+  today__observe -.-> today__observe
+  today__observe -.-> today__options
+  today__options --> today__decide
+  subgraph ASK["Ask Raah"]
+    ask__plan["plan"]
+    ask__answer["answer"]
+    ask__fixed["fixed"]
+    ask__check["check"]
+    ask__finish["finish"]
+  end
+  route --> ask__plan
+  ask__answer --> ask__check
+  ask__check -.-> ask__answer
+  ask__check -.-> ask__finish
+  ask__fixed --> ask__finish
+  ask__plan -.-> ask__answer
+  ask__plan -.-> ask__check
+  ask__plan -.-> ask__fixed
+  ask__plan -.-> ask__plan
+  ask__finish --> done
+  subgraph APPLICATION["Scholarship application"]
+    application__check_documents["check documents"]
+    application__wait_for_student["wait for student"]
+    application__wait_for_parent["wait for parent"]
+    application__wait_for_submit["wait for submit"]
+    application__done["done"]
+  end
+  route --> application__check_documents
+  application__check_documents --> application__wait_for_student
+  application__wait_for_parent --> application__wait_for_submit
+  application__wait_for_student -.-> application__wait_for_parent
+  application__wait_for_student -.-> application__wait_for_submit
+  application__wait_for_submit --> application__done
+  application__done --> done
+  subgraph ALERT["Exam date agent"]
+    alert__gather["gather"]
+    alert__draft["draft"]
+    alert__verify["verify"]
+    alert__send["send"]
+  end
+  route --> alert__gather
+  alert__draft --> alert__verify
+  alert__gather --> alert__draft
+  alert__verify --> alert__send
+  alert__send --> done
+  done(["Result, and a line in What Raah did for you"])
+  shared[["Shared: MCP tools, model layer with fallbacks, activity log"]]
+  shared -.-> TODAY
+  shared -.-> ASK
+  shared -.-> APPLICATION
+  shared -.-> ALERT

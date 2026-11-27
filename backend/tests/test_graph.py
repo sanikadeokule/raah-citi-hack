@@ -4,7 +4,7 @@ import time
 
 import pytest
 
-from raah import auth, db, graph, llm
+from raah import auth, db, graph, llm, raah_graph
 
 
 def _student(name):
@@ -49,7 +49,7 @@ def _fake_model(monkeypatch, answers):
 
 def test_model_chooses_among_true_steps_and_the_trace_is_kept(monkeypatch, chosen_student):
     seen = _fake_model(monkeypatch, [{"step": "step_notice", "reason": "MHT CET date changed"}])
-    step = graph.run_today(chosen_student)
+    step = raah_graph.run("today", user_id=chosen_student)
     assert step["key"] == "step_notice" and step["agent"]["mode"] == "model"
     assert step["agent"]["reason"] == "MHT CET date changed" and step["agent"]["framework"] == "langgraph"
     assert any("looked with get_student_profile" in t for t in step["agent"]["trace"])
@@ -58,7 +58,7 @@ def test_model_chooses_among_true_steps_and_the_trace_is_kept(monkeypatch, chose
 
 def test_a_step_off_the_list_is_refused_then_the_rule_is_used(monkeypatch, chosen_student):
     _fake_model(monkeypatch, [{"step": "step_find_career"}, {"step": "step_invented"}])
-    step = graph.run_today(chosen_student)
+    step = raah_graph.run("today", user_id=chosen_student)
     assert step["agent"]["mode"] == "rule" and step["key"] == "step_notice"
     assert sum(t.startswith("check: refused") for t in step["agent"]["trace"]) == 2
 
@@ -67,10 +67,31 @@ def test_no_model_means_the_rule_decides(monkeypatch, chosen_student):
     def down(*a, **kw):
         raise llm.ToolsUnsupported("no provider")
     monkeypatch.setattr(llm, "chat_tools", down)
-    step = graph.run_today(chosen_student)
+    step = raah_graph.run("today", user_id=chosen_student)
     assert step["agent"]["mode"] == "rule" and step["key"] == "step_notice"
 
 
 def test_graph_exports_a_diagram():
     mermaid = graph.build().get_graph().draw_mermaid()
     assert "observe" in mermaid and "check" in mermaid
+
+
+def test_one_root_graph_routes_to_every_flow_and_leaves_no_checkpoints_behind(monkeypatch, chosen_student):
+    from raah import raah_graph
+    raah_graph.reset()
+    g = raah_graph.build().get_graph()
+    assert {"route", "today", "ask", "application", "alert"} <= set(g.nodes)
+    monkeypatch.setattr(llm, "chat_tools", lambda *a, **k: (_ for _ in ()).throw(llm.ToolsUnsupported("none")))
+    step = raah_graph.run("today", user_id=chosen_student)
+    assert step["key"] == "step_notice"
+    count = raah_graph.saver().conn.execute("SELECT COUNT(*) FROM checkpoints").fetchone()[0]
+    assert count == 0, "one-shot runs are not kept"
+    with pytest.raises(Exception):
+        raah_graph.run("nonsense")
+
+
+def test_combined_diagram_names_every_flow():
+    from raah import raah_graph
+    m = raah_graph.diagram()
+    for word in ("Today's step", "Ask Raah", "Scholarship application", "Exam date agent", "Route by intent", "Shared:"):
+        assert word in m
