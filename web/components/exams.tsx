@@ -59,7 +59,7 @@ export function ExamCard({ e, compact }: { e: any; compact?: boolean }) {
   );
 }
 
-export function ExamTile({ e, paths = [], reason }: { e: any; paths?: any[]; reason?: string | null }) {
+export function ExamTile({ e, paths = [], reason }: { e: any; paths?: any[]; reason?: { key: string; vars?: Record<string, any> } | null }) {
   const { t } = useApp();
   const fact = (icon: string, label: string, value: React.ReactNode) => (
     <div className="flex items-start gap-2.5 rounded-xl bg-[var(--bg)] p-2.5">
@@ -74,7 +74,7 @@ export function ExamTile({ e, paths = [], reason }: { e: any; paths?: any[]; rea
     <details className="group rounded-2xl bg-[var(--card)] shadow-sm ring-1 ring-black/5">
       <summary className="flex cursor-pointer list-none items-center gap-3 p-3.5">
         <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[var(--brand-soft)] text-[var(--brand)]"><Icon name="clipboard" size={22} /></span>
-        <span className="min-w-0 flex-1 font-bold leading-snug">{e.name}{reason && <span className="mt-1 block text-[11px] font-medium text-[var(--brand-ink)]">{t("because_career", { career: reason })}</span>}</span>
+        <span className="min-w-0 flex-1 font-bold leading-snug">{e.name}{reason && <span className="mt-1 block text-[11px] font-medium text-[var(--brand-ink)]">{t(reason.key, reason.vars)}</span>}</span>
         <span aria-hidden className="text-lg text-[var(--muted)] transition-transform group-open:rotate-90">›</span>
       </summary>
       <div className="space-y-2.5 border-t border-black/5 p-3.5 pt-3">
@@ -109,7 +109,7 @@ export function ExamsList() {
   // the student's own path first: exams for the career they saved (else Raah's best match), with the reason
   const rows = useMemo(() => examsForStudent(data, profile), [data, profile]);
   const mineCount = rows.filter((r) => r.mine).length;
-  const [tab, setTab] = useState<"you" | "all">(mineCount ? "you" : "all");
+  const [tab, setTab] = useState<"you" | "all">("you");
   const shown = tab === "you" ? rows.filter((r) => r.mine) : rows;
   // which cost plans use each exam, so a student can jump from the exam to the path
   const usedBy = (id: string) => (data?.plans || []).filter((p: any) => (p.exams || []).includes(id));
@@ -117,18 +117,18 @@ export function ExamsList() {
   return (
     <>
       <Card><p className="text-sm text-[var(--muted)]">{t("exams_intro")}</p></Card>
-      {mineCount > 0 && (
-        <div className="flex gap-2" role="group" aria-label={t("exams_for_you_intro")}>
-          {([["you", t("for_you_tab")], ["all", t("all_tab")]] as const).map(([k, label]) => (
-            <button key={k} onClick={() => setTab(k)} aria-pressed={tab === k}
-              className={`flex-1 rounded-full px-3 py-2 text-sm font-semibold ${tab === k ? "bg-[var(--brand)] text-white" : "bg-[var(--card)] ring-1 ring-black/10"}`}>{label}</button>
-          ))}
-        </div>
-      )}
-      <div ref={pg.top} />
-      <div className="space-y-2 lg:grid lg:grid-cols-2 lg:items-start lg:gap-3 lg:space-y-0">
-        {pg.pageItems.map((r) => <ExamTile key={r.item.id} e={r.item} paths={usedBy(r.item.id)} reason={r.reason} />)}
+      <div className="flex gap-2" role="tablist" aria-label={t("exams_for_you_intro")}>
+        {([["you", t("for_you_tab")], ["all", t("all_tab")]] as const).map(([k, label]) => (
+          <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)}
+            className={`flex-1 rounded-full px-3 py-2 text-sm font-semibold ${tab === k ? "bg-[var(--brand)] text-white" : "bg-[var(--card)] ring-1 ring-black/10"}`}>{label}{k === "you" ? ` (${mineCount})` : ` (${rows.length})`}</button>
+        ))}
       </div>
+      <div ref={pg.top} />
+      {tab === "you" && mineCount === 0
+        ? <Card><p className="text-sm text-[var(--muted)]">{profile?.class ? t("exams_none_for_you") : t("exams_need_profile")}</p></Card>
+        : <div className="space-y-2 lg:grid lg:grid-cols-2 lg:items-start lg:gap-3 lg:space-y-0">
+            {pg.pageItems.map((r) => <ExamTile key={r.item.id} e={r.item} paths={usedBy(r.item.id)} reason={tab === "you" ? r.reason : null} />)}
+          </div>}
       {tab === "you" && <button onClick={() => setTab("all")} className="w-full text-center text-sm font-semibold text-[var(--brand-ink)] underline">{t("see_all")}</button>}
       <Pager {...pg} shown={pg.pageItems.length} />
     </>

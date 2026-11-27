@@ -157,6 +157,10 @@ function Start() {
           <div className="space-y-2">
             <Primary onClick={() => setI(1)}>{t("start_get_started")}</Primary>
             <Link href="/login/" className="block w-full rounded-2xl border-2 border-black/15 py-3.5 text-base font-bold active:scale-[.98]">{t("start_have_account")}</Link>
+            <div className="grid grid-cols-2 gap-2 pt-1">
+              <Link href="/parent/" className="rounded-xl bg-[var(--brand-soft)] px-2 py-3 text-sm font-semibold text-[var(--brand-ink)] active:scale-[.98]">{t("start_parent_signin")}</Link>
+              <Link href="/apply/" className="rounded-xl bg-[var(--brand-soft)] px-2 py-3 text-sm font-semibold text-[var(--brand-ink)] active:scale-[.98]">{t("start_apply")}</Link>
+            </div>
           </div>
         </div>
       )}
