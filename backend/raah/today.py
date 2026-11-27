@@ -142,5 +142,8 @@ def graphs():
     """The agent graphs as Mermaid text, drawn from the code that runs them."""
     from . import chain_graph, graph
     from langgraph.checkpoint.memory import InMemorySaver
+    from . import ask_graph, watch_graph
     return {"today": graph.build().get_graph().draw_mermaid(),
-            "application": chain_graph.build(InMemorySaver()).get_graph().draw_mermaid()}
+            "application": chain_graph.build(InMemorySaver()).get_graph().draw_mermaid(),
+            "ask": ask_graph.build().get_graph().draw_mermaid(),
+            "exam_alert": watch_graph.build().get_graph().draw_mermaid()}

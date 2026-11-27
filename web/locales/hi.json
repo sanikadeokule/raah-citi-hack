@@ -1114,5 +1114,6 @@
  "act_remind": "Raah {title} के बचे दस्तावेज़ों की याद दिलाएगा।",
  "ap_continue": "जारी रखें",
  "step_why": "क्यों: {reason}",
- "step_trace": "Raah ने कैसे तय किया"
+ "step_trace": "Raah ने कैसे तय किया",
+ "act_exam_alert": "Raah ने {exam} की नई तारीख के बारे में बताया।"
 }

@@ -137,9 +137,14 @@ def check_exam(exam: dict, fetch=fetch_page) -> dict:
                                                     (exam["id"],)).fetchall()]
     if not new_dated or not users:
         return {"exam": exam["id"], "status": "unchanged", "notified": 0}
-    notify(users, "exam_update", {"exam_id": exam["id"], "exam_name": exam["name"], "site": exam["site"],
-                                  "body": " · ".join(new_dated[:3])})
-    return {"exam": exam["id"], "status": "changed", "notified": len(users), "new_lines": new_dated[:5]}
+    try:  # the exam date agent decides what each student hears; the plain broadcast is the safety net
+        from . import watch_graph
+        res = watch_graph.run(exam, new_dated, users)
+        return {"exam": exam["id"], "status": "changed", "notified": res["notified"], "new_lines": new_dated[:5], "agent": res}
+    except Exception:
+        notify(users, "exam_update", {"exam_id": exam["id"], "exam_name": exam["name"], "site": exam["site"],
+                                      "body": " · ".join(new_dated[:3])})
+        return {"exam": exam["id"], "status": "changed", "notified": len(users), "new_lines": new_dated[:5]}
 
 
 def _record(con, exam: dict, lines: list[str] | None, status: str, now: int, changed: bool) -> None:
