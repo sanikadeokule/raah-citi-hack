@@ -92,6 +92,10 @@ applications = Table(
     Column("column", Text, nullable=False, server_default="'researching'"),  # kanban column
     Column("notes", Text, server_default="''"),
     Column("deadline", Text),               # ISO date string or null
+    Column("checklist", Text, nullable=False, server_default="'[]'"),
+    Column("prefill", Text, nullable=False, server_default="'{}'"),
+    Column("parent_message", Text),
+    Column("parent_message_approved_at", Integer),
     Column("created_at", Integer, nullable=False),
     Column("updated_at", Integer, nullable=False),
 )

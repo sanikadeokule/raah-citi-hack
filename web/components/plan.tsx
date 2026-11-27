@@ -220,6 +220,10 @@ export function SchemeResult({ e, open = false, tag, hideStatus = false, onPage 
         <Source url={e.source} date={e.last_checked} />
         {e.status !== "not_eligible" && <a className="text-sm font-medium text-[var(--brand-ink)] underline" href={applyUrl(e.apply_via, e.source)} target="_blank" rel="noreferrer">{e.apply_via}</a>}
       </div>
+      {(e.status === "eligible" || e.status === "eligible_missing_docs") && (
+        <a className="mt-3 inline-flex rounded-lg bg-[var(--brand)] px-3 py-2 text-sm font-semibold text-white"
+          href={`/apply/?scheme=${encodeURIComponent(e.id)}`}>{t("start_application")}</a>
+      )}
     </details>
   );
 }

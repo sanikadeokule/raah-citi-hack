@@ -16,6 +16,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from . import dataset, engine, mcp_client
+from .application_chain import router as application_chain_router
 from .agent import router as agent_router
 from .today import router as today_router
 from .auth import current_user, log_sync, save_profile
@@ -189,6 +190,7 @@ app.include_router(money_router)
 app.include_router(notices_router)
 app.include_router(mentors_router)
 app.include_router(modules_router)
+app.include_router(application_chain_router)
 app.include_router(partners_router)
 app.include_router(rag_router)
 app.include_router(parent_router)

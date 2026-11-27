@@ -19,6 +19,11 @@ const T: Record<string, Record<string, string>> = {
     not_set: "Not set yet", exams: "Watched exams", no_exams: "No exams tracked yet",
     lessons: "Recent lessons", no_lessons: "No lessons yet", subject: "Subject",
     when: "When", notifications: "Notifications", no_notifs: "No new notifications",
+    applications: "Scholarship applications", no_apps: "No applications are being tracked yet.",
+    ask_title: "Ask Raah about the costs", ask_hint: "Ask in English, Hindi, or Marathi. Raah uses the student's profile and verified data.",
+    ask_placeholder: "Can we afford this course?", ask_btn: "Ask", asking: "Checking…", ask_error: "Could not get an answer. Please try again.",
+    stage_researching: "Preparing", stage_docs_submitted: "Documents submitted", stage_applied: "Applied", stage_waiting: "Waiting", stage_result: "Result received",
+    student_message: "Message approved by the student",
     sign_out: "Sign out",
     pin_set_title: "Set your family PIN", pin_set_sub: "Let a parent or guardian see your progress. Choose a 4–8 digit PIN they will enter on this page.",
     new_pin: "New family PIN (4–8 digits)", save_pin: "Save PIN", saving: "Saving…", pin_saved: "PIN saved!",
@@ -35,6 +40,11 @@ const T: Record<string, Record<string, string>> = {
     not_set: "अभी तय नहीं", exams: "देखी जा रही परीक्षाएँ", no_exams: "कोई परीक्षा ट्रैक नहीं",
     lessons: "हाल के पाठ", no_lessons: "अभी कोई पाठ नहीं", subject: "विषय",
     when: "कब", notifications: "सूचनाएँ", no_notifs: "नई सूचना नहीं",
+    applications: "छात्रवृत्ति आवेदन", no_apps: "अभी कोई आवेदन ट्रैक नहीं हो रहा है।",
+    ask_title: "खर्च के बारे में Raah से पूछें", ask_hint: "हिंदी, मराठी या अंग्रेज़ी में पूछें। Raah छात्र की प्रोफ़ाइल और सत्यापित जानकारी देखेगा।",
+    ask_placeholder: "क्या हम इस कोर्स का खर्च उठा सकते हैं?", ask_btn: "पूछें", asking: "जाँच रहे हैं…", ask_error: "जवाब नहीं मिला। फिर से कोशिश करें।",
+    stage_researching: "तैयारी", stage_docs_submitted: "दस्तावेज़ जमा", stage_applied: "आवेदन किया", stage_waiting: "प्रतीक्षा", stage_result: "नतीजा मिला",
+    student_message: "छात्र की मंज़ूरी वाला संदेश",
     sign_out: "साइन आउट",
     pin_set_title: "फैमिली PIN सेट करें", pin_set_sub: "माता-पिता को प्रगति देखने दें। 4–8 अंकों का PIN चुनें।",
     new_pin: "नया फैमिली PIN (4–8 अंक)", save_pin: "PIN सेव करें", saving: "सेव हो रहा है…", pin_saved: "PIN सेव हुआ!",
@@ -51,6 +61,11 @@ const T: Record<string, Record<string, string>> = {
     not_set: "अजून ठरलेले नाही", exams: "पाहिलेल्या परीक्षा", no_exams: "कोणत्याही परीक्षा ट्रॅक केल्या नाहीत",
     lessons: "अलीकडील धडे", no_lessons: "अजून धडे नाहीत", subject: "विषय",
     when: "केव्हा", notifications: "सूचना", no_notifs: "नवीन सूचना नाही",
+    applications: "शिष्यवृत्ती अर्ज", no_apps: "अद्याप कोणतेही अर्ज ट्रॅक होत नाहीत.",
+    ask_title: "खर्चाविषयी Raah ला विचारा", ask_hint: "मराठी, हिंदी किंवा इंग्रजीत विचारा. Raah विद्यार्थ्याची प्रोफाइल आणि पडताळलेली माहिती वापरेल.",
+    ask_placeholder: "आपल्याला या अभ्यासक्रमाचा खर्च परवडेल का?", ask_btn: "विचारा", asking: "तपासत आहे…", ask_error: "उत्तर मिळाले नाही. पुन्हा प्रयत्न करा.",
+    stage_researching: "तयारी", stage_docs_submitted: "कागदपत्रे जमा", stage_applied: "अर्ज केला", stage_waiting: "प्रतीक्षा", stage_result: "निकाल मिळाला",
+    student_message: "विद्यार्थ्याने मंजूर केलेला संदेश",
     sign_out: "साइन आउट",
     pin_set_title: "कुटुंब PIN सेट करा", pin_set_sub: "पालकांना तुमची प्रगती पाहू द्या. 4–8 अंकांचा PIN निवडा.",
     new_pin: "नवीन कुटुंब PIN (4–8 अंक)", save_pin: "PIN सेव करा", saving: "सेव होत आहे…", pin_saved: "PIN सेव झाला!",
@@ -166,8 +181,12 @@ function PinManager({ studentToken }: { studentToken: string }) {
 
 function Dashboard({ token, studentName, onSignOut, onExpired }: { token: string; studentName: string; onSignOut: () => void; onExpired: () => void }) {
   const t = useText(T);
+  const { lang } = useApp();
   const [data, setData] = useState<any>(null);
-  const [err, setErr] = useState("");
+  const [askError, setAskError] = useState("");
+  const [question, setQuestion] = useState("");
+  const [answer, setAnswer] = useState<any>(null);
+  const [asking, setAsking] = useState(false);
 
   useEffect(() => {
     fetch(`${API}/api/parent/summary`, { headers: { Authorization: `Bearer ${token}` } })
@@ -176,7 +195,21 @@ function Dashboard({ token, studentName, onSignOut, onExpired }: { token: string
       .catch(() => onExpired());
   }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (err) return <Card><p className="text-sm text-rose-500">{err}</p></Card>;
+  async function ask(e: React.FormEvent) {
+    e.preventDefault();
+    if (!question.trim()) return;
+    setAsking(true); setAskError(""); setAnswer(null);
+    try {
+      const r = await fetch(`${API}/api/parent/ask`, {
+        method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ question: question.trim(), lang }),
+      });
+      if (!r.ok) throw new Error("parent question failed");
+      setAnswer(await r.json());
+    } catch { setAskError(t("ask_error")); }
+    finally { setAsking(false); }
+  }
+
   if (!data) return <div className="py-16 text-center text-sm text-[var(--muted)]">Loading…</div>;
 
   const name = data.student_name || studentName;
@@ -207,6 +240,36 @@ function Dashboard({ token, studentName, onSignOut, onExpired }: { token: string
             <div className="text-sm font-semibold">{t("chosen_on")} {new Date(data.roadmap_at).toLocaleDateString()}</div>
           </div>
         )}
+      </Card>
+
+      <Card>
+        <h3 className="font-bold">{t("applications")}</h3>
+        {!data.applications?.length
+          ? <p className="mt-2 text-sm text-[var(--muted)]">{t("no_apps")}</p>
+          : <ul className="mt-2 space-y-2">{data.applications.map((app: any, i: number) => (
+              <li key={`${app.title}-${i}`} className="rounded-xl bg-[var(--bg)] p-3 text-sm">
+                <div className="flex items-start justify-between gap-2"><b>{app.title}</b><Badge tone="blue">{t(`stage_${app.stage}`)}</Badge></div>
+                {app.student_approved_message && <p className="mt-2 border-t border-black/10 pt-2 text-[var(--muted)]"><b>{t("student_message")}:</b> {app.student_approved_message}</p>}
+              </li>))}</ul>}
+      </Card>
+
+      <Card>
+        <h3 className="font-bold">{t("ask_title")}</h3>
+        <p className="mt-1 text-xs text-[var(--muted)]">{t("ask_hint")}</p>
+        <form onSubmit={ask} className="mt-3 space-y-2">
+          <textarea value={question} onChange={(e) => setQuestion(e.target.value)} rows={2} maxLength={500}
+            placeholder={t("ask_placeholder")} aria-label={t("ask_title")} className="w-full rounded-lg bg-[var(--bg)] p-3 text-sm" />
+          <button disabled={asking || !question.trim()} className="w-full rounded-xl bg-[var(--brand)] py-2.5 text-sm font-semibold text-white disabled:opacity-50">
+            {asking ? t("asking") : t("ask_btn")}
+          </button>
+        </form>
+        {answer && <div aria-live="polite" className="mt-3 rounded-xl bg-[var(--bg)] p-3 text-sm leading-relaxed">
+          <p>{answer.answer}</p>
+          {answer.citations?.length > 0 && <div className="mt-2 border-t border-black/10 pt-2 text-xs text-[var(--muted)]">
+            {answer.citations.map((c: any) => c.source && <a key={`${c.n}-${c.source}`} className="mr-2 underline" href={c.source} target="_blank" rel="noreferrer">[{c.n}] {c.title}</a>)}
+          </div>}
+        </div>}
+        {askError && <p role="alert" className="mt-2 text-sm text-rose-600">{askError}</p>}
       </Card>
 
       <Card>
