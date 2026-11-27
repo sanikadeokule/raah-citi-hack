@@ -266,6 +266,7 @@ export default function Discover() {
       {screen === "confirm" && (
         <div className="flex flex-1 flex-col gap-4">
           <div><h2 className="text-2xl font-extrabold text-[var(--brand-ink)]">{t("ik_confirm_title")}</h2><p className="mt-1 text-sm text-[var(--muted)]">{t("ik_confirm_hint")}</p></div>
+          <div className="space-y-4 xl:grid xl:grid-cols-2 xl:gap-4 xl:space-y-0">
           {([["love", "ik_love_h", love, setLove, loveWords, setLoveWords], ["good", "ik_good_h", good, setGood, goodWords, setGoodWords]] as const).map(([k, h, items, set, ws, setWs]) => (
             <section key={k} className="rounded-2xl bg-[var(--card)] p-4 ring-2 ring-black/10">
               <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--muted)]">{t(h)}</h3>
@@ -291,6 +292,7 @@ export default function Discover() {
               )}
             </section>
           ))}
+          </div>
           <p className="text-xs text-[var(--muted)]">{t("ik_confirm_next")}</p>
           <div className="mt-auto space-y-2">
             <button onClick={confirm} disabled={!love.length && !good.length} className="w-full rounded-2xl bg-[var(--brand)] py-4 text-base font-bold text-white active:scale-[.98] disabled:opacity-40">{t("ik_looks_right")}</button>
@@ -322,6 +324,7 @@ export default function Discover() {
         <div className="flex flex-1 flex-col gap-3">
           <p className="text-sm text-[var(--muted)]">{t("ik_sweet_sub")}</p>
           {spots.length === 0 && <p className="rounded-2xl bg-[var(--card)] p-4 text-sm ring-1 ring-black/10">{t("ik_none_found")}</p>}
+          <div className="flex flex-col gap-3 xl:grid xl:grid-cols-2">
           {spots.slice(0, 5).map((s, i) => (
             <button key={s.career.id} onClick={() => setSel(i)} aria-pressed={sel === i} className={`rounded-2xl bg-[var(--card)] p-4 text-left ${sel === i ? "ring-[3px] ring-[var(--brand)]" : "ring-2 ring-black/10"}`}>
               <span className="flex items-baseline justify-between gap-2">
@@ -339,6 +342,7 @@ export default function Discover() {
               <span className="mt-2 grid grid-cols-2 gap-1.5">{CIRCLES.map((c) => checkRow(s.checks[c], c))}</span>
             </button>
           ))}
+          </div>
           <p className="text-[11px] text-[var(--muted)]">{t("ik_pct_how")} {t("ik_estimates")}</p>
           {spots[sel] && <button onClick={() => { setPick(spots[sel]); setScreen("reach"); }} className="mt-auto w-full rounded-2xl bg-[var(--brand)] py-4 text-base font-bold text-white active:scale-[.98]">{t("ik_see_reach", { career: spots[sel].career.name })}</button>}
         </div>

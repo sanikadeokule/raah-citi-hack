@@ -1166,5 +1166,9 @@
  "colleges_filter_all": "सर्व",
  "not_sure_yet": "अजून खात्री नाही?",
  "not_sure_yet_sub": "दोन करिअरची तुलना करा, किंवा Raah ला विचारा.",
- "ap_submitted_step": "सादर केले"
+ "ap_submitted_step": "सादर केले",
+ "ask_heard": "राहने काय ऐकले",
+ "ask_heard_empty": "प्रश्न विचारा, राह इथे दाखवेल की तो कशावर काम करत आहे.",
+ "ask_live_matches": "जुळणारे निकाल",
+ "ask_live_matches_empty": "राह शोधेल तसे योजना, केंद्रे आणि करिअर इथे दिसतील."
 }

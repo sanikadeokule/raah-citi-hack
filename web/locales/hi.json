@@ -1166,5 +1166,9 @@
  "colleges_filter_all": "सभी",
  "not_sure_yet": "अभी तय नहीं?",
  "not_sure_yet_sub": "दो करियर की तुलना करें, या Raah से पूछें।",
- "ap_submitted_step": "जमा हुआ"
+ "ap_submitted_step": "जमा हुआ",
+ "ask_heard": "राह ने क्या सुना",
+ "ask_heard_empty": "कोई सवाल पूछें, राह यहाँ दिखाएगा कि वह किस पर काम कर रहा है।",
+ "ask_live_matches": "मिलते-जुलते नतीजे",
+ "ask_live_matches_empty": "जैसे-जैसे राह ढूँढेगा, योजनाएँ, केंद्र और करियर यहाँ दिखेंगे।"
 }

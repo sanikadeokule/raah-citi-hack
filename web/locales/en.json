@@ -1166,5 +1166,9 @@
  "colleges_filter_all": "All",
  "not_sure_yet": "Not sure yet?",
  "not_sure_yet_sub": "Compare two careers side by side, or ask Raah.",
- "ap_submitted_step": "Submitted"
+ "ap_submitted_step": "Submitted",
+ "ask_heard": "What Raah heard",
+ "ask_heard_empty": "Ask a question and Raah will show what it's working on here.",
+ "ask_live_matches": "Live matches",
+ "ask_live_matches_empty": "Matching schemes, centres and careers will show up here as Raah finds them."
 }

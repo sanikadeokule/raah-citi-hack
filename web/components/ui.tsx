@@ -28,8 +28,8 @@ const DESK_NAV = [
  * On a big screen (lg and up) the app bar spans the window and the page is centred: a reading width by default,
  * the full desktop width with `wide` (pages that lay themselves out in columns). Phones are unchanged.
  */
-export function Shell({ title, back = "/", role = "any", publicPage = false, fit = false, wide = false, children }: {
-  title?: string; back?: string | null; role?: "any" | "teacher"; publicPage?: boolean; fit?: boolean; wide?: boolean; children: React.ReactNode;
+export function Shell({ title, back = "/", role = "any", publicPage = false, fit = false, wide = false, aside, children }: {
+  title?: string; back?: string | null; role?: "any" | "teacher"; publicPage?: boolean; fit?: boolean; wide?: boolean; aside?: React.ReactNode; children: React.ReactNode;
 }) {
   const { t, online, toast, lang, setLang, data, auth, authReady, signOut, profile } = useApp();
   const router = useRouter();
@@ -114,7 +114,7 @@ export function Shell({ title, back = "/", role = "any", publicPage = false, fit
           </Card>
         ) : data || publicPage ? children : <Loading />}
       </main>
-      {withAside && <div className="hidden xl:block xl:py-6"><SideInfo /></div>}
+      {withAside && <div className="hidden xl:block xl:py-6">{aside ?? <SideInfo />}</div>}
       </div>
       </div>
       </div>

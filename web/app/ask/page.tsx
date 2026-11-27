@@ -17,6 +17,31 @@ type Msg = { from: "me" | "raah"; text: string; cites?: Cite[]; note?: string; s
 
 const EXAMPLES = ["ask_ex1", "ask_ex2", "ask_ex3"];
 
+/** Wide-screen side panel: the last question Raah is working from, and what it found for it. */
+function AskAside({ lastQ, lastA, t }: { lastQ?: string; lastA?: Msg; t: (k: string, v?: any) => string }) {
+  return (
+    <div className="flex w-80 flex-col gap-3">
+      <Card className="space-y-1">
+        <div className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">{t("ask_heard")}</div>
+        <p className="text-sm">{lastQ || t("ask_heard_empty")}</p>
+      </Card>
+      <Card className="space-y-2">
+        <div className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">{t("ask_live_matches")}</div>
+        {lastA?.cites && lastA.cites.length > 0 ? (
+          <ul className="space-y-2">
+            {lastA.cites.slice(0, 5).map((c) => (
+              <li key={c.n} className="rounded-lg bg-[var(--bg)] p-2 text-xs">
+                <span className="font-semibold text-[var(--brand)]">[{c.n}]</span> <span className="font-medium">{c.title}</span>
+                <div className="text-[var(--muted)]">{c.sheet}{c.row_id && c.row_id !== c.sheet ? ` ${c.row_id}` : ""}</div>
+              </li>
+            ))}
+          </ul>
+        ) : <p className="text-xs text-[var(--muted)]">{t("ask_live_matches_empty")}</p>}
+      </Card>
+    </div>
+  );
+}
+
 /** "[2]" in the answer becomes a small link to citation 2 below it. */
 function withCites(text: string, id: number) {
   return text.split(/(\[\d+\])/g).map((part, i) => {
@@ -98,8 +123,10 @@ export default function AskPage() {
     setMsgs((m) => [...m, { from: "raah", text: j.answer, cites: j.citations, note, steps, lang: responseLang }]);
   };
 
+  const lastMine = [...msgs].reverse().find((m) => m.from === "me");
+  const lastRaah = [...msgs].reverse().find((m) => m.from === "raah");
   return (
-    <Shell title={t("home_ask")}>
+    <Shell title={t("home_ask")} aside={<AskAside lastQ={lastMine?.text} lastA={lastRaah} t={t} />}>
       {msgs.length === 0 && (
         <Card>
           <p className="text-sm">{t("ask_intro")}</p>
