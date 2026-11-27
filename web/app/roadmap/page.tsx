@@ -66,6 +66,12 @@ function RoadmapView() {
     cheerTimer.current = window.setTimeout(() => setCheer(false), 3200);
   };
   const tot = r.totals;
+  const MakeMine = ({ className = "" }: { className?: string }) => (
+    <button onClick={makeMine} disabled={isMine}
+      className={`w-full rounded-xl py-3 font-semibold ${isMine ? "bg-emerald-100 text-emerald-900" : "bg-[var(--brand)] text-white"} ${className}`}>
+      {isMine ? t("rm_saved") : t("rm_make_mine")}
+    </button>
+  );
   const classLabel = (c: number) => (c >= 13 ? t("rm_12_pass") : t("rm_class_n", { n: c }));
   const journey = r.stages.filter((s: any) => s.months > 0);
   const others = top.filter((s: any) => s.career.id !== careerId);
@@ -112,13 +118,15 @@ function RoadmapView() {
 
       {tab === "start" ? (
         <>
+          <div className="space-y-4 lg:grid lg:grid-cols-2 lg:items-start lg:gap-4 lg:space-y-0">
           <CentresCard centres={planResult ? planResult.centres : nearestCentres(data, profile, null, 3)} />
           <CoursesCard courses={coursesFor(data, r.career, plan)} />
           {planResult ? <ParentNote r={planResult} /> : r.available && <RoadmapParentNote r={r} />}
+          </div>
           {plan && <Link href={`/plan/?id=${plan.id}`} className="block text-center text-sm font-semibold text-[var(--brand-ink)] underline">{t("rm_full_plan")} ›</Link>}
         </>
       ) : tab === "other" && others.length > 0 ? (
-        <ul className="space-y-2">
+        <ul className="space-y-2 lg:grid lg:grid-cols-2 lg:items-start lg:gap-3 lg:space-y-0">
           {others.map((s: any) => {
             const mine = profile?.roadmap_career === s.career.id;
             return (
@@ -140,6 +148,8 @@ function RoadmapView() {
           })}
         </ul>
       ) : !r.available ? <Card>{t("rm_not_added")}</Card> : (<>
+        <div className="space-y-4 lg:grid lg:grid-cols-12 lg:items-start lg:gap-6 lg:space-y-0">
+        <div className="space-y-4 lg:sticky lg:top-32 lg:col-span-5">
         {/* the whole journey as one bar, each stage as wide as it is long */}
         {journey.length > 0 && (
           <Card>
@@ -187,8 +197,10 @@ function RoadmapView() {
           {tot.estimated_stages > 0 && <p className="mt-1"><Badge tone="amber"> {t("rm_estimates", { n: tot.estimated_stages })}</Badge></p>}
         </Card>
 
+        <MakeMine className="hidden lg:block" />
+        </div>
         {/* the road itself */}
-        <Card>
+        <Card className="lg:col-span-7">
           <ol className="relative">
             {r.stages.map((s: any, i: number) => {
               const k = KIND[s.kind] || KIND.course;
@@ -261,11 +273,9 @@ function RoadmapView() {
           </Mascot>
         </Card>
 
-        <button onClick={makeMine}
-          disabled={isMine}
-          className={`w-full rounded-xl py-3 font-semibold ${isMine ? "bg-emerald-100 text-emerald-900" : "bg-[var(--brand)] text-white"}`}>
-          {isMine ? t("rm_saved") : t("rm_make_mine")}
-        </button>
+        </div>
+        {/* below the road on a phone; under the money summary on a big screen */}
+        <MakeMine className="lg:hidden" />
 
       </>)}
       <p className="text-center text-xs text-[var(--muted)]">{t("rm_footer", { file: data.version.file })}</p>
@@ -297,7 +307,7 @@ function Tile({ label, value, sub, tone, strong }: { label: string; value: strin
 export default function RoadmapPage() {
   const { t } = useApp();
   return (
-    <Shell title={t("rm_title")} back="/careers/">
+    <Shell title={t("rm_title")} back="/careers/" wide>
       <Suspense><RoadmapView /></Suspense>
     </Shell>
   );

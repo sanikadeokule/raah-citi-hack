@@ -19,18 +19,18 @@ export function ModuleHero({ color, item, pose = "wave", line, stats = [], child
   color: string; item?: Item; pose?: Pose; line: React.ReactNode; stats?: Stat[]; children?: React.ReactNode;
 }) {
   return (
-    <section className="relative overflow-hidden rounded-2xl p-3 text-white shadow"
+    <section className="relative overflow-hidden rounded-2xl p-3 text-white shadow lg:px-6 lg:pt-5 lg:pb-4"
       style={{ background: `linear-gradient(135deg, ${color}, color-mix(in srgb, ${color} 62%, #0b1020))` }}>
       {/* a dotted raah curving across the banner, and soft light behind Maina */}
       <svg aria-hidden className="pointer-events-none absolute inset-0 h-full w-full" preserveAspectRatio="none" viewBox="0 0 300 140">
         <path d="M-10 128C60 96 110 132 170 92S260 40 310 22" stroke="#fff" strokeOpacity=".22" strokeWidth="3" strokeDasharray="2 9" strokeLinecap="round" fill="none" />
         <circle cx="270" cy="18" r="34" fill="#fff" fillOpacity=".07" />
       </svg>
-      <span aria-hidden className="absolute -left-6 -bottom-8 h-36 w-36 rounded-full bg-white/15" />
+      <span aria-hidden className="absolute -left-6 -bottom-8 h-36 w-36 rounded-full bg-white/15 lg:h-56 lg:w-56" />
       <div className="relative flex items-end gap-1">
-        <Mascot pose={pose} item={item} size={92} className="-mb-1 -ml-1 shrink-0" />
+        <Mascot pose={pose} item={item} size={92} className="-mb-1 -ml-1 shrink-0 lg:mr-3 lg:[&_svg.m-in]:size-[150px]" />
         <div className="min-w-0 flex-1 space-y-2">
-          <div className="m-bubble relative rounded-2xl bg-white px-3 py-2 text-sm font-semibold leading-snug text-[#14213d] shadow">
+          <div className="m-bubble relative rounded-2xl bg-white px-3 py-2 text-sm font-semibold leading-snug text-[#14213d] shadow lg:max-w-2xl lg:px-4 lg:py-3 lg:text-lg">
             <span aria-hidden className="absolute -left-1.5 bottom-3 h-3 w-3 rotate-45 bg-white" />
             <span className="relative">{line}</span>
           </div>

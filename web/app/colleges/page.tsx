@@ -185,7 +185,7 @@ export default function CollegesPage() {
   const pagedCentres = centres.slice(centrePage * PAGE_SIZE, (centrePage + 1) * PAGE_SIZE);
 
   return (
-    <Shell title={t("colleges_title")}>
+    <Shell title={t("colleges_title")} wide>
       {/* Maina in her graduation cap; she thinks while the colleges load */}
       <ModuleHero color={MODULE_COLOR.colleges} item="cap" pose={loading ? "think" : "wave"}
         line={careerName ? t("hero_colleges", { career: careerName }) : t("hero_colleges_none")}
@@ -214,15 +214,19 @@ export default function CollegesPage() {
             {!loading && centres.length === 0 && (
               <p className="text-sm text-[var(--muted)]">{t("colleges_no_centres")}</p>
             )}
+            <div className="lg:grid lg:grid-cols-2 lg:items-start lg:gap-5">
             {!loading && pagedCentres.some((c: any) => c.lat != null) && (
+<div className="lg:sticky lg:top-32">
               <CentreMap centres={pagedCentres.filter((c: any) => c.lat != null).map((c: any) => ({ ...c, approximate: c.approximate ?? c.coord_source !== "exact" }))}
                 home={{ lat: profile?.lat, lon: profile?.lon, label: placeLabel(t, profile?.taluka) || t("your_profile") }} />
+              </div>
             )}
             <ul className="space-y-2">
               {pagedCentres.map((c: any) => (
                 <CentreCard key={c.id} c={c} t={t} profile={profile} lang={lang} />
               ))}
             </ul>
+            </div>
             {totalCentrePages > 1 && (
               <div className="mt-3 flex items-center justify-between gap-2">
                 <button
@@ -250,7 +254,7 @@ export default function CollegesPage() {
               {loading && courses.length === 0 && (
                 <p className="text-sm text-[var(--muted)] animate-pulse">Loading…</p>
               )}
-              <ul className="space-y-3">
+              <ul className="space-y-3 lg:grid lg:grid-cols-2 lg:items-start lg:gap-3 lg:space-y-0">
                 {courses.map((c: any) => (
                   <li key={c.id} className="rounded-xl bg-[var(--bg)] p-3 ring-1 ring-black/5">
                     <div className="flex items-start justify-between gap-2">
