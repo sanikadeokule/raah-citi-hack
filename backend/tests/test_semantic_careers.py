@@ -34,3 +34,23 @@ def test_no_model_means_keywords_only(monkeypatch):
     out = embed.career_scores("nursing", dataset.load()["careers"])
     assert out == {"method": "keyword", "scores": {}}
     assert embed.career_scores("  ", dataset.load()["careers"])["method"] == "none"
+
+
+def test_top_five_blends_keyword_and_meaning():
+    from raah import engine
+    d = dataset.load()
+    base = {"class": 10, "marks_pct": 60, "family_income_annual": 180000, "interests": ["helping people"]}
+    plain = {s["career"]["id"]: s for s in engine.rank_careers(d, base, len(d["careers"]))}
+    other = next(c["id"] for c in d["careers"] if plain[c["id"]]["fit"] == "none")
+    scores = {c["id"]: 0.0 for c in d["careers"]}
+    scores[other] = 1.0
+    prof = {**base, "interest_meaning": {"for": ["helping people"], "scores": scores}}
+    blended = {s["career"]["id"]: s for s in engine.rank_careers(d, prof, len(d["careers"]))}
+    assert blended[other]["fit"] == "related" and blended[other]["breakdown"]["interest"] == 0.7
+    assert "close in meaning" in blended[other]["why"]
+    kw = next(i for i, s in plain.items() if s["fit"] == "direct")
+    assert blended[kw]["breakdown"]["interest"] == round(0.3 * plain[kw]["breakdown"]["interest"], 2)
+    # saved for different interests, or no model: the keyword ranking is used unchanged
+    stale = {**prof, "interests": ["machines"]}
+    assert [s["career"]["id"] for s in engine.rank_careers(d, stale)] == \
+           [s["career"]["id"] for s in engine.rank_careers(d, {**base, "interests": ["machines"]})]

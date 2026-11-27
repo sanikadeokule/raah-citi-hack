@@ -88,7 +88,15 @@ export default function Discover() {
         words(love, loveWords) ? postAi("/api/interests/careers", { text: words(love, loveWords) }) : null,
         words(good, goodWords) ? postAi("/api/interests/careers", { text: words(good, goodWords) }) : null,
       ]);
-      if (live) setSemantic({ love: l?.scores && Object.keys(l.scores).length ? l.scores : undefined, good: g?.scores && Object.keys(g.scores).length ? g.scores : undefined });
+      if (!live) return;
+      const ls = l?.scores && Object.keys(l.scores).length ? l.scores : undefined;
+      setSemantic({ love: ls, good: g?.scores && Object.keys(g.scores).length ? g.scores : undefined });
+      if (ls && profile) {
+        // the rest of the app ranks by profile.interests; saving these lets its top 5 use meaning too (30% keyword, 70% meaning)
+        const prof = { ...profile, interest_meaning: { for: love, scores: ls } };
+        setProfile(prof);
+        await queueAction("profile", prof);
+      }
     })();
     return () => { live = false; };
   }, [screen, love, good, loveWords, goodWords]);

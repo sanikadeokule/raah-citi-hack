@@ -369,6 +369,20 @@ RELATED_WEIGHT = 0.5  # a career that only shares tags with the direct matches c
 # Top-5 scoring: interest match is 60% of the score, and careers are also grouped by how well they match the interest
 # (direct, then related, then none) BEFORE the score is compared, so a better interest match always ranks first.
 W_INTEREST, W_ELIG, W_AFFORD, W_DEMAND = 0.6, 0.15, 0.15, 0.1
+# When Discover saved how close the student's words are in meaning to each career (profile.interest_meaning, 0 to 1),
+# interest = 30% keyword match + 70% meaning. Without it (no model, or interests changed since) interest is the keyword match.
+KEYWORD_SHARE = 0.3
+MEANING_RELATED = 0.3  # a career at least this close in meaning counts as related even with no shared tag
+
+
+def meaning_scores(profile: dict) -> dict:
+    m = profile.get("interest_meaning")
+    if not isinstance(m, dict) or not isinstance(m.get("scores"), dict):
+        return {}
+    mine = sorted(_phrase(i) for i in profile.get("interests") or [] if str(i).strip())
+    if sorted(_phrase(i) for i in m.get("for") or []) != mine:
+        return {}
+    return {k: float(v) for k, v in m["scores"].items() if isinstance(v, (int, float))}
 
 
 def rank_careers(data: dict, profile: dict, n: int = 5) -> list[dict]:
@@ -385,6 +399,7 @@ def rank_careers(data: dict, profile: dict, n: int = 5) -> list[dict]:
             for w in _tokens([t]):
                 word_tags.setdefault(w, set()).add(_phrase(t))
     distinctive = {w for w, ts in word_tags.items() if len(ts) == 1}
+    meaning = meaning_scores(profile)
     scored = []
     for c in data["careers"]:
         tags = _tokens(c.get("tags")) & distinctive
@@ -413,8 +428,13 @@ def rank_careers(data: dict, profile: dict, n: int = 5) -> list[dict]:
     for s in scored:
         rel = sorted(v for k, v in s["by_phrase"].items() if k in near) if s["direct"] == 0 else []
         interest = s["direct"] or (RELATED_WEIGHT * len(rel) / len(s["by_phrase"]) if rel else 0)
+        sem = meaning.get(s["career"]["id"])
+        if sem is not None:
+            interest = KEYWORD_SHARE * interest + (1 - KEYWORD_SHARE) * sem
         s["related"] = rel
-        s["fit"] = "direct" if s["direct"] > 0 else ("related" if rel else "none")
+        s["meaning"] = round(sem, 2) if sem is not None else None
+        s["fit"] = ("direct" if s["direct"] > 0 else
+                    "related" if rel or (sem is not None and sem >= MEANING_RELATED) else "none")
         raw = W_INTEREST * interest + W_ELIG * s["elig"] + W_AFFORD * s["afford"] + W_DEMAND * s["demand"]
         s["raw"] = raw
         s["score"] = math.floor(raw * 1000 + 0.5) / 1000  # same half-up rounding as Math.round in engine.ts
@@ -453,6 +473,8 @@ def why_line(s: dict) -> str:
         parts.append("matches your interest in " + ", ".join(s["matched"][:3]))
     elif s.get("related"):
         parts.append("close to your interests through " + ", ".join(s["related"][:3]))
+    elif s.get("fit") == "related":
+        parts.append("close in meaning to what you told us")
     if s["breakdown"]["affordability"] >= 1:
         parts.append("low cost for your family")
     if s["breakdown"]["demand"] >= 0.8:

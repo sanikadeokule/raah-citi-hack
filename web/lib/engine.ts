@@ -343,6 +343,18 @@ const tokens = (items: any[]) => {
 
 // a career that only shares tags with the direct matches counts at most half a direct match
 const RELATED_WEIGHT = 0.5;
+// When Discover saved how close the student's words are in meaning to each career (profile.interest_meaning, 0 to 1),
+// interest = 30% keyword match + 70% meaning. Without it (no model, or interests changed since) interest is the keyword match.
+const KEYWORD_SHARE = 0.3;
+const MEANING_RELATED = 0.3; // a career at least this close in meaning counts as related even with no shared tag
+function meaningScores(profile: any): Record<string, number> {
+  const m = profile?.interest_meaning;
+  if (!m || typeof m.scores !== "object" || !m.scores) return {};
+  const mine = (profile.interests || []).filter((i: any) => String(i).trim()).map(phrase).sort();
+  const theirs = (m.for || []).map(phrase).sort();
+  if (mine.length !== theirs.length || mine.some((x: string, i: number) => x !== theirs[i])) return {};
+  return Object.fromEntries(Object.entries(m.scores).filter(([, v]) => typeof v === "number")) as Record<string, number>;
+}
 // interest match is 60% of the score; careers are also grouped direct > related > none before the score is compared
 const W_INTEREST = 0.6, W_ELIG = 0.15, W_AFFORD = 0.15, W_DEMAND = 0.1;
 const TIER: Record<string, number> = { direct: 0, related: 1, none: 2 };
@@ -359,6 +371,7 @@ export function rankCareers(data: Data, profile: Profile, n = 5) {
   const wordTags: Record<string, Set<string>> = {};
   for (const c of data.careers) for (const t of c.tags || []) for (const w of tokens([t])) (wordTags[w] ||= new Set()).add(phrase(t));
   const distinctive = new Set(Object.keys(wordTags).filter((w) => wordTags[w].size === 1));
+  const meaning = meaningScores(profile);
   const scored: any[] = data.careers.map((c: any) => {
     const tags = new Set([...tokens(c.tags)].filter((w) => distinctive.has(w)));
     const byPhrase: Record<string, string> = {};
@@ -388,11 +401,14 @@ export function rankCareers(data: Data, profile: Profile, n = 5) {
   const ranked = scored.map((s: any) => {
     const keys = Object.keys(s.byPhrase);
     const related = s.direct === 0 ? keys.filter((k) => near.has(k)).map((k) => s.byPhrase[k]).sort() : [];
-    const interest = s.direct || (related.length ? (RELATED_WEIGHT * related.length) / keys.length : 0);
+    let interest = s.direct || (related.length ? (RELATED_WEIGHT * related.length) / keys.length : 0);
+    const sem: number | undefined = meaning[s.career.id];
+    if (sem !== undefined) interest = KEYWORD_SHARE * interest + (1 - KEYWORD_SHARE) * sem;
     const score = W_INTEREST * interest + W_ELIG * s.elig + W_AFFORD * s.afford + W_DEMAND * s.demand;
     return {
       career: s.career, plan_id: s.plan_id, matched: s.matched, related,
-      fit: s.direct > 0 ? "direct" : related.length ? "related" : "none",
+      meaning: sem !== undefined ? Math.round(sem * 100) / 100 : null,
+      fit: s.direct > 0 ? "direct" : related.length || (sem !== undefined && sem >= MEANING_RELATED) ? "related" : "none",
       score: Math.round(score * 1000) / 1000, raw: score,
       breakdown: { interest: Math.round(interest * 100) / 100, eligibility: s.elig, affordability: s.afford, demand: Math.round(s.demand * 100) / 100 },
       diversity: false, has_interests: phrases.size > 0,
@@ -416,6 +432,7 @@ export function whyLine(s: any) {
   const parts: string[] = [];
   if (s.matched.length) parts.push("matches your interest in " + s.matched.slice(0, 3).join(", "));
   else if (s.related?.length) parts.push("close to your interests through " + s.related.slice(0, 3).join(", "));
+  else if (s.fit === "related") parts.push("close in meaning to what you told us");
   if (s.breakdown.affordability >= 1) parts.push("low cost for your family");
   if (s.breakdown.demand >= 0.8) parts.push("many openings near Pune");
   if (s.career.flags.vocational) parts.push("start earning sooner");

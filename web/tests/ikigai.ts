@@ -2,6 +2,7 @@
 // (run by backend/tests/test_ikigai.py with the parsed spreadsheet)
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { rankCareers } from "../lib/engine";
 import { allTagsOf, extractTags, reachable, refiners, sweetSpots } from "../lib/ikigai";
 
 const d = JSON.parse(readFileSync(process.argv[2], "utf8"));
@@ -62,4 +63,19 @@ console.log("ikigai ok");
   const got = extractTags("logical things, medicine, house hold work", tg);
   for (const w of ["maths", "health", "organising"]) if (!got.includes(w)) { console.error("FAIL free text missing", w, got); process.exit(1); }
   console.log("ok free text", got.join(","));
+}
+
+// the top 5 uses the same blend once Discover has saved the meaning scores (same numbers as the Python engine)
+{
+  const base = { class: 10, marks_pct: 60, family_income_annual: 180000, interests: ["helping people"] } as any;
+  const plain = new Map<string, any>(rankCareers(d, base, d.careers.length).map((x: any) => [x.career.id, x]));
+  const other = d.careers.find((c: any) => plain.get(c.id).fit === "none").id;
+  const scores = Object.fromEntries(d.careers.map((c: any) => [c.id, 0]));
+  scores[other] = 1;
+  const blended = new Map<string, any>(rankCareers(d, { ...base, interest_meaning: { for: ["helping people"], scores } }, d.careers.length).map((x: any) => [x.career.id, x]));
+  assert.equal(blended.get(other).fit, "related");
+  assert.equal(blended.get(other).breakdown.interest, 0.7);
+  assert.ok(blended.get(other).why.includes("close in meaning"));
+  const stale = rankCareers(d, { ...base, interests: ["machines"], interest_meaning: { for: ["helping people"], scores } }, 5).map((x: any) => x.career.id);
+  assert.deepEqual(stale, rankCareers(d, { ...base, interests: ["machines"] }, 5).map((x: any) => x.career.id));
 }
