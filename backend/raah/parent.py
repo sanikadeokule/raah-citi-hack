@@ -245,7 +245,7 @@ def summary(claims: dict = Depends(_family_user)):
         ).fetchall()
 
         application_rows = con.execute(
-            "SELECT title, \"column\", parent_message, parent_message_approved_at, updated_at "
+            "SELECT id, title, \"column\", parent_message, parent_message_approved_at, parent_agreed_at, updated_at "
             "FROM applications WHERE user_id = ? AND kind = 'scholarship' ORDER BY updated_at DESC LIMIT 20",
             (student_id,),
         ).fetchall()
@@ -274,7 +274,7 @@ def summary(claims: dict = Depends(_family_user)):
         "watched_exams": watched_exams,
         "notifications": notifications,
         "lessons_done": lessons_done,
-        "applications": [{"title": r["title"], "stage": r["column"], "updated_at": r["updated_at"],
+        "applications": [{"id": r["id"], "parent_agreed_at": r["parent_agreed_at"], "title": r["title"], "stage": r["column"], "updated_at": r["updated_at"],
                            "student_approved_message": r["parent_message"] if r["parent_message_approved_at"] else None}
                           for r in application_rows],
     }
@@ -299,3 +299,48 @@ def parent_ask(body: ParentAskIn, claims: dict = Depends(_family_user)):
         return plan_answer
     from .rag import AskIn, answer
     return answer(AskIn(question=body.question, lang=body.lang, profile=profile))
+
+
+@router.post("/applications/{app_id}/agree")
+def agree(app_id: int, claims: dict = Depends(_family_user)):
+    """The parent's yes, given in Parent mode with the family token."""
+    from .today import log_activity
+    student_id = int(claims["sub"])
+    now = int(time.time())
+    with db.connect() as con:
+        row = con.execute("SELECT id, title, parent_message_approved_at FROM applications WHERE id = ? AND user_id = ? "
+                          "AND kind = 'scholarship'", (app_id, student_id)).fetchone()
+        if row is None:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "application not found")
+        if not row["parent_message_approved_at"]:
+            raise HTTPException(status.HTTP_409_CONFLICT, "The student has not asked yet")
+        from . import application_chain, chain_graph
+        full = con.execute("SELECT * FROM applications WHERE id = ?", (app_id,)).fetchone()
+        application_chain.sync_graph(full)
+        if not full["parent_agreed_at"]:
+            chain_graph.advance(app_id, "parent_agree")
+        con.execute("UPDATE applications SET parent_agreed_at = ?, updated_at = ? WHERE id = ?", (full["parent_agreed_at"] or now, now, app_id))
+    log_activity(student_id, "chose", "act_parent_agreed", {"title": row["title"]}, "/apply/")
+    return {"id": app_id, "parent_agreed_at": now}
+
+
+@router.get("/plan-card")
+def plan_card(claims: dict = Depends(_family_user)):
+    """The numbers a parent asks about first, for the student's chosen path: per month, total, scholarships, payback."""
+    from . import engine
+    student_id = int(claims["sub"])
+    with db.connect() as con:
+        row = con.execute("SELECT data FROM profiles WHERE user_id = ?", (student_id,)).fetchone()
+    profile = json.loads(row["data"]) if row else {}
+    career_id = profile.get("roadmap_career")
+    data = dataset.get()
+    plan = next((p for p in data["plans"] if p.get("career_id") == career_id), None) if career_id else None
+    if not plan:
+        return {"plan": None}
+    r = engine.compute_plan(data, profile, plan["id"])
+    months = max(1, int(plan.get("course_months") or 1))
+    net = max(0, r["net_cost"])
+    return {"plan": {"label": plan["label"], "months": months, "total": round(r["costs"]["total"]),
+                     "net": round(net), "per_month": round(net / months), "scholarship": round(r["scholarship"]["low"]),
+                     "payback_months": (r["payback"].get("median") or {}).get("months_after_training"),
+                     "estimate": "estimate" in (plan.get("status") or "").lower()}}

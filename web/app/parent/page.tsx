@@ -5,75 +5,14 @@
 // useApp() store (which belongs to the signed-in student).
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useState } from "react";
-import { Badge, Card, Shell } from "@/components/ui";
-import { useText } from "@/components/pro";
+import { Badge, Card, Shell, SpeakButton } from "@/components/ui";
 import { API, useApp } from "@/lib/store";
 
-const T: Record<string, Record<string, string>> = {
-  en: {
-    title: "Family view", sign_in: "Sign in as parent / guardian",
-    phone: "Student's mobile number", pin: "Family PIN", sign_in_btn: "View dashboard",
-    signing_in: "Signing in…", wrong: "Wrong number or PIN. Ask your student to set a family PIN in their app.",
-    no_pin: "No family PIN is set on this account. Ask the student to set one from the app.",
-    welcome: "Welcome, family of", career: "Career goal", stage: "Roadmap stage",
-    not_set: "Not set yet", exams: "Watched exams", no_exams: "No exams tracked yet",
-    lessons: "Recent lessons", no_lessons: "No lessons yet", subject: "Subject",
-    when: "When", notifications: "Notifications", no_notifs: "No new notifications",
-    applications: "Scholarship applications", no_apps: "No applications are being tracked yet.",
-    ask_title: "Ask Raah about the costs", ask_hint: "Ask in English, Hindi, or Marathi. Raah uses the student's profile and verified data.",
-    ask_placeholder: "Can we afford this course?", ask_btn: "Ask", asking: "Checking…", ask_error: "Could not get an answer. Please try again.",
-    stage_researching: "Preparing", stage_docs_submitted: "Documents submitted", stage_applied: "Applied", stage_waiting: "Waiting", stage_result: "Result received",
-    student_message: "Message approved by the student",
-    sign_out: "Sign out",
-    pin_set_title: "Set your family PIN", pin_set_sub: "Let a parent or guardian see your progress. Choose a 4–8 digit PIN they will enter on this page.",
-    new_pin: "New family PIN (4–8 digits)", save_pin: "Save PIN", saving: "Saving…", pin_saved: "PIN saved!",
-    remove_pin: "Remove PIN",
-    for_student: "For the student — set a family PIN",
-    expired: "Your family session ended. Please sign in again with the same number and PIN.", c_category: "Type of work", c_entry: "How to get in", c_qual: "Minimum qualification", c_income: "Expected income", chosen_on: "Chosen on",
-  },
-  hi: {
-    title: "परिवार दृश्य", sign_in: "अभिभावक के रूप में साइन इन करें",
-    phone: "छात्र का मोबाइल नंबर", pin: "फैमिली PIN", sign_in_btn: "डैशबोर्ड देखें",
-    signing_in: "साइन इन हो रहे हैं…", wrong: "नंबर या PIN गलत है। छात्र से फैमिली PIN सेट करने को कहें।",
-    no_pin: "इस खाते पर फैमिली PIN नहीं है। छात्र से ऐप में सेट करने को कहें।",
-    welcome: "परिवार में आपका स्वागत,", career: "करियर लक्ष्य", stage: "रोडमैप चरण",
-    not_set: "अभी तय नहीं", exams: "देखी जा रही परीक्षाएँ", no_exams: "कोई परीक्षा ट्रैक नहीं",
-    lessons: "हाल के पाठ", no_lessons: "अभी कोई पाठ नहीं", subject: "विषय",
-    when: "कब", notifications: "सूचनाएँ", no_notifs: "नई सूचना नहीं",
-    applications: "छात्रवृत्ति आवेदन", no_apps: "अभी कोई आवेदन ट्रैक नहीं हो रहा है।",
-    ask_title: "खर्च के बारे में Raah से पूछें", ask_hint: "हिंदी, मराठी या अंग्रेज़ी में पूछें। Raah छात्र की प्रोफ़ाइल और सत्यापित जानकारी देखेगा।",
-    ask_placeholder: "क्या हम इस कोर्स का खर्च उठा सकते हैं?", ask_btn: "पूछें", asking: "जाँच रहे हैं…", ask_error: "जवाब नहीं मिला। फिर से कोशिश करें।",
-    stage_researching: "तैयारी", stage_docs_submitted: "दस्तावेज़ जमा", stage_applied: "आवेदन किया", stage_waiting: "प्रतीक्षा", stage_result: "नतीजा मिला",
-    student_message: "छात्र की मंज़ूरी वाला संदेश",
-    sign_out: "साइन आउट",
-    pin_set_title: "फैमिली PIN सेट करें", pin_set_sub: "माता-पिता को प्रगति देखने दें। 4–8 अंकों का PIN चुनें।",
-    new_pin: "नया फैमिली PIN (4–8 अंक)", save_pin: "PIN सेव करें", saving: "सेव हो रहा है…", pin_saved: "PIN सेव हुआ!",
-    remove_pin: "PIN हटाएँ",
-    for_student: "छात्र के लिए — फैमिली PIN सेट करें",
-    expired: "आपका सत्र खत्म हो गया। उसी नंबर और PIN से फिर साइन इन करें।", c_category: "काम का प्रकार", c_entry: "कैसे प्रवेश करें", c_qual: "न्यूनतम योग्यता", c_income: "अपेक्षित आय", chosen_on: "चुना गया:",
-  },
-  mr: {
-    title: "कुटुंब दृश्य", sign_in: "पालक म्हणून साइन इन करा",
-    phone: "विद्यार्थ्याचा मोबाइल नंबर", pin: "कुटुंब PIN", sign_in_btn: "डॅशबोर्ड पाहा",
-    signing_in: "साइन इन होत आहे…", wrong: "नंबर किंवा PIN चुकीचा. विद्यार्थ्याला कुटुंब PIN सेट करायला सांगा.",
-    no_pin: "या खात्यावर कुटुंब PIN नाही. विद्यार्थ्याला ॲपमध्ये सेट करायला सांगा.",
-    welcome: "कुटुंबाचे स्वागत,", career: "करिअर ध्येय", stage: "रोडमॅप टप्पा",
-    not_set: "अजून ठरलेले नाही", exams: "पाहिलेल्या परीक्षा", no_exams: "कोणत्याही परीक्षा ट्रॅक केल्या नाहीत",
-    lessons: "अलीकडील धडे", no_lessons: "अजून धडे नाहीत", subject: "विषय",
-    when: "केव्हा", notifications: "सूचना", no_notifs: "नवीन सूचना नाही",
-    applications: "शिष्यवृत्ती अर्ज", no_apps: "अद्याप कोणतेही अर्ज ट्रॅक होत नाहीत.",
-    ask_title: "खर्चाविषयी Raah ला विचारा", ask_hint: "मराठी, हिंदी किंवा इंग्रजीत विचारा. Raah विद्यार्थ्याची प्रोफाइल आणि पडताळलेली माहिती वापरेल.",
-    ask_placeholder: "आपल्याला या अभ्यासक्रमाचा खर्च परवडेल का?", ask_btn: "विचारा", asking: "तपासत आहे…", ask_error: "उत्तर मिळाले नाही. पुन्हा प्रयत्न करा.",
-    stage_researching: "तयारी", stage_docs_submitted: "कागदपत्रे जमा", stage_applied: "अर्ज केला", stage_waiting: "प्रतीक्षा", stage_result: "निकाल मिळाला",
-    student_message: "विद्यार्थ्याने मंजूर केलेला संदेश",
-    sign_out: "साइन आउट",
-    pin_set_title: "कुटुंब PIN सेट करा", pin_set_sub: "पालकांना तुमची प्रगती पाहू द्या. 4–8 अंकांचा PIN निवडा.",
-    new_pin: "नवीन कुटुंब PIN (4–8 अंक)", save_pin: "PIN सेव करा", saving: "सेव होत आहे…", pin_saved: "PIN सेव झाला!",
-    remove_pin: "PIN काढा",
-    for_student: "विद्यार्थ्यासाठी — कुटुंब PIN सेट करा",
-    expired: "तुमचे सत्र संपले. त्याच नंबर आणि PIN ने पुन्हा साइन इन करा.", c_category: "कामाचा प्रकार", c_entry: "कसा प्रवेश मिळवावा", c_qual: "किमान पात्रता", c_income: "अपेक्षित उत्पन्न", chosen_on: "निवडले:",
-  },
-};
+/** Parent-mode text lives in the locale files under the pm_ prefix. */
+function usePm() {
+  const { t } = useApp();
+  return (k: string, vars?: Record<string, string | number>) => t(`pm_${k}`, vars);
+}
 
 const FAMILY_TOKEN_KEY = "raah_family_token";
 
@@ -86,7 +25,7 @@ function timeAgo(ts: number) {
 }
 
 function SignInForm({ onToken }: { onToken: (tok: string, name: string) => void }) {
-  const t = useText(T);
+  const t = usePm();
   const [phone, setPhone] = useState("");
   const [pin, setPin] = useState("");
   const [busy, setBusy] = useState(false);
@@ -138,7 +77,7 @@ function SignInForm({ onToken }: { onToken: (tok: string, name: string) => void 
 }
 
 function PinManager({ studentToken }: { studentToken: string }) {
-  const t = useText(T);
+  const t = usePm();
   const [newPin, setNewPin] = useState("");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
@@ -180,13 +119,24 @@ function PinManager({ studentToken }: { studentToken: string }) {
 }
 
 function Dashboard({ token, studentName, onSignOut, onExpired }: { token: string; studentName: string; onSignOut: () => void; onExpired: () => void }) {
-  const t = useText(T);
+  const t = usePm();
   const { lang } = useApp();
   const [data, setData] = useState<any>(null);
   const [askError, setAskError] = useState("");
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState<any>(null);
   const [asking, setAsking] = useState(false);
+  const [plan, setPlan] = useState<any>(undefined);
+  const hdr = { Authorization: `Bearer ${token}` };
+
+  useEffect(() => {
+    fetch(`${API}/api/parent/plan-card`, { headers: hdr }).then((r) => r.ok ? r.json() : null).then((j) => setPlan(j?.plan ?? null)).catch(() => setPlan(null));
+  }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function agree(id: number) {
+    const r = await fetch(`${API}/api/parent/applications/${id}/agree`, { method: "POST", headers: hdr });
+    if (r.ok) { const j = await r.json(); setData((d: any) => ({ ...d, applications: d.applications.map((a: any) => a.id === id ? { ...a, parent_agreed_at: j.parent_agreed_at } : a) })); }
+  }
 
   useEffect(() => {
     fetch(`${API}/api/parent/summary`, { headers: { Authorization: `Bearer ${token}` } })
@@ -195,14 +145,16 @@ function Dashboard({ token, studentName, onSignOut, onExpired }: { token: string
       .catch(() => onExpired());
   }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  async function ask(e: React.FormEvent) {
-    e.preventDefault();
-    if (!question.trim()) return;
+  async function ask(e: React.FormEvent | null, preset?: string) {
+    e?.preventDefault();
+    const q = (preset ?? question).trim();
+    if (!q) return;
+    if (preset) setQuestion(preset);
     setAsking(true); setAskError(""); setAnswer(null);
     try {
       const r = await fetch(`${API}/api/parent/ask`, {
         method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ question: question.trim(), lang }),
+        body: JSON.stringify({ question: q, lang }),
       });
       if (!r.ok) throw new Error("parent question failed");
       setAnswer(await r.json());
@@ -250,13 +202,36 @@ function Dashboard({ token, studentName, onSignOut, onExpired }: { token: string
               <li key={`${app.title}-${i}`} className="rounded-xl bg-[var(--bg)] p-3 text-sm">
                 <div className="flex items-start justify-between gap-2"><b>{app.title}</b><Badge tone="blue">{t(`stage_${app.stage}`)}</Badge></div>
                 {app.student_approved_message && <p className="mt-2 border-t border-black/10 pt-2 text-[var(--muted)]"><b>{t("student_message")}:</b> {app.student_approved_message}</p>}
+                {app.student_approved_message && (app.parent_agreed_at
+                  ? <p className="mt-2 text-xs font-semibold text-[var(--good)]">{t("agreed")}</p>
+                  : <button onClick={() => agree(app.id)} className="mt-2 w-full rounded-xl bg-[var(--brand)] py-2.5 text-sm font-semibold text-white">{t("agree")}</button>)}
               </li>))}</ul>}
+      </Card>
+
+      <Card className="space-y-3">
+        <h3 className="font-bold">{t("quick")}</h3>
+        <div className="flex flex-wrap gap-2">
+          {[["q_month", "How much per month will this cost us?"], ["q_total", "What is the total cost of this course?"], ["q_schol", "Are there scholarships that cover this?"]].map(([k, q]) => (
+            <button key={k} onClick={() => ask(null, q)} disabled={asking} className="rounded-full bg-[var(--bg)] px-3 py-1.5 text-sm font-medium ring-1 ring-black/10 disabled:opacity-50">{t(k)}</button>))}
+        </div>
+        {plan === null && <p className="text-sm text-[var(--muted)]">{t("no_plan")}</p>}
+        {plan && (
+          <div className="rounded-xl bg-[var(--bg)] p-3">
+            <p className="text-xs text-[var(--muted)]">{t("path_picked")}: <b>{plan.label}</b></p>
+            <dl className="mt-2 grid grid-cols-2 gap-2 text-sm">
+              <div><dt className="text-xs text-[var(--muted)]">{t("per_month")}</dt><dd className="font-bold">₹{plan.per_month.toLocaleString("en-IN")}</dd></div>
+              <div><dt className="text-xs text-[var(--muted)]">{t("total_cost")}</dt><dd className="font-bold">₹{plan.total.toLocaleString("en-IN")}</dd></div>
+              <div><dt className="text-xs text-[var(--muted)]">{t("scholarship")}</dt><dd className="font-bold">₹{plan.scholarship.toLocaleString("en-IN")}</dd></div>
+              <div><dt className="text-xs text-[var(--muted)]">{t("paid_back")}</dt><dd className="font-bold">{plan.payback_months != null ? t("months", { n: plan.payback_months }) : "-"}</dd></div>
+            </dl>
+            {plan.estimate && <p className="mt-2 text-xs text-[var(--muted)]">{t("estimate")}</p>}
+          </div>)}
       </Card>
 
       <Card>
         <h3 className="font-bold">{t("ask_title")}</h3>
         <p className="mt-1 text-xs text-[var(--muted)]">{t("ask_hint")}</p>
-        <form onSubmit={ask} className="mt-3 space-y-2">
+        <form onSubmit={(e) => ask(e)} className="mt-3 space-y-2">
           <textarea value={question} onChange={(e) => setQuestion(e.target.value)} rows={2} maxLength={500}
             placeholder={t("ask_placeholder")} aria-label={t("ask_title")} className="w-full rounded-lg bg-[var(--bg)] p-3 text-sm" />
           <button disabled={asking || !question.trim()} className="w-full rounded-xl bg-[var(--brand)] py-2.5 text-sm font-semibold text-white disabled:opacity-50">
@@ -265,6 +240,7 @@ function Dashboard({ token, studentName, onSignOut, onExpired }: { token: string
         </form>
         {answer && <div aria-live="polite" className="mt-3 rounded-xl bg-[var(--bg)] p-3 text-sm leading-relaxed">
           <p>{answer.answer}</p>
+          <div className="mt-2"><SpeakButton text={answer.answer} lang={lang} label={t("listen", { lang: ({ mr: "Marathi", hi: "Hindi", en: "English" } as any)[lang] })} /></div>
           {answer.citations?.length > 0 && <div className="mt-2 border-t border-black/10 pt-2 text-xs text-[var(--muted)]">
             {answer.citations.map((c: any) => c.source && <a key={`${c.n}-${c.source}`} className="mr-2 underline" href={c.source} target="_blank" rel="noreferrer">[{c.n}] {c.title}</a>)}
           </div>}
@@ -315,7 +291,7 @@ function Dashboard({ token, studentName, onSignOut, onExpired }: { token: string
 }
 
 export default function ParentPage() {
-  const t = useText(T);
+  const t = usePm();
   const { auth } = useApp();
   const [familyToken, setFamilyToken] = useState<string | null>(null);
   const [studentName, setStudentName] = useState("");

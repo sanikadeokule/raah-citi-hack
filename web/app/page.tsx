@@ -89,7 +89,7 @@ export default function Home() {
   // greet the signed-in person by their registered name, never by a demo profile
   const greetName = auth?.user.name || (isTeacher ? null : profile?.name) || "";
   // Today's step is decided by the agent from the student's tools; the plain rule shows until it answers or when offline
-  const [agentStep, setAgentStep] = useState<(Step & { looked?: { label: string }[] }) | null>(null);
+  const [agentStep, setAgentStep] = useState<(Step & { looked?: { label: string }[]; agent?: { mode: string; reason: string; trace: string[] } }) | null>(null);
   const [stepLoading, setStepLoading] = useState(false); // Maina thinks while the agent picks the step
   useEffect(() => {
     if (!auth || isTeacher) return;
@@ -191,6 +191,9 @@ export default function Home() {
           <p className="mt-1 text-xs text-[var(--muted)]">{t(`${step.key}_why`, step.vars)}</p>
           {step.source && <p className="mt-1 truncate text-[11px] text-[var(--muted)]">{t("source")}: <a href={step.source.split(" ; ")[0]} target="_blank" rel="noreferrer" className="underline">{step.source.split(" ; ")[0].replace(/^https?:\/\/(www\.)?/, "")}</a></p>}
           {agentStep?.looked?.length ? <p className="mt-1 text-[11px] text-[var(--muted)]">{t("step_looked", { tools: agentStep.looked.map((x) => x.label).join(", ") })}</p> : null}
+          {agentStep?.agent?.reason ? <p className="mt-1 text-[11px] text-[var(--muted)]">{t("step_why", { reason: agentStep.agent.reason })}</p> : null}
+          {agentStep?.agent?.trace?.length ? <details className="mt-1 text-[11px] text-[var(--muted)]"><summary className="cursor-pointer">{t("step_trace")}</summary>
+            <ol className="mt-1 list-decimal space-y-0.5 pl-4">{agentStep.agent.trace.map((x, i) => <li key={i}>{x}</li>)}</ol></details> : null}
           {checkin ? (
             <div className="mt-3 flex flex-wrap items-center gap-2" role="group" aria-label={t(step.key, step.vars)}>
               <button onClick={() => answerCheckin("yes")} disabled={answering} className="rounded-xl bg-[var(--brand)] px-4 py-2.5 text-sm font-bold text-white active:scale-95 disabled:opacity-50">{t("ci_yes")}</button>
