@@ -47,6 +47,6 @@ for cid, name, cat, path, minq, group, src, tags, mc, stream, demand in ROWS:
            "Income type": "Salaried reference", "Source": src, "Last checked": "2026-11-17",
            "Earnings group (Occupation_Earnings)": group, "Income status": STATUS}
     ci.append([row.get(h) for h in head])
-    cp.append([cid, tags, mc, stream, demand, "App input for matching - demand is an estimate, edit freely"])
+    cp.append([cid, name, tags, mc, stream, demand, "App input for matching - demand is an estimate, edit freely"])
     print("added", cid, name)
 wb.save(PATH)

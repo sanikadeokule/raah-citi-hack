@@ -5,23 +5,29 @@
 // useApp() store (which belongs to the signed-in student).
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useState } from "react";
-import { Badge, Card, Shell } from "@/components/ui";
-import { useText } from "@/components/pro";
+import { Badge, Card, Shell, SpeakButton } from "@/components/ui";
 import { API, useApp } from "@/lib/store";
+import { languageName } from "@/lib/languages";
 
+/** Parent-mode text lives in the locale files under the pm_ prefix. */
+function usePm() {
+  const { t } = useApp();
+  return (k: string, vars?: Record<string, string | number>) => t(`pm_${k}`, vars);
+}
 
 const FAMILY_TOKEN_KEY = "raah_family_token";
 
-function timeAgo(ts: number, t: (key: string, vars?: Record<string, string | number>) => string) {
+function timeAgo(ts: number) {
   const diff = Math.floor((Date.now() / 1000 - ts) / 60);
-  if (diff < 2) return t("just_now");
-  if (diff < 60) return t("min_ago", { n: diff });
-  if (diff < 1440) return t("hour_ago", { n: Math.floor(diff / 60) });
-  return t("day_ago", { n: Math.floor(diff / 1440) });
+  if (diff < 2) return "just now";
+  if (diff < 60) return `${diff}m ago`;
+  if (diff < 1440) return `${Math.floor(diff / 60)}h ago`;
+  return `${Math.floor(diff / 1440)}d ago`;
 }
 
 function SignInForm({ onToken }: { onToken: (tok: string, name: string) => void }) {
-  const t = useText("family_");
+  const t = usePm();
+  const { t: globalT } = useApp();
   const [phone, setPhone] = useState("");
   const [pin, setPin] = useState("");
   const [busy, setBusy] = useState(false);
@@ -55,12 +61,12 @@ function SignInForm({ onToken }: { onToken: (tok: string, name: string) => void 
         <label className="block text-sm">
           <span className="text-[var(--muted)]">{t("phone")}</span>
           <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} required maxLength={12}
-            className="mt-1 w-full rounded-lg bg-[var(--bg)] p-2 text-sm" placeholder={t("phone_hint")} />
+            className="mt-1 w-full rounded-lg bg-[var(--bg)] p-2 text-sm" placeholder={globalT("family_phone_hint")} />
         </label>
         <label className="block text-sm">
           <span className="text-[var(--muted)]">{t("pin")}</span>
           <input type="password" inputMode="numeric" value={pin} onChange={(e) => setPin(e.target.value)} required maxLength={8}
-            className="mt-1 w-full rounded-lg bg-[var(--bg)] p-2 text-sm" placeholder={t("pin_hint")} />
+            className="mt-1 w-full rounded-lg bg-[var(--bg)] p-2 text-sm" placeholder={globalT("family_pin_hint")} />
         </label>
         {err && <p className="rounded-xl bg-rose-50 p-2 text-sm text-rose-700 dark:bg-rose-900/30 dark:text-rose-200">{err}</p>}
         <button type="submit" disabled={busy}
@@ -73,7 +79,7 @@ function SignInForm({ onToken }: { onToken: (tok: string, name: string) => void 
 }
 
 function PinManager({ studentToken }: { studentToken: string }) {
-  const t = useText("family_");
+  const t = usePm();
   const [newPin, setNewPin] = useState("");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
@@ -86,7 +92,7 @@ function PinManager({ studentToken }: { studentToken: string }) {
       body: JSON.stringify({ family_pin: newPin }),
     });
     setBusy(false);
-    setMsg(r.ok ? t("pin_saved") : "Error saving");
+    setMsg(r.ok ? t("pin_saved") : t("pin_save_error"));
   }
 
   async function remove() {
@@ -115,13 +121,24 @@ function PinManager({ studentToken }: { studentToken: string }) {
 }
 
 function Dashboard({ token, studentName, onSignOut, onExpired }: { token: string; studentName: string; onSignOut: () => void; onExpired: () => void }) {
-  const t = useText("family_");
-  const { lang } = useApp();
+  const t = usePm();
+  const { lang, t: globalT } = useApp();
   const [data, setData] = useState<any>(null);
   const [askError, setAskError] = useState("");
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState<any>(null);
   const [asking, setAsking] = useState(false);
+  const [plan, setPlan] = useState<any>(undefined);
+  const hdr = { Authorization: `Bearer ${token}` };
+
+  useEffect(() => {
+    fetch(`${API}/api/parent/plan-card`, { headers: hdr }).then((r) => r.ok ? r.json() : null).then((j) => setPlan(j?.plan ?? null)).catch(() => setPlan(null));
+  }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function agree(id: number) {
+    const r = await fetch(`${API}/api/parent/applications/${id}/agree`, { method: "POST", headers: hdr });
+    if (r.ok) { const j = await r.json(); setData((d: any) => ({ ...d, applications: d.applications.map((a: any) => a.id === id ? { ...a, parent_agreed_at: j.parent_agreed_at } : a) })); }
+  }
 
   useEffect(() => {
     fetch(`${API}/api/parent/summary`, { headers: { Authorization: `Bearer ${token}` } })
@@ -130,14 +147,16 @@ function Dashboard({ token, studentName, onSignOut, onExpired }: { token: string
       .catch(() => onExpired());
   }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  async function ask(e: React.FormEvent) {
-    e.preventDefault();
-    if (!question.trim()) return;
+  async function ask(e: React.FormEvent | null, preset?: string) {
+    e?.preventDefault();
+    const q = (preset ?? question).trim();
+    if (!q) return;
+    if (preset) setQuestion(preset);
     setAsking(true); setAskError(""); setAnswer(null);
     try {
       const r = await fetch(`${API}/api/parent/ask`, {
         method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ question: question.trim(), lang }),
+        body: JSON.stringify({ question: q, lang }),
       });
       if (!r.ok) throw new Error("parent question failed");
       setAnswer(await r.json());
@@ -145,7 +164,7 @@ function Dashboard({ token, studentName, onSignOut, onExpired }: { token: string
     finally { setAsking(false); }
   }
 
-  if (!data) return <div className="py-16 text-center text-sm text-[var(--muted)]">{t("loading")}</div>;
+  if (!data) return <div className="py-16 text-center text-sm text-[var(--muted)]">{globalT("loading")}</div>;
 
   const name = data.student_name || studentName;
   return (
@@ -185,13 +204,36 @@ function Dashboard({ token, studentName, onSignOut, onExpired }: { token: string
               <li key={`${app.title}-${i}`} className="rounded-xl bg-[var(--bg)] p-3 text-sm">
                 <div className="flex items-start justify-between gap-2"><b>{app.title}</b><Badge tone="blue">{t(`stage_${app.stage}`)}</Badge></div>
                 {app.student_approved_message && <p className="mt-2 border-t border-black/10 pt-2 text-[var(--muted)]"><b>{t("student_message")}:</b> {app.student_approved_message}</p>}
+                {app.student_approved_message && (app.parent_agreed_at
+                  ? <p className="mt-2 text-xs font-semibold text-[var(--good)]">{t("agreed")}</p>
+                  : <button onClick={() => agree(app.id)} className="mt-2 w-full rounded-xl bg-[var(--brand)] py-2.5 text-sm font-semibold text-white">{t("agree")}</button>)}
               </li>))}</ul>}
+      </Card>
+
+      <Card className="space-y-3">
+        <h3 className="font-bold">{t("quick")}</h3>
+        <div className="flex flex-wrap gap-2">
+          {[["q_month", "How much per month will this cost us?"], ["q_total", "What is the total cost of this course?"], ["q_schol", "Are there scholarships that cover this?"]].map(([k, q]) => (
+            <button key={k} onClick={() => ask(null, q)} disabled={asking} className="rounded-full bg-[var(--bg)] px-3 py-1.5 text-sm font-medium ring-1 ring-black/10 disabled:opacity-50">{t(k)}</button>))}
+        </div>
+        {plan === null && <p className="text-sm text-[var(--muted)]">{t("no_plan")}</p>}
+        {plan && (
+          <div className="rounded-xl bg-[var(--bg)] p-3">
+            <p className="text-xs text-[var(--muted)]">{t("path_picked")}: <b>{plan.label}</b></p>
+            <dl className="mt-2 grid grid-cols-2 gap-2 text-sm">
+              <div><dt className="text-xs text-[var(--muted)]">{t("per_month")}</dt><dd className="font-bold">₹{plan.per_month.toLocaleString("en-IN")}</dd></div>
+              <div><dt className="text-xs text-[var(--muted)]">{t("total_cost")}</dt><dd className="font-bold">₹{plan.total.toLocaleString("en-IN")}</dd></div>
+              <div><dt className="text-xs text-[var(--muted)]">{t("scholarship")}</dt><dd className="font-bold">₹{plan.scholarship.toLocaleString("en-IN")}</dd></div>
+              <div><dt className="text-xs text-[var(--muted)]">{t("paid_back")}</dt><dd className="font-bold">{plan.payback_months != null ? t("months", { n: plan.payback_months }) : "-"}</dd></div>
+            </dl>
+            {plan.estimate && <p className="mt-2 text-xs text-[var(--muted)]">{t("estimate")}</p>}
+          </div>)}
       </Card>
 
       <Card>
         <h3 className="font-bold">{t("ask_title")}</h3>
         <p className="mt-1 text-xs text-[var(--muted)]">{t("ask_hint")}</p>
-        <form onSubmit={ask} className="mt-3 space-y-2">
+        <form onSubmit={(e) => ask(e)} className="mt-3 space-y-2">
           <textarea value={question} onChange={(e) => setQuestion(e.target.value)} rows={2} maxLength={500}
             placeholder={t("ask_placeholder")} aria-label={t("ask_title")} className="w-full rounded-lg bg-[var(--bg)] p-3 text-sm" />
           <button disabled={asking || !question.trim()} className="w-full rounded-xl bg-[var(--brand)] py-2.5 text-sm font-semibold text-white disabled:opacity-50">
@@ -200,6 +242,7 @@ function Dashboard({ token, studentName, onSignOut, onExpired }: { token: string
         </form>
         {answer && <div aria-live="polite" className="mt-3 rounded-xl bg-[var(--bg)] p-3 text-sm leading-relaxed">
           <p>{answer.answer}</p>
+          <div className="mt-2"><SpeakButton text={answer.answer} lang={lang} label={t("listen", { lang: languageName(lang) })} /></div>
           {answer.citations?.length > 0 && <div className="mt-2 border-t border-black/10 pt-2 text-xs text-[var(--muted)]">
             {answer.citations.map((c: any) => c.source && <a key={`${c.n}-${c.source}`} className="mr-2 underline" href={c.source} target="_blank" rel="noreferrer">[{c.n}] {c.title}</a>)}
           </div>}
@@ -224,7 +267,7 @@ function Dashboard({ token, studentName, onSignOut, onExpired }: { token: string
           : <ul className="mt-2 space-y-1 text-sm">{data.lessons_done.slice(0, 10).map((l: any, i: number) => (
               <li key={i} className="flex items-center justify-between gap-2 rounded-xl bg-[var(--bg)] px-3 py-2">
                 <span className="font-medium">{l.subject || l.id || t("subject")}</span>
-                <span className="text-[11px] text-[var(--muted)]">{l.received_at ? timeAgo(l.received_at, t) : ""}</span>
+                <span className="text-[11px] text-[var(--muted)]">{l.received_at ? timeAgo(l.received_at) : ""}</span>
               </li>))}</ul>}
       </Card>
 
@@ -236,7 +279,7 @@ function Dashboard({ token, studentName, onSignOut, onExpired }: { token: string
               <li key={n.id} className="rounded-xl bg-[var(--bg)] px-3 py-2">
                 <div className="flex items-start justify-between gap-2">
                   <span className="font-medium">{n.title || n.kind}</span>
-                  <span className="shrink-0 text-[11px] text-[var(--muted)]">{timeAgo(n.created_at, t)}</span>
+                  <span className="shrink-0 text-[11px] text-[var(--muted)]">{timeAgo(n.created_at)}</span>
                 </div>
                 {n.body && <p className="mt-0.5 text-xs text-[var(--muted)]">{n.body}</p>}
               </li>))}</ul>}
@@ -250,7 +293,7 @@ function Dashboard({ token, studentName, onSignOut, onExpired }: { token: string
 }
 
 export default function ParentPage() {
-  const t = useText("family_");
+  const t = usePm();
   const { auth } = useApp();
   const [familyToken, setFamilyToken] = useState<string | null>(null);
   const [studentName, setStudentName] = useState("");

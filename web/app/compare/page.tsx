@@ -10,7 +10,8 @@ import { useApp } from "@/lib/store";
 function CompareView() {
   const sp = useSearchParams();
   const router = useRouter();
-  const { data, profile, t } = useApp();
+  const { data, profile, t, setProfile, queueAction, auth } = useApp();
+  const [saved, setSaved] = useState("");
   const a = sp.get("a") || data.plans[0]?.id;
   const b = sp.get("b") || data.plans[1]?.id;
   const [opts, setOpts] = useState<PlanOptions>({});
@@ -26,6 +27,16 @@ function CompareView() {
     [t("payback"), (r) => <b>{paybackText(t, r.payback.median, data)}</b>],
     [`${t("payback")} (${t("low")})`, (r) => paybackText(t, r.payback.low, data)],
   ];
+  // Raah's suggestion is a plain rule: lower cost after scholarships, and when the costs are within 5% the shorter path.
+  const [x, y] = rs;
+  const netX = Math.max(0, x.net_cost), netY = Math.max(0, y.net_cost);
+  const close = Math.abs(netX - netY) <= 0.05 * Math.max(netX, netY, 1);
+  const best = close ? (x.plan.course_months <= y.plan.course_months ? x : y) : (netX <= netY ? x : y);
+  const why = close ? t("cmp_why_time", { a: best.plan.label }) : t("cmp_why_cost", { a: best.plan.label });
+  function choose(r: any) {
+    const next = { ...profile, roadmap_career: r.plan.career_id, roadmap_at: new Date().toISOString() };
+    setProfile(next); queueAction("profile", next); setSaved(t("cmp_picked", { a: r.plan.label }));
+  }
   const pick = (which: "a" | "b", v: string) => router.replace(`/compare/?a=${which === "a" ? v : a}&b=${which === "b" ? v : b}`);
   return (
     <>
@@ -37,6 +48,19 @@ function CompareView() {
           </select>
         ))}
       </div>
+      <Card className="space-y-2">
+        <div className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">{t("cmp_suggests")}</div>
+        <p className="text-sm font-semibold">{why}</p>
+        <p className="text-xs text-[var(--muted)]">{t("cmp_choice")}</p>
+        <div className="grid grid-cols-2 gap-2">
+          {rs.map((r: any) => (
+            <button key={r.plan.id} onClick={() => choose(r)} disabled={!auth}
+              className={`rounded-xl px-2 py-2.5 text-sm font-semibold disabled:opacity-50 ${r === best ? "bg-[var(--brand)] text-white" : "bg-[var(--bg)] ring-1 ring-black/10"}`}>
+              {t("cmp_pick")}<span className="block text-xs font-normal opacity-80">{r.plan.label}</span></button>))}
+        </div>
+        {!auth && <p className="text-xs text-[var(--muted)]">{t("cmp_signin")}</p>}
+        {saved && <p role="status" className="text-sm text-[var(--good)]">{saved}</p>}
+      </Card>
       <Card>
         <table className="w-full text-sm">
           <tbody>

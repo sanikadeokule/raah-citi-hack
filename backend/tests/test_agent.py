@@ -161,3 +161,29 @@ def test_notifications_only_for_signed_in_student(monkeypatch):
 def test_mcp_status_endpoint():
     s = c.get("/api/mcp/status").json()
     assert s["server"] == "raah-data" and s["max_steps"] == 6 and "rank_careers" in s["tools"]
+
+
+def test_a_figure_from_no_tool_gets_one_retry_then_a_grounded_answer(monkeypatch):
+    fake, _ = scripted([[("get_scholarships", {})], "You will get ₹99,99,999 every year [1]."])
+    monkeypatch.setattr(llm, "chat_tools", fake)
+    asked = []
+
+    def chat(messages, **k):
+        asked.append(messages[-1]["content"])
+        return "Raah's data lists scholarships you can look at [1].", "test"
+    monkeypatch.setattr(llm, "chat", chat)
+    ans = next(e for e in ask("Which scholarship can I get?") if e["type"] == "answer")
+    assert ans["mode"].startswith("agent") and "99,99,999" not in ans["answer"]
+    assert any("no tool returned" in a for a in asked)
+    assert any("asking again" in t for t in ans["graph"]["trace"]) and ans["graph"]["framework"] == "langgraph"
+
+
+def test_langgraph_ask_uses_selected_language(monkeypatch):
+    fake, seen = scripted(["Here is the answer in Tamil."])
+    monkeypatch.setattr(llm, "chat_tools", fake)
+    r = c.post("/api/agent/ask", json={"question": "What can I study?", "lang": "ta", "profile": PROFILE})
+    assert r.status_code == 200
+    ev = events(r)
+    assert not [e for e in ev if e["type"] == "error"], ev
+    assert "Answer entirely in Tamil" in seen[0]["messages"][0]["content"]
+    assert next(e for e in ev if e["type"] == "answer")["answer"] == "Here is the answer in Tamil."

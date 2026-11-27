@@ -8,6 +8,7 @@ import { eligibility, eligibilityChanges, inr } from "@/lib/engine";
 import { useApp } from "@/lib/store";
 import { Pager, usePaged } from "@/components/pager";
 import { Tabs } from "@/components/tabs";
+import { HeroSplit, MODULE_COLOR, ModuleHero } from "@/components/modulehero";
 
 const PAGE = 5;
 const STATUSES = ["eligible", "eligible_missing_docs", "need_info", "not_eligible"] as const;
@@ -44,7 +45,16 @@ export default function EligibilityPage() {
   const shown = useMemo(() => list.filter((e: any) => e.status === status), [list, status]);
   const pg = usePaged(shown, PAGE, `${planId}|${hostel}|${focus}|${status}`);
   return (
-    <Shell title={t("eligibility")}>
+    <Shell title={t("eligibility")} wide>
+      <ModuleHero color={MODULE_COLOR.scholarships} item="coins"
+        line={counts.eligible ? t("hero_schol", { n: counts.eligible }) : t("hero_schol_none")}>
+        <HeroSplit parts={[
+          { color: "#4ade80", n: counts.eligible || 0, label: t("st_eligible") },
+          { color: "#fcd34d", n: counts.eligible_missing_docs || 0, label: t("st_eligible_missing_docs") },
+          { color: "#cbd5e1", n: counts.need_info || 0, label: t("st_need_info") },
+          { color: "#fca5a5", n: counts.not_eligible || 0, label: t("st_not_eligible") },
+        ]} />
+      </ModuleHero>
       <Card>
         <label className="text-sm">{t("plan_for")}:
           <select value={planId} onChange={(e) => setPlanId(e.target.value)} className="ml-2 rounded bg-[var(--bg)] p-1">
@@ -91,7 +101,7 @@ export default function EligibilityPage() {
       <Tabs cols={2} value={status} onChange={setPicked}
         tabs={STATUSES.map((s) => ({ key: s, label: <span className="inline-flex items-center gap-1"><Icon name={STATUS_ICON[s]} size={14} />{t(`st_${s}`)}</span>, count: counts[s] || 0 }))} />
       {shown.length === 0 && <Card><p className="text-sm text-[var(--muted)]">{t("st_none")}</p></Card>}
-      <div className="space-y-2">
+      <div className="space-y-2 lg:grid lg:grid-cols-2 lg:items-start lg:gap-3 lg:space-y-0">
         {pg.pageItems.map((e: any) => (
           <SchemeResult key={`${e.id}-${focus}-${planId}`} e={e} hideStatus onPage open={e.id === focus}
             tag={changedIds.has(e.id) ? t("elig_tag_changed") : forCourse.has(e.id) ? t("elig_tag_course") : undefined} />

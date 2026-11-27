@@ -199,75 +199,13 @@ def run(body: AskBody, user_id: int | None = None) -> Iterator[dict]:
              if m.get("role") in ("user", "assistant")]
     msgs.append({"role": "user", "content": body.question})
 
-    steps: list[dict] = []
-    results: list = []
-    mode, provider, answer = "tools", None, None
-
-    def do_step(name: str, args: dict):
-        n = len(steps) + 1
-        label = labels().get(name, name)
-        ev = {"type": "step", "n": n, "tool": name, "label": label, "args": {k: v for k, v in args.items() if k not in INJECTED}}
-        started = time.time()
-        res = run_tool(name, args, profile, user_id)
-        step = {**ev, "summary": _short(res), "ms": int((time.time() - started) * 1000), "source": _first_source(res)}
-        steps.append(step)
-        results.append(res)
-        return ev, {**step, "type": "step_done"}, res
-
-    for _round in range(MAX_STEPS):
-        try:
-            if mode == "tools":
-                msg, provider = llm.chat_tools(msgs, specs)
-                calls = msg.get("tool_calls") or []
-                if not calls:
-                    answer = msg.get("content") or ""
-                    break
-                msgs.append({"role": "assistant", "content": msg.get("content") or "", "tool_calls": calls})
-                for c in calls[:4]:
-                    try:
-                        args = json.loads(c["function"].get("arguments") or "{}")
-                    except ValueError:
-                        args = {}
-                    ev, done, res = do_step(c["function"]["name"], args if isinstance(args, dict) else {})
-                    yield ev
-                    yield done
-                    msgs.append({"role": "tool", "tool_call_id": c["id"],
-                                 "content": f"[{done['n']}] " + json.dumps(res, ensure_ascii=False)[:RESULT_CHARS]})
-            else:  # JSON planner
-                text, provider = llm.chat(_planner_messages(msgs, specs), json_mode=True, max_tokens=700)
-                plan = llm.parse_json(text)
-                if plan.get("answer") or not plan.get("tool"):
-                    answer = str(plan.get("answer") or "")
-                    break
-                ev, done, res = do_step(str(plan["tool"]), plan.get("args") if isinstance(plan.get("args"), dict) else {})
-                yield ev
-                yield done
-                msgs.append({"role": "assistant", "content": json.dumps({"tool": plan["tool"], "args": plan.get("args", {})})})
-                msgs.append({"role": "user", "content": f"Result [{done['n']}]: " + json.dumps(res, ensure_ascii=False)[:RESULT_CHARS]})
-        except llm.ToolsUnsupported:
-            mode = "planner"  # no provider takes function calling: let the model plan in JSON instead
-            continue
-        except (llm.LLMUnavailable, ValueError, json.JSONDecodeError):
-            mode = "fixed"
-            break
-
-    if answer is None and mode != "fixed":
-        # step budget used up: ask for the answer from what was found, with no more tools
-        try:
-            msgs.append({"role": "user", "content": "Answer the question now from the tool results above, with [n] numbers."})
-            answer, provider = llm.chat(_flatten(msgs), temperature=0.2, max_tokens=600)
-        except llm.LLMUnavailable:
-            mode = "fixed"
-
-    if mode == "fixed":
-        for name, args in fixed_plan(body.question, signed_in):
-            if len(steps) >= MAX_STEPS:
-                break
-            ev, done, _ = do_step(name, args)
+    from . import raah_graph
+    out = None
+    for ev in raah_graph.stream("ask", body=body, profile=profile, user_id=user_id, signed_in=signed_in, msgs=msgs, specs=specs):
+        if ev["type"] == "_out":
+            out = ev["out"]
+        else:
             yield ev
-            yield done
-
-    out = finish(body, answer if mode != "fixed" else None, results, steps, profile, mode, provider)
     out["ms"] = int((time.time() - t0) * 1000)
     log_run(user_id, body.question, out)
     yield {"type": "answer", **out}

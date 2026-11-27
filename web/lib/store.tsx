@@ -21,6 +21,11 @@ import { db, enqueue, getKV, setKV } from "./db";
 
 export const API = process.env.NEXT_PUBLIC_API_BASE || "";
 const LOCALES: Record<string, Record<string, string>> = { en, mr, hi, ta, bn, te, gu, kn, ml, pa, or, as };
+export function translateForLanguage(language: string, key: string, vars?: Record<string, string | number>): string {
+  let value = LOCALES[normalizeLanguage(language)]?.[key] ?? (en as Record<string, string>)[key] ?? key;
+  if (vars) for (const [name, replacement] of Object.entries(vars)) value = value.replaceAll(`{${name}}`, String(replacement));
+  return value;
+}
 const SHORT_LABELS: Record<string, string> = { mr: "मरा", hi: "हिं", en: "Eng" };
 const DISPLAY_ORDER = ["mr", "hi", "en"];
 export const LANGS = SELECTABLE_LANGUAGES.map((language) => ({
@@ -89,9 +94,7 @@ export function Provider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const t = useCallback((k: string, vars?: Record<string, string | number>) => {
-    let s = LOCALES[lang]?.[k] ?? (en as Record<string, string>)[k] ?? k;
-    if (vars) for (const [a, b] of Object.entries(vars)) s = s.replaceAll(`{${a}}`, String(b));
-    return s;
+    return translateForLanguage(lang, k, vars);
   }, [lang]);
 
   const signOut = useCallback(async () => {

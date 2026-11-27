@@ -9,9 +9,25 @@ import { Icon } from "@/components/icon";
 import { ROADMAP_HREF } from "@/lib/roadmap";
 import { cachedAudio, fetchAudio, micErrorKind, micProblem, pickVoice, startRecording, transcribe, voiceStatus, type Recording, type VoiceProblem } from "@/lib/audio";
 
-/** `fit`: lay the page out to fill one screen (no bottom padding, main is a flex column) so it needs no scrolling. */
-export function Shell({ title, back = "/", role = "any", publicPage = false, fit = false, children }: {
-  title?: string; back?: string | null; role?: "any" | "teacher"; publicPage?: boolean; fit?: boolean; children: React.ReactNode;
+// the student's main places, shown as a row under the app bar on a big screen (laptop, projector)
+const DESK_NAV = [
+  { href: "/", key: "nav_home", icon: "home" },
+  { href: "/careers/", key: "home_careers", icon: "compass" },
+  { href: "/colleges/", key: "home_colleges", icon: "graduation" },
+  { href: "/eligibility/", key: "home_eligibility", icon: "rupee" },
+  { href: "/exams/", key: "home_exams", icon: "clipboard" },
+  { href: "/learn/", key: "home_learn", icon: "book" },
+  { href: "/opportunity/", key: "home_opportunity", icon: "briefcase" },
+  { href: "/ask/", key: "home_ask", icon: "chat" },
+];
+
+/**
+ * `fit`: lay the page out to fill one screen (no bottom padding, main is a flex column) so it needs no scrolling.
+ * On a big screen (lg and up) the app bar spans the window and the page is centred: a reading width by default,
+ * the full desktop width with `wide` (pages that lay themselves out in columns). Phones are unchanged.
+ */
+export function Shell({ title, back = "/", role = "any", publicPage = false, fit = false, wide = false, children }: {
+  title?: string; back?: string | null; role?: "any" | "teacher"; publicPage?: boolean; fit?: boolean; wide?: boolean; children: React.ReactNode;
 }) {
   const { t, online, toast, lang, setLang, data, auth, authReady, signOut, profile } = useApp();
   const router = useRouter();
@@ -24,9 +40,10 @@ export function Shell({ title, back = "/", role = "any", publicPage = false, fit
   const ready = publicPage || (authReady && auth);
   const onRoadmap = (path.endsWith("/") ? path : `${path}/`) === ROADMAP_HREF;
   return (
-    <div className={`mx-auto max-w-md bg-[var(--bg)] ${fit ? "flex min-h-[100dvh] flex-col" : "min-h-screen pb-24"}`}>
+    <div className={`mx-auto max-w-md bg-[var(--bg)] lg:max-w-none ${fit ? "flex min-h-[100dvh] flex-col" : "min-h-screen pb-24"}`}>
       <div className="sticky top-0 z-20 shadow">
-      <header className="flex items-center gap-2 bg-[var(--header-bg)] px-4 py-3 text-white">
+      <header className="bg-[var(--header-bg)] px-4 py-3 text-white">
+      <div className="mx-auto flex items-center gap-2 lg:max-w-6xl lg:px-4">
         {back !== null && (
           <Link href={back} aria-label={t("back")} className="rounded-full px-2 text-2xl leading-none">‹</Link>
         )}
@@ -52,11 +69,27 @@ export function Shell({ title, back = "/", role = "any", publicPage = false, fit
           {LANGS.map((l) => <option key={l.code} value={l.code} title={l.label} className="text-black">{l.label}</option>)}
         </select>
         <ProfileMenu />
+      </div>
       </header>
       <div aria-hidden className="tricolour" />
+      {auth?.user.role === "student" && (
+        <nav aria-label={t("app_name")} className="hidden border-b border-black/10 bg-[var(--card)] lg:block">
+          <div className="mx-auto flex max-w-6xl gap-1 overflow-x-auto px-8 py-2">
+            {DESK_NAV.map((n) => {
+              const here = n.href === "/" ? path === "/" : path.startsWith(n.href.replace(/\/$/, ""));
+              return (
+                <Link key={n.href} href={n.href} aria-current={here ? "page" : undefined}
+                  className={`flex items-center gap-1.5 whitespace-nowrap rounded-full px-3.5 py-1.5 text-sm font-semibold ${here ? "bg-[var(--brand)] text-white" : "text-[var(--brand-ink)] hover:bg-[var(--brand-soft)]"}`}>
+                  <Icon name={n.icon} size={16} />{t(n.key)}
+                </Link>
+              );
+            })}
+          </div>
+        </nav>
+      )}
       </div>
       {!online && <div className="bg-amber-500 px-4 py-2 text-center text-sm font-medium text-black"><Icon name="offline" size={16} className="mr-1 align-[-3px]" />{t("offline_banner")}</div>}
-      <main className={fit ? "flex flex-1 flex-col gap-3 p-3" : "space-y-4 p-4"}>
+      <main className={`${fit ? "flex flex-1 flex-col gap-3 p-3" : "space-y-4 p-4"} lg:mx-auto lg:w-full lg:px-8 lg:py-6 ${wide ? "lg:max-w-6xl" : "lg:max-w-3xl"}`}>
         {!ready ? <Loading /> : wrongRole ? (
           <Card>
             <p><Icon name="lock" size={16} className="mr-1 align-[-3px]" />{t("teacher_only")}</p>

@@ -11,6 +11,7 @@ import { tagLabel } from "@/lib/questions";
 import { paybackText } from "@/components/plan";
 import { aiAvailable, postAi } from "@/lib/ai";
 import { Pager, usePaged } from "@/components/pager";
+import { MODULE_COLOR, ModuleHero, Ring } from "@/components/modulehero";
 
 // National Career Service, Ministry of Labour & Employment, Government of India
 const NCS_URL = "https://www.ncs.gov.in/";
@@ -64,7 +65,13 @@ export default function CareersPage() {
       className={`flex-1 rounded-full px-3 py-2 text-sm font-semibold ${tab === id ? "bg-[var(--brand)] text-white" : "bg-[var(--bg)] ring-1 ring-black/10"}`}>{label}</button>
   );
   return (
-    <Shell title={t("home_careers")}>
+    <Shell title={t("home_careers")} wide>
+      <ModuleHero color={MODULE_COLOR.careers} item="compass"
+        line={top.length ? t("hero_careers", { n: top.length }) : t("hero_careers_none")}
+        stats={[
+          ...(top[0] ? [{ icon: "star", value: `${Math.round(top[0].score * 100)}%`, label: t("hero_stat_best") }] : []),
+          { icon: "compass", value: data?.careers?.length ?? 0, label: t("hero_stat_all") },
+        ]} />
       <div className="flex gap-2">
         {tabBtn("top", `${t("shortlist")}`)}
         {tabBtn("all", t("all_careers", { n: data?.careers?.length ?? 0 }))}
@@ -76,7 +83,7 @@ export default function CareersPage() {
         </div>
         <p className="text-xs text-[var(--muted)]">{(profile?.interests || []).map((x: string) => tagLabel(t, x)).join(", ")}</p>
         <p className="mt-1 text-xs font-medium text-[var(--brand-ink)]">{t("rm_tap_hint")}</p>
-        <ul className="mt-2 space-y-2">
+        <ul className="mt-2 space-y-2 lg:grid lg:grid-cols-2 lg:items-start lg:gap-3 lg:space-y-0">
           {top.map((s: any, i: number) => {
             const r = s.plan_id ? quick(s.plan_id) : null;
             return (
@@ -84,7 +91,7 @@ export default function CareersPage() {
                 className="cursor-pointer rounded-xl bg-[var(--bg)] p-3 ring-1 ring-transparent transition hover:ring-[var(--brand)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)] active:scale-[0.99]">
                 <div className="flex items-start justify-between gap-2">
                   <div><span className="mr-1 text-[var(--muted)]">{i + 1}.</span><b>{s.career.name}</b></div>
-                  <span className="text-xs text-[var(--muted)]">{Math.round(s.score * 100)}%</span>
+                  <Ring value={s.score} color={MODULE_COLOR.careers} size={38} />
                 </div>
                 <div className="mt-1 flex flex-wrap gap-1">
                   {flagBadges(s.career, t)}
@@ -123,9 +130,9 @@ export default function CareersPage() {
         <h2 className="text-lg font-bold">{t("all_careers", { n: all.length })}</h2>
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("careers_search_placeholder")} className="mt-2 w-full rounded-lg bg-[var(--bg)] p-2" />
         <div ref={pg.top} />
-        <ul className="mt-2 divide-y divide-black/5">
+        <ul className="mt-2 divide-y divide-black/5 lg:grid lg:grid-cols-2 lg:gap-x-6 lg:divide-y-0">
           {pg.pageItems.map((c: any) => (
-            <li key={c.id} {...cardProps(c.id)} className="cursor-pointer py-2 hover:bg-[var(--bg)]">
+            <li key={c.id} {...cardProps(c.id)} className="cursor-pointer py-2 hover:bg-[var(--bg)] lg:border-b lg:border-black/5">
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <div className="font-medium">{c.name}</div>

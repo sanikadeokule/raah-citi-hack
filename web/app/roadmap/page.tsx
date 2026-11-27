@@ -1,9 +1,10 @@
 "use client";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Icon } from "@/components/icon";
+import { Mascot } from "@/components/mascot";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Badge, Card, Shell, Source } from "@/components/ui";
 import { buildRoadmap, computePlan, inr, nearestCentres, rankCareers } from "@/lib/engine";
 import { coursesFor } from "@/lib/helpers";
@@ -41,6 +42,10 @@ function RoadmapView() {
   const profileClass = Math.min(13, Math.max(9, Math.trunc(Number(profile?.class) || 10)));
   const [cls, setCls] = useState<number | null>(null);
   const [tab, setTab] = useState<"road" | "other" | "start">("road");
+  // Maina cheers for a moment when the student makes this road theirs
+  const [cheer, setCheer] = useState(false);
+  const cheerTimer = useRef<number | undefined>(undefined);
+  useEffect(() => () => window.clearTimeout(cheerTimer.current), []);
   const startClass = cls ?? profileClass;
   const r = useMemo(() => (data && profile && careerId ? buildRoadmap(data, profile, careerId, startClass) : null),
     [data, profile, careerId, startClass]);
@@ -56,8 +61,17 @@ function RoadmapView() {
     const next = { ...profile, roadmap_career: careerId, roadmap_at: new Date().toISOString() };
     setProfile(next);
     queueAction("profile", next);
+    setCheer(true);
+    window.clearTimeout(cheerTimer.current);
+    cheerTimer.current = window.setTimeout(() => setCheer(false), 3200);
   };
   const tot = r.totals;
+  const MakeMine = ({ className = "" }: { className?: string }) => (
+    <button onClick={makeMine} disabled={isMine}
+      className={`w-full rounded-xl py-3 font-semibold ${isMine ? "bg-emerald-100 text-emerald-900" : "bg-[var(--brand)] text-white"} ${className}`}>
+      {isMine ? t("rm_saved") : t("rm_make_mine")}
+    </button>
+  );
   const classLabel = (c: number) => (c >= 13 ? t("rm_12_pass") : t("rm_class_n", { n: c }));
   const journey = r.stages.filter((s: any) => s.months > 0);
   const others = top.filter((s: any) => s.career.id !== careerId);
@@ -104,13 +118,15 @@ function RoadmapView() {
 
       {tab === "start" ? (
         <>
+          <div className="space-y-4 lg:grid lg:grid-cols-2 lg:items-start lg:gap-4 lg:space-y-0">
           <CentresCard centres={planResult ? planResult.centres : nearestCentres(data, profile, null, 3)} />
           <CoursesCard courses={coursesFor(data, r.career, plan)} />
           {planResult ? <ParentNote r={planResult} /> : r.available && <RoadmapParentNote r={r} />}
+          </div>
           {plan && <Link href={`/plan/?id=${plan.id}`} className="block text-center text-sm font-semibold text-[var(--brand-ink)] underline">{t("rm_full_plan")} ›</Link>}
         </>
       ) : tab === "other" && others.length > 0 ? (
-        <ul className="space-y-2">
+        <ul className="space-y-2 lg:grid lg:grid-cols-2 lg:items-start lg:gap-3 lg:space-y-0">
           {others.map((s: any) => {
             const mine = profile?.roadmap_career === s.career.id;
             return (
@@ -132,6 +148,8 @@ function RoadmapView() {
           })}
         </ul>
       ) : !r.available ? <Card>{t("rm_not_added")}</Card> : (<>
+        <div className="space-y-4 lg:grid lg:grid-cols-12 lg:items-start lg:gap-6 lg:space-y-0">
+        <div className="space-y-4 lg:sticky lg:top-32 lg:col-span-5">
         {/* the whole journey as one bar, each stage as wide as it is long */}
         {journey.length > 0 && (
           <Card>
@@ -179,8 +197,10 @@ function RoadmapView() {
           {tot.estimated_stages > 0 && <p className="mt-1"><Badge tone="amber"> {t("rm_estimates", { n: tot.estimated_stages })}</Badge></p>}
         </Card>
 
+        <MakeMine className="hidden lg:block" />
+        </div>
         {/* the road itself */}
-        <Card>
+        <Card className="lg:col-span-7">
           <ol className="relative">
             {r.stages.map((s: any, i: number) => {
               const k = KIND[s.kind] || KIND.course;
@@ -190,7 +210,15 @@ function RoadmapView() {
               return (
                 <li key={i} className="relative flex gap-3 pb-5 last:pb-0">
                   {!last && <span aria-hidden className="absolute left-[19px] top-10 bottom-0 w-1 rounded-full" style={{ background: `linear-gradient(${k.color}, ${KIND[r.stages[i + 1].kind]?.color})` }} />}
-                  <span className={`relative z-10 grid h-10 w-10 shrink-0 place-items-center rounded-full text-lg shadow ${s.now ? "ring-4 ring-amber-300" : ""}`} style={{ background: k.color }}><Icon name={k.icon} size={20} className="text-white" /></span>
+                  {s.now ? (
+                    // Maina stands on the road where the student is now
+                    <span className="relative z-10 h-10 w-10 shrink-0">
+                      <span aria-hidden className="absolute inset-x-1 bottom-0 h-2 rounded-full bg-amber-300/70" />
+                      <Mascot pose="wave" size={60} className="absolute -left-2.5 -top-5" />
+                    </span>
+                  ) : (
+                    <span className="relative z-10 grid h-10 w-10 shrink-0 place-items-center rounded-full text-lg shadow" style={{ background: k.color }}><Icon name={k.icon} size={20} className="text-white" /></span>
+                  )}
                   <div className="min-w-0 flex-1 rounded-xl bg-[var(--bg)] p-3">
                     <div className="flex flex-wrap items-center gap-1.5 text-xs text-[var(--muted)]">
                       {s.now && <span className="rounded-full bg-amber-300 px-2 py-0.5 font-bold text-black">{t("rm_you_are_here")}</span>}
@@ -239,17 +267,23 @@ function RoadmapView() {
               );
             })}
           </ol>
-          <div className="mt-3 rounded-xl bg-[var(--brand-soft)] p-3 text-center text-sm font-semibold text-[var(--brand-ink)]">{t("rm_finish", { y: year0 + Math.ceil(tot.months_to_job / 12) })}</div>
+          {/* the end of the road: Maina plants her flag */}
+          <Mascot pose="flag" size={68} className="mt-3">
+            <p className="text-sm font-semibold text-[var(--brand-ink)]">{t("rm_finish", { y: year0 + Math.ceil(tot.months_to_job / 12) })}</p>
+          </Mascot>
         </Card>
 
-        <button onClick={makeMine}
-          disabled={isMine}
-          className={`w-full rounded-xl py-3 font-semibold ${isMine ? "bg-emerald-100 text-emerald-900" : "bg-[var(--brand)] text-white"}`}>
-          {isMine ? `✓ ${t("rm_saved")}` : `${t("rm_make_mine")}`}
-        </button>
+        </div>
+        {/* below the road on a phone; under the money summary on a big screen */}
+        <MakeMine className="lg:hidden" />
 
       </>)}
       <p className="text-center text-xs text-[var(--muted)]">{t("rm_footer", { file: data.version.file })}</p>
+      {cheer && (
+        <div role="status" className="pointer-events-none fixed inset-x-0 bottom-8 z-50 flex justify-center px-4">
+          <Mascot pose="cheer" size={110} stack><p className="text-base font-bold">{t("rm_saved")}</p></Mascot>
+        </div>
+      )}
     </>
   );
 }
@@ -273,7 +307,7 @@ function Tile({ label, value, sub, tone, strong }: { label: string; value: strin
 export default function RoadmapPage() {
   const { t } = useApp();
   return (
-    <Shell title={t("rm_title")} back="/careers/">
+    <Shell title={t("rm_title")} back="/careers/" wide>
       <Suspense><RoadmapView /></Suspense>
     </Shell>
   );

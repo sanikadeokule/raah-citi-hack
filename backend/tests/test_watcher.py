@@ -122,3 +122,50 @@ def test_failed_first_read_is_not_a_baseline():
     assert watcher.check_exam(exam, down)["status"] == "error"
     res = watcher.check_exam(exam, lambda u: page("Registration last date 28 February 2030"))
     assert res["status"] == "baseline" and res["notified"] == 0
+
+
+def test_the_exam_date_agent_writes_per_student_messages_and_drops_invented_dates(monkeypatch):
+    import json
+    from raah import llm
+    exam = next(e for e in dataset.get()["exams"] if e.get("site"))
+    ha, hb = login("9700000031"), login("9700000032")
+    for h in (ha, hb):
+        c.put(f"/api/watch/interests/exam/{exam['id']}", headers=h)
+    base = page("Registration open")
+    watcher.check_exam(exam, lambda u: base)
+    answers = iter([{"urgent": True, "message": "Registration closes on 28 February 2027, apply soon."},
+                    {"urgent": False, "message": "Registration closes on 5 March 2027."}])  # a date the site never published
+
+    def fake_chat(messages, **kw):
+        return json.dumps(next(answers)), "test"
+    monkeypatch.setattr(llm, "chat", fake_chat)
+    res = watcher.check_exam(exam, lambda u: page("Registration open", "Last date to apply: 28 February 2027"))
+    assert res["notified"] == 2 and res["agent"]["mode"] == "model"
+    assert any("dropped" in t and not t.startswith("verify: 2 kept, 0") for t in res["agent"]["trace"])
+    bodies = {json.dumps(n["body"]) for h in (ha, hb) for n in c.get("/api/auth/notifications", headers=h).json()[:1]}
+    assert any("apply soon" in b for b in bodies)
+    assert not any("5 March" in b for b in bodies), "an invented date never reaches a student"
+
+
+def test_exam_alert_graph_uses_saved_language_in_model_prompt(monkeypatch):
+    import json
+    from raah import db, llm, watch_graph
+
+    h = login("9700000091")
+    uid = c.get("/api/auth/me", headers=h).json()["id"]
+    with db.connect() as con:
+        con.execute("INSERT INTO profiles (user_id, data, updated_at) VALUES (?, ?, 0)",
+                    (uid, json.dumps({"language": "bn"})))
+    prompts = []
+
+    def fake_chat(messages, **kwargs):
+        prompts.append(messages[-1]["content"])
+        return json.dumps({"urgent": False, "message": "Registration is open."}), "test"
+
+    monkeypatch.setattr(llm, "chat", fake_chat)
+    monkeypatch.setattr(watch_graph, "notify", lambda *args: None)
+    monkeypatch.setattr("raah.today.log_activity", lambda *args: None)
+    out = watch_graph.run({"id": "EX01", "name": "Exam", "site": "https://example.org"},
+                          ["Registration is open."], [uid])
+    assert out["mode"] == "model"
+    assert "in Bengali" in prompts[0]
