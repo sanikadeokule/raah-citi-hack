@@ -199,9 +199,9 @@ def run(body: AskBody, user_id: int | None = None) -> Iterator[dict]:
              if m.get("role") in ("user", "assistant")]
     msgs.append({"role": "user", "content": body.question})
 
-    from . import ask_graph
+    from . import raah_graph
     out = None
-    for ev in ask_graph.run(body, profile, user_id, signed_in, msgs, specs):
+    for ev in raah_graph.stream("ask", body=body, profile=profile, user_id=user_id, signed_in=signed_in, msgs=msgs, specs=specs):
         if ev["type"] == "_out":
             out = ev["out"]
         else:

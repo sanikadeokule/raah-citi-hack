@@ -113,8 +113,8 @@ def _step(key: str, href: str, vars: dict | None = None, source: str = "", looke
 def today(user: dict = Depends(current_user)):
     """Today's step for the signed-in student, decided with the agent's tools. Logged once a day per step."""
     try:
-        from . import graph
-        step = graph.run_today(user["id"])
+        from . import raah_graph
+        step = raah_graph.run("today", user_id=user["id"])
     except Exception:  # the graph must never take Today's step down: the rule is always there
         step = decide(user["id"])
     day = datetime.now(timezone.utc).strftime("%Y-%m-%d")
@@ -143,7 +143,8 @@ def graphs():
     from . import chain_graph, graph
     from langgraph.checkpoint.memory import InMemorySaver
     from . import ask_graph, watch_graph
-    return {"today": graph.build().get_graph().draw_mermaid(),
+    from . import raah_graph
+    return {"all": raah_graph.diagram(), "today": graph.build().get_graph().draw_mermaid(),
             "application": chain_graph.build(InMemorySaver()).get_graph().draw_mermaid(),
             "ask": ask_graph.build().get_graph().draw_mermaid(),
             "exam_alert": watch_graph.build().get_graph().draw_mermaid()}

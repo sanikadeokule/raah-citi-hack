@@ -138,8 +138,8 @@ def check_exam(exam: dict, fetch=fetch_page) -> dict:
     if not new_dated or not users:
         return {"exam": exam["id"], "status": "unchanged", "notified": 0}
     try:  # the exam date agent decides what each student hears; the plain broadcast is the safety net
-        from . import watch_graph
-        res = watch_graph.run(exam, new_dated, users)
+        from . import raah_graph
+        res = raah_graph.run("alert", exam=exam, lines=new_dated, user_ids=users)
         return {"exam": exam["id"], "status": "changed", "notified": res["notified"], "new_lines": new_dated[:5], "agent": res}
     except Exception:
         notify(users, "exam_update", {"exam_id": exam["id"], "exam_name": exam["name"], "site": exam["site"],
