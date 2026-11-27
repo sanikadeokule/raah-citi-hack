@@ -5,6 +5,15 @@
 import en from "@/locales/en.json";
 import hi from "@/locales/hi.json";
 import mr from "@/locales/mr.json";
+import ta from "@/locales/ta.json";
+import bn from "@/locales/bn.json";
+import te from "@/locales/te.json";
+import gu from "@/locales/gu.json";
+import kn from "@/locales/kn.json";
+import ml from "@/locales/ml.json";
+import pa from "@/locales/pa.json";
+import or from "@/locales/or.json";
+import as from "@/locales/as.json";
 import { computePlan, eligibility, rankCareers } from "@/lib/engine";
 import { tradeMatches } from "@/lib/listings";
 
@@ -43,10 +52,10 @@ const SAYS: Record<string, string | string[]> = {
   hindi: "languages", marathi: "languages", electric: "electrical", wiring: "electrical", wood: "wood", carpenter: "wood", welding: "metal",
 };
 
-const LOCALES: Record<string, Record<string, string>> = { en, hi, mr };
+const LOCALES: Record<string, Record<string, string>> = { en, hi, mr, ta, bn, te, gu, kn, ml, pa, or, as };
 const norm = (s: string) => s.toLowerCase().replace(/[.,!?;:()]/g, " ").replace(/\bhouse hold\b/g, "household").replace(/\s+/g, " ").trim();
 
-/** Tags a typed or spoken answer mentions: the tag in any of the three languages, or a common word for it. */
+/** Tags a typed or spoken answer mentions: a localized tag or a common word for it. */
 export function extractTags(raw: string, allTags: string[]): string[] {
   const text = ` ${norm(raw)} `;
   if (!text.trim()) return [];

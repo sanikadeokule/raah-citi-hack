@@ -8,11 +8,19 @@ import en from "@/locales/en.json";
 import mr from "@/locales/mr.json";
 import hi from "@/locales/hi.json";
 import ta from "@/locales/ta.json";
+import bn from "@/locales/bn.json";
+import te from "@/locales/te.json";
+import gu from "@/locales/gu.json";
+import kn from "@/locales/kn.json";
+import ml from "@/locales/ml.json";
+import pa from "@/locales/pa.json";
+import or from "@/locales/or.json";
+import as from "@/locales/as.json";
 import { normalizeLanguage, SELECTABLE_LANGUAGES } from "./languages";
 import { db, enqueue, getKV, setKV } from "./db";
 
 export const API = process.env.NEXT_PUBLIC_API_BASE || "";
-const LOCALES: Record<string, Record<string, string>> = { en, mr, hi, ta };
+const LOCALES: Record<string, Record<string, string>> = { en, mr, hi, ta, bn, te, gu, kn, ml, pa, or, as };
 const SHORT_LABELS: Record<string, string> = { mr: "मरा", hi: "हिं", en: "Eng" };
 const DISPLAY_ORDER = ["mr", "hi", "en"];
 export const LANGS = SELECTABLE_LANGUAGES.map((language) => ({

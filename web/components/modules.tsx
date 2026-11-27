@@ -158,7 +158,7 @@ const blankQ = () => ({ q: "", options: ["", ""], answer: 0 });
 export function ModuleBuilder({ onSaved }: { onSaved: () => void }) {
   const { t, authFetch, lang, showToast } = useApp();
   const [title, setTitle] = useState("");
-  const [mlang, setMlang] = useState(lang);
+  const [mlang, setMlang] = useState(["en", "hi", "mr"].includes(lang) ? lang : "en");
   const [lesson, setLesson] = useState("");
   const [quiz, setQuiz] = useState([blankQ()]);
   const [priceModel, setPriceModel] = useState<"free" | "per_module" | "subscription">("free");

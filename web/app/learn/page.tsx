@@ -37,7 +37,7 @@ export default function Learn() {
   const [voice, setVoice] = useState(false);
   const [saved, setSaved] = useState<Record<string, boolean>>({});
   const [saving, setSaving] = useState(false);
-  useEffect(() => { voiceAvailable().then(setVoice); }, []);
+  useEffect(() => { voiceAvailable(lang).then(setVoice); }, [lang]);
   useEffect(() => {
     Promise.all(ls.map(async (l) => [l.id, Boolean(await cachedAudio(lang, l.text))] as const)).then((e) => setSaved(Object.fromEntries(e)));
   }, [ls, lang]);

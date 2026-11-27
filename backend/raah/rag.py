@@ -28,6 +28,7 @@ import json
 import math
 import os
 import re
+import unicodedata
 import threading
 import time
 import uuid
@@ -65,15 +66,16 @@ SUMMARY_COLS = ("Amount", "Income limit", "Category", "Class / course", "Stipend
                 "Application fee (Open / General)", "Usual timing", "Fee", "Duration / level", "Value", "Unit",
                 "Revised minimum (per month, from 11 Sep 2025)", "Can help with")
 
-_TOKEN = re.compile(r"[\wऀ-ॿ]+")  # keep Devanagari vowel signs inside words
+_TOKEN = re.compile(r"[\wऀ-ൿ]+")  # keep Indic vowel signs inside words
 _NUM = re.compile(r"\d[\d,]*(?:\.\d+)?")
-_DEVANAGARI_DIGITS = str.maketrans("०१२३४५६७८९", "0123456789")
+def _ascii_digits(text: str) -> str:
+    return "".join(str(unicodedata.decimal(ch)) if ch.isdecimal() else ch for ch in text)
 _STOP = {"the", "a", "an", "of", "for", "to", "in", "on", "and", "or", "is", "are", "be", "can", "i", "me", "my",
          "what", "which", "who", "how", "do", "does", "with", "per", "any", "there", "it", "this", "that", "get"}
 
 
 def tokens(text: str) -> list[str]:
-    return [t for t in _TOKEN.findall((text or "").lower().translate(_DEVANAGARI_DIGITS)) if t not in _STOP]
+    return [t for t in _TOKEN.findall(_ascii_digits((text or "").lower())) if t not in _STOP]
 
 
 def _cell(v) -> str:
@@ -393,7 +395,7 @@ MSG = {
 
 
 def _digits(text: str) -> set[str]:
-    text = re.sub(r"\[\d+\]", " ", (text or "").translate(_DEVANAGARI_DIGITS))
+    text = re.sub(r"\[\d+\]", " ", _ascii_digits(text or ""))
     return {n.replace(",", "").rstrip(".") for n in _NUM.findall(text)}
 
 
@@ -452,6 +454,25 @@ GLOSSARY = {
     "कोर्स": "course", "अभ्यासक्रम": "course", "पाठ्यक्रम": "course", "केंद्र": "centre", "पुणे": "Pune",
     "अपंग": "disability", "दिव्यांग": "disability", "मोफत": "free", "मुफ्त": "free",
 }
+GLOSSARY.update({
+    "বৃত্তি": "scholarship", "স্কলারশিপ": "scholarship", "কলেজ": "college", "মহাবিদ্যালয়": "college",
+    "চাকরি": "job", "পৰীক্ষা": "exam", "পরীক্ষা": "exam", "খরচ": "cost fees", "খৰচ": "cost fees",
+    "ছাত্রবৃত্তি": "scholarship", "বৃত্ত": "scholarship", "নথি": "documents", "পাঠ্যক্ৰম": "course",
+    "உதவித்தொகை": "scholarship", "கல்லூரி": "college", "வேலை": "job", "தேர்வு": "exam",
+    "கட்டண": "fees", "செலவு": "cost", "விடுதி": "hostel", "படிப்பு": "course",
+    "ఉపకార": "scholarship", "కళాశాల": "college", "ఉద్యోగ": "job", "పరీక్ష": "exam",
+    "రుసుము": "fees", "ఖర్చు": "cost", "వసతి": "hostel", "కోర్సు": "course",
+    "શિષ્યવૃત્તિ": "scholarship", "કોલેજ": "college", "નોકરી": "job", "પરીક્ષા": "exam",
+    "ફી": "fees", "ખર્ચ": "cost", "છાત્રાલય": "hostel", "અભ્યાસક્રમ": "course",
+    "ವಿದ್ಯಾರ್ಥಿವೇತನ": "scholarship", "ಕಾಲೇಜು": "college", "ಉದ್ಯೋಗ": "job", "ಪರೀಕ್ಷೆ": "exam",
+    "ಶುಲ್ಕ": "fees", "ವೆಚ್ಚ": "cost", "ವಸತಿ": "hostel", "ಕೋರ್ಸ್": "course",
+    "സ്കോളർഷിപ്പ്": "scholarship", "കോളേജ്": "college", "ജോലി": "job", "പരീക്ഷ": "exam",
+    "ഫീസ്": "fees", "ചെലവ്": "cost", "ഹോസ്റ്റൽ": "hostel", "കോഴ്‌സ്": "course",
+    "ਵਜ਼ੀਫ਼": "scholarship", "ਕਾਲਜ": "college", "ਨੌਕਰੀ": "job", "ਪ੍ਰੀਖਿਆ": "exam",
+    "ਫ਼ੀਸ": "fees", "ਖਰਚ": "cost", "ਹੋਸਟਲ": "hostel", "ਕੋਰਸ": "course",
+    "ଛାତ୍ରବୃତ୍ତି": "scholarship", "କଲେଜ": "college", "ଚାକିରି": "job", "ପରୀକ୍ଷା": "exam",
+    "ଫିସ": "fees", "ଖର୍ଚ୍ଚ": "cost", "ହଷ୍ଟେଲ": "hostel", "ପାଠ୍ୟକ୍ରମ": "course",
+})
 
 
 def glossary_keywords(question: str) -> str:
@@ -460,9 +481,9 @@ def glossary_keywords(question: str) -> str:
 
 
 def english_keywords(question: str) -> str:
-    """For a Marathi/Hindi question, English search words for the BM25 half (the index text is English):
+    """For a question in another script, English search words for the BM25 half (the index text is English):
     the glossary always, plus an LLM rewrite when a model answers."""
-    if not re.search(r"[ऀ-ॿ]", question):
+    if not any(ord(ch) > 127 and unicodedata.category(ch).startswith("L") for ch in question):
         return ""
     gloss = glossary_keywords(question)
     try:
@@ -492,7 +513,7 @@ def answer(body: AskIn) -> dict:
     retrieval = {"method": res["method"], "store": res["store"], "model": res["model"], "keywords": kw or None,
                  "hits": [{"id": idx.chunks[i]["id"], "score": s} for i, s in res["hits"]]}
     if not chunks:
-        return {"answer": MSG["not_found"][lang], "citations": [], "fallback": False, "grounded": True,
+        return {"answer": MSG["not_found"].get(lang, MSG["not_found"]["en"]), "citations": [], "fallback": False, "grounded": True,
                 "found": False, "provider": None, "retrieval": retrieval}
 
     sources = _source_block(chunks)

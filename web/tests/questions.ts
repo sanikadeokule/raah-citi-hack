@@ -1,10 +1,14 @@
 // Usage: npx tsx tests/questions.ts  -> exits non-zero if a Discover answer check is wrong (also run by backend/tests/test_questions.py)
 import assert from "node:assert/strict";
-import { ageFitsClass, cleanPlace, examsFor, firstMissing, parseAge, parseKm, parseMarks, QUESTIONS } from "../lib/questions";
+import { ageFitsClass, asciiDigits, cleanPlace, examsFor, firstMissing, parseAge, parseKm, parseMarks, QUESTIONS } from "../lib/questions";
 import { SELECTABLE_LANGUAGES } from "../lib/languages";
 
 const ok = (r: any) => (assert.ok(r.ok, JSON.stringify(r)), r);
 const err = (r: any, e: string) => (assert.ok(!r.ok && r.error === e, JSON.stringify(r)), r);
+
+for (const digits of ["०१२३४५६७८९", "০১২৩৪৫৬৭৮৯", "௦௧௨௩௪௫௬௭௮௯", "౦౧౨౩౪౫౬౭౮౯", "૦૧૨૩૪૫૬૭૮૯", "೦೧೨೩೪೫೬೭೮೯", "൦൧൨൩൪൫൬൭൮൯", "੦੧੨੩੪੫੬੭੮੯", "୦୧୨୩୪୫୬୭୮୯"]) {
+  assert.equal(asciiDigits(digits), "0123456789");
+}
 
 assert.equal(ok(parseMarks("412/500")).value, 82.4);
 assert.deepEqual(ok(parseMarks("412 out of 500")).extra, { marks_obtained: 412, marks_total: 500 });

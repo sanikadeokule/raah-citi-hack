@@ -48,8 +48,8 @@ export function Shell({ title, back = "/", role = "any", publicPage = false, fit
             className="grid h-8 w-8 place-items-center rounded-full bg-white/15 active:scale-90"><Icon name="bell" size={18} /></Link>
         )}
         <select aria-label={t("language_select")} value={lang} onChange={(e) => setLang(e.target.value)}
-          className="h-8 rounded-full bg-white/15 px-2 text-sm font-semibold">
-          {LANGS.map((l) => <option key={l.code} value={l.code} title={l.label} className="text-black">{l.short}</option>)}
+          className="h-8 max-w-24 rounded-full bg-white/15 px-2 text-sm font-semibold">
+          {LANGS.map((l) => <option key={l.code} value={l.code} title={l.label} className="text-black">{l.label}</option>)}
         </select>
         <ProfileMenu />
       </header>
@@ -230,7 +230,7 @@ export function MicButton({ onText }: { onText: (s: string, detectedLang?: strin
     const problem = micProblem();
     if (problem === "insecure") return tell("insecure");
     const SR: any = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    const status = await voiceStatus();
+    const status = await voiceStatus(lang);
     if (status.asr && !problem && typeof MediaRecorder !== "undefined") {
       try {
         rec.current = await startRecording();
