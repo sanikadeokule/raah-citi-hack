@@ -87,15 +87,28 @@ export default function Learn() {
         line={doneCount ? t("hero_learn", { d: doneCount, n: all.length }) : t("hero_learn_start")}>
         <HeroBar value={doneCount} max={all.length} label={t("hero_learn_bar", { d: doneCount, n: all.length })} />
       </ModuleHero>
-      <Tabs value={tab} onChange={setTab} tabs={[
+      {/* on a laptop, lessons and free courses sit side by side with nothing to switch; a phone still taps between tabs */}
+      <Tabs value={tab} onChange={setTab} className="xl:hidden" tabs={[
         { key: "lessons", label: `${t("learn_tab_lessons")}`, count: ls.length },
         { key: "courses", label: `${t("learn_tab_courses")}` },
         { key: "modules", label: `${t("learn_tab_modules")}` },
         { key: "quiz", label: `${t("quiz")}`, count: qs.length },
       ]} />
+      <div className="hidden gap-2 xl:flex">
+        {(["modules", "quiz"] as const).map((k) => (
+          <button key={k} onClick={() => setTab(k)} aria-pressed={tab === k}
+            className={`rounded-full px-3.5 py-1.5 text-sm font-semibold ${tab === k ? "bg-[var(--brand)] text-white" : "bg-[var(--bg)] ring-1 ring-black/10"}`}>
+            {k === "modules" ? t("learn_tab_modules") : `${t("quiz")} (${qs.length})`}
+          </button>
+        ))}
+      </div>
 
-      {/* one topic drives both the lessons and the quiz built from them */}
-      {tab !== "modules" && tab !== "courses" && (
+      {tab === "modules" && <StudentModules emptyText={t("learn_no_modules")} />}
+
+      {/* lessons and free courses: two tabs on a phone, two columns side by side on a laptop so nothing has to switch */}
+      {(tab === "lessons" || tab === "courses") && (
+      <div className="xl:grid xl:grid-cols-2 xl:items-start xl:gap-4">
+      <div className={tab === "courses" ? "hidden xl:block" : ""}>
         <label className="block text-sm font-medium">
           {t("lesson_topic")}
           <select value={topic} onChange={(e) => pickTopic(e.target.value)}
@@ -105,13 +118,9 @@ export default function Learn() {
           </select>
           {topic === FOR_YOU && <span className="mt-1 block text-xs font-normal text-[var(--muted)]">{t("lesson_for_you_note")}</span>}
         </label>
-      )}
-
-      {tab === "courses" && <FreeCourses />}
-
-      {tab === "modules" && <StudentModules emptyText={t("learn_no_modules")} />}
-
-      {tab === "lessons" && <Card>
+      </div>
+      <div className={tab === "courses" ? "" : "hidden xl:block"}><FreeCourses /></div>
+      <div className={`mt-3 xl:col-start-1 xl:mt-0 ${tab === "courses" ? "hidden xl:block" : ""}`}><Card>
         {voice ? (
           <button onClick={saveAll} disabled={saving || savedCount === ls.length}
             className="mb-3 w-full rounded-lg bg-[var(--brand-soft)] py-2 text-sm font-semibold text-[var(--brand-ink)] disabled:opacity-60">
@@ -138,7 +147,9 @@ export default function Learn() {
             </li>
           ))}
         </ul>
-      </Card>}
+      </Card></div>
+      </div>
+      )}
 
       {tab === "quiz" && <Card>
         <ol className="space-y-3">
