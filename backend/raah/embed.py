@@ -114,6 +114,37 @@ def all_tags(d: dict) -> list[str]:
     return sorted({t for c in d["careers"] for t in c["tags"]})
 
 
+FULL_SCORE = float(os.environ.get("EMBED_FULL_SCORE", "0.75"))  # cosine at or above this counts as a full match
+_career_cache: dict[tuple, list[list[float]]] = {}
+
+
+def career_doc(c: dict) -> str:
+    """What a career 'means': its name, its tags and how you get there (all from the spreadsheet)."""
+    return f"{c['name']}. {'; '.join(c.get('tags') or [])}. {c.get('entry_path') or ''}".strip()
+
+
+def career_scores(text: str, careers: list[dict]) -> dict:
+    """How close the student's words are in meaning to each career, 0 to 1 (0 at EMBED_MIN_SCORE, 1 at EMBED_FULL_SCORE).
+    Empty scores when no embedding model is reachable or nothing is close, so callers fall back to keywords."""
+    text = text.strip()
+    if not text or not careers:
+        return {"method": "none", "scores": {}}
+    try:
+        (q,), model = embed([text], "query")
+        docs = [career_doc(c) for c in careers]
+        key = (model, tuple(docs))
+        if key not in _career_cache:
+            _career_cache[key] = embed(docs, "passage")[0]
+    except EmbedUnavailable:
+        return {"method": "keyword", "scores": {}}
+    cos = [_cos(q, v) for v in _career_cache[key]]
+    if max(cos) < MIN_SCORE:
+        return {"method": "embedding", "model": model, "scores": {}}
+    span = max(FULL_SCORE - MIN_SCORE, 0.05)
+    return {"method": "embedding", "model": model,
+            "scores": {c["id"]: round(min(1.0, max(0.0, (x - MIN_SCORE) / span)), 3) for c, x in zip(careers, cos)}}
+
+
 class MatchIn(BaseModel):
     text: str = Field(..., max_length=500)
 
@@ -121,3 +152,9 @@ class MatchIn(BaseModel):
 @router.post("/match")
 def match_endpoint(body: MatchIn):
     return match(body.text, all_tags(dataset.get()))
+
+
+@router.post("/careers")
+def careers_endpoint(body: MatchIn):
+    """Semantic closeness of the text to every career (used with the keyword match, 30% keyword + 70% meaning)."""
+    return career_scores(body.text, dataset.get()["careers"])

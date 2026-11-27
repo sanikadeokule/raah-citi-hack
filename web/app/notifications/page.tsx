@@ -43,7 +43,7 @@ function notifTitle(n: any, t: (k: string, p?: any) => string): string {
 }
 
 function NotifCard({ n, onRead, t }: { n: any; onRead: (id: number) => void; t: (k: string, p?: any) => string }) {
-  const meta = KIND_META[n.kind] ?? { icon: "bell", color: "bg-[var(--bg)] border-[var(--muted)]" };
+  const meta = KIND_META[n.kind] ?? { icon: "bell", color: "bg-(--bg) border-(--muted)" };
   const date = new Date(n.created_at * 1000).toLocaleDateString(undefined, { day: "numeric", month: "short" });
   const href = notifLink(n);
   const title = notifTitle(n, t);
@@ -55,16 +55,16 @@ function NotifCard({ n, onRead, t }: { n: any; onRead: (id: number) => void; t: 
         onClick={() => !n.read && onRead(n.id)}
         className="flex min-w-0 flex-1 items-start gap-3 py-3 pl-4"
       >
-        <Icon name={meta.icon} size={24} className="mt-0.5 text-[var(--brand)]" />
+        <Icon name={meta.icon} size={24} className="mt-0.5 text-(--brand)" />
         <div className="min-w-0 flex-1">
           <p className={`text-sm leading-snug ${n.read ? "" : "font-semibold"}`}>{title}</p>
-          {n.body && <p className="mt-0.5 text-xs text-[var(--muted)] line-clamp-2">{n.body}</p>}
+          {n.body && <p className="mt-0.5 text-xs text-(--muted) line-clamp-2">{n.body}</p>}
           <div className="mt-1 flex items-center gap-2">
-            {n.from && <span className="text-[11px] text-[var(--muted)]">{n.from}</span>}
-            <span className="text-[11px] text-[var(--muted)]">{date}</span>
+            {n.from && <span className="text-[11px] text-(--muted)">{n.from}</span>}
+            <span className="text-[11px] text-(--muted)">{date}</span>
           </div>
         </div>
-        {!n.read && <span className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full bg-[var(--brand)]" aria-label={t("notif_unread")} />}
+        {!n.read && <span className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full bg-(--brand)" aria-label={t("notif_unread")} />}
       </Link>
       {/* outside the link, so reading it aloud does not open it */}
       <div className="shrink-0 py-2 pr-2"><SpeakButton text={n.body ? `${title}. ${n.body}` : title} label="" /></div>
@@ -127,8 +127,8 @@ export default function NotificationsPage() {
     return (
       <Shell title={t("notif_title")}>
         <Card className="text-center py-8">
-          <Icon name="bell" size={40} className="mb-2 text-[var(--muted)]" />
-          <p className="text-sm text-[var(--muted)]">{t("notif_login")}</p>
+          <Icon name="bell" size={40} className="mb-2 text-(--muted)" />
+          <p className="text-sm text-(--muted)">{t("notif_login")}</p>
         </Card>
       </Shell>
     );
@@ -162,13 +162,13 @@ function NotificationsView({ tab, setTab, unread, read, items, loading, markAllR
 
       {tab === "for_you" && (<>
         {loading && items.length === 0 && (
-          <p className="text-sm text-[var(--muted)] animate-pulse px-1">{t("loading")}</p>
+          <p className="text-sm text-(--muted) animate-pulse px-1">{t("loading")}</p>
         )}
 
         {!loading && items.length === 0 && (
           <Card className="text-center py-10 space-y-2">
-            <Icon name="bell" size={40} className="text-[var(--muted)]" />
-            <p className="text-sm text-[var(--muted)]">{t("notices_empty_for_you")}</p>
+            <Icon name="bell" size={40} className="text-(--muted)" />
+            <p className="text-sm text-(--muted)">{t("notices_empty_for_you")}</p>
           </Card>
         )}
 
@@ -176,10 +176,10 @@ function NotificationsView({ tab, setTab, unread, read, items, loading, markAllR
         {pageUnread.length > 0 && (
           <div className="space-y-2">
             <div className="flex items-center justify-between px-1">
-              <p className="text-xs font-semibold text-[var(--muted)] uppercase tracking-wide">
+              <p className="text-xs font-semibold text-(--muted) uppercase tracking-wide">
                 {t("notif_new")} · {unread.length}
               </p>
-              <button onClick={markAllRead} className="text-xs font-semibold text-[var(--brand)]">
+              <button onClick={markAllRead} className="text-xs font-semibold text-(--brand)">
                 {t("notif_mark_all_read")}
               </button>
             </div>
@@ -189,7 +189,7 @@ function NotificationsView({ tab, setTab, unread, read, items, loading, markAllR
 
         {pageRead.length > 0 && (
           <div className="space-y-2">
-            <p className="px-1 text-xs font-semibold text-[var(--muted)] uppercase tracking-wide">{t("notif_earlier")}</p>
+            <p className="px-1 text-xs font-semibold text-(--muted) uppercase tracking-wide">{t("notif_earlier")}</p>
             <ul className="space-y-2">{pageRead.map(renderItem)}</ul>
           </div>
         )}
@@ -198,11 +198,11 @@ function NotificationsView({ tab, setTab, unread, read, items, loading, markAllR
       </>)}
 
       {tab !== "for_you" && (<>
-        {!list.loaded && <p className="text-sm text-[var(--muted)] animate-pulse px-1">{t("loading")}</p>}
+        {!list.loaded && <p className="text-sm text-(--muted) animate-pulse px-1">{t("loading")}</p>}
         {list.loaded && list.items.length === 0 && (
           <Card className="text-center py-10 space-y-2">
-            <Icon name={tab === "deadlines" ? "calendar" : "doc"} size={40} className="text-[var(--muted)]" />
-            <p className="text-sm text-[var(--muted)]">{t(tab === "deadlines" ? "notices_empty_deadlines" : "notices_empty_all")}</p>
+            <Icon name={tab === "deadlines" ? "calendar" : "doc"} size={40} className="text-(--muted)" />
+            <p className="text-sm text-(--muted)">{t(tab === "deadlines" ? "notices_empty_deadlines" : "notices_empty_all")}</p>
           </Card>
         )}
         <div ref={pg.top} />

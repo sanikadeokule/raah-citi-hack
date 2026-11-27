@@ -4,7 +4,8 @@
 // The three "basics" lessons below are built here because they quote live figures;
 // every other lesson, topic and quiz question comes from the Lessons and
 // Lesson_Topics sheets, so adding a lesson is an Excel edit.
-import { inr, rankCareers } from "./engine";
+import { inr } from "./engine";
+import { rankFor, studentGaps, type Ranked } from "./gaps";
 
 export interface QuizItem { q: string; options: string[]; answer: number }
 export interface Lesson { id: string; topic: string; title: string; text: string; quiz: QuizItem | null; career_ids: string[]; tags: string[] }
@@ -95,23 +96,18 @@ export function lessonTopics(d: any, lang: string, all: Lesson[]) {
 }
 
 /**
- * Lessons about the student's own careers: the top careers from the same ranking the Careers screen
- * uses, plus general lessons whose interest tags the student picked. Empty when we know nothing about them.
+ * Lessons that fit the student: lessons about her saved career (else her best matches) first, then lessons on the skills that
+ * career needs and she has not covered (lib/gaps.ts), then lessons on what she enjoys. Finished lessons go after unfinished ones
+ * of the same fit. Empty when we know nothing about her.
  */
-export function forYou(d: any, profile: any, all: Lesson[]): Lesson[] {
-  if (!profile || !(profile.interests || []).length) return [];
-  const top: string[] = rankCareers(d, profile, 5).filter((s: any) => s.fit !== "none").map((s: any) => s.career.id);
-  const said = new Set((profile.interests || []).map((i: any) => String(i).trim().toLowerCase()));
-  const rank = (l: Lesson) => {
-    const byCareer = l.career_ids.map((c) => top.indexOf(c)).filter((i) => i >= 0);
-    const byTag = l.tags.some((t) => said.has(t.toLowerCase()));
-    if (!byCareer.length && !byTag) return null;
-    // a lesson about one of their careers first, in ranking order; then general lessons on what they enjoy
-    return l.career_ids.length === 1 && byCareer.length ? byCareer[0] : 10 + (byCareer.length ? Math.min(...byCareer) : 5);
-  };
-  return all.map((l) => ({ l, r: rank(l) })).filter((x) => x.r !== null)
-    .sort((a, b) => (a.r as number) - (b.r as number)).map((x) => x.l);
+export function forYouRanked(d: any, profile: any, all: Lesson[], done: string[] = []): Ranked<Lesson>[] {
+  if (!profile || !((profile.interests || []).length || profile.roadmap_career)) return [];
+  const finished = new Set(done);
+  const doneTags = all.filter((l) => finished.has(l.id)).flatMap((l) => l.tags);
+  const g = studentGaps(d, profile, doneTags);
+  return rankFor(all, g, (l) => (finished.has(l.id) ? -0.5 : 0));
 }
+export const forYou = (d: any, profile: any, all: Lesson[], done: string[] = []): Lesson[] => forYouRanked(d, profile, all, done).map((x) => x.item);
 
 /** Up to five easy questions from the lessons on screen. */
 export function quiz(ls: Lesson[], n = 5): QuizItem[] {

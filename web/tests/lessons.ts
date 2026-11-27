@@ -2,7 +2,8 @@
 // (run by backend/tests/test_lessons.py with the parsed spreadsheet)
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { forYou, lessonTopics, lessons, quiz } from "../lib/lessons";
+import { forYou, forYouRanked, lessonTopics, lessons, quiz } from "../lib/lessons";
+import { rankFor, studentGaps } from "../lib/gaps";
 
 const d = JSON.parse(readFileSync(process.argv[2], "utf8"));
 const en = lessons(d, "en");
@@ -41,3 +42,27 @@ assert.ok(/[ऀ-ॿ]/.test(mr.find((l) => l.id === "CAR10")!.title));
 assert.ok(/[ऀ-ॿ]/.test(lessons(d, "hi").find((l) => l.id === "G01")!.quiz!.q));
 assert.ok(/[ऀ-ॿ]/.test(lessonTopics(d, "mr", mr)[1].name));
 console.log("ok", en.length, "lessons");
+
+// courses and lessons for a student's gaps (lib/gaps.ts): career first, then gaps, then what she enjoys, each with a reason
+{
+  const stu = { ...base, interests: ["electrical"], roadmap_career: "CAR36", ikigai: { good_at: ["hands-on"] } };
+  const g = studentGaps(d, stu);
+  assert.equal(g.careerId, "CAR36");
+  assert.ok(!g.gap.includes("hands-on") || !(d.careers.find((c: any) => c.id === "CAR36").tags.includes("hands-on")), "what she is good at is not a gap");
+  const picks = rankFor<any>(d.courses, g);
+  assert.ok(picks.length > 0 && picks.every((p) => p.reason.kind), "every pick has a reason");
+  assert.ok(["CRS02", "CRS26"].includes(picks[0].item.id), `solar course first for a solar career: ${picks[0].item.id}`);
+  assert.equal(picks[0].reason.kind, "first");
+  // a course that serves no career of hers but builds a gap skill comes next
+  assert.ok(picks.some((p) => p.reason.kind === "gap"), "a gap course shows up");
+  // a finished lesson goes after unfinished ones of the same fit
+  const ranked = forYouRanked(d, stu, en);
+  const kind0 = ranked[0].reason.kind;
+  const same = ranked.filter((x) => x.reason.kind === kind0 && x.score >= ranked[0].score - 0.01);
+  if (same.length > 1) {
+    const after = forYouRanked(d, stu, en, [ranked[0].item.id]);
+    assert.ok(after.findIndex((x) => x.item.id === ranked[0].item.id) > 0, "a finished lesson moves down");
+  }
+  // no career and no interests: nothing is picked for her
+  assert.equal(rankFor<any>(d.courses, studentGaps(d, { ...base, interests: [] })).length, 0);
+}

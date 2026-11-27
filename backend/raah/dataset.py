@@ -382,7 +382,8 @@ def load(path: Path = DATASET_PATH) -> dict:
         courses.append({"id": r.get("ID"), "platform": r.get("Platform"), "title": r.get("Course"),
                         "provider": r.get("Provider"), "language": r.get("Language"), "fee_text": fee_text,
                         "fee": fee, "duration": r.get("Duration / level"), "career_text": r.get("Linked career"),
-                        "source": r.get("Source"), "last_checked": str(r.get("Last checked") or "")})
+                        "source": r.get("Source"), "last_checked": str(r.get("Last checked") or ""),
+                        "career_ids": split_list(r.get("Career IDs (use ;)")), "tags": split_list(r.get("Skill tags (use ;)"))})
     by_course = {c["id"]: c for c in courses}
 
     # exams and admission rounds

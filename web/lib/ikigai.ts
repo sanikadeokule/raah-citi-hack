@@ -22,8 +22,13 @@ export type Circle = "love" | "good" | "pays" | "needed";
 export interface Check { level: Level; text: string; vars?: Record<string, string | number>; key: string }
 export interface Spot { career: any; plan: any; checks: Record<Circle, Check>; score: number; parts: Record<Circle, number>; pct: number }
 
-/** How much each circle counts towards the match percentage (love 25, good at 25, pays 30, needed 20). */
-export const IKIGAI_WEIGHTS: Record<Circle, number> = { love: 0.25, good: 0.25, pays: 0.3, needed: 0.2 };
+/** How much each circle counts towards the match percentage: Assumptions rows ikigai_w_*, scaled to add up to 1 (defaults 25, 25, 30, 20). */
+export function ikigaiWeights(data: any): Record<Circle, number> {
+  const get = (k: string, d: number) => { const v = Number(data?.assumptions?.[k]?.value); return Number.isFinite(v) && data?.assumptions?.[k]?.value !== null ? v : d; };
+  const w = { love: get("ikigai_w_love", 0.25), good: get("ikigai_w_good", 0.25), pays: get("ikigai_w_pays", 0.3), needed: get("ikigai_w_needed", 0.2) };
+  const sum = w.love + w.good + w.pays + w.needed || 1;
+  return { love: w.love / sum, good: w.good / sum, pays: w.pays / sum, needed: w.needed / sum };
+}
 const levelOf = (x: number): Level => (x >= 0.6 ? "yes" : x >= 0.3 ? "part" : "no");
 
 /** Tags offered as quick answers; any of the dataset's tags can still be typed, spoken or added. */
@@ -31,7 +36,7 @@ export const LOVE_CHIPS = ["helping people", "machines", "computers", "animals",
 export const GOOD_CHIPS = ["talking to people", "fixing things", "maths", "organising", "teamwork", "reading", "leadership", "hands-on", "typing", "languages", "discipline", "precision"];
 
 // words people say that are not the dataset's own tag
-const SAYS: Record<string, string | string[]> = {
+const SAYS_BASE: Record<string, string | string[]> = {
   logical: ["maths", "science"], logic: ["maths", "science"], puzzle: "maths", puzzles: "maths", calculation: "maths", thinking: "research", think: "research",
   medicine: ["health", "biology"], medical: ["health", "biology"], medicines: ["health", "biology"], hospital: "health", patient: "helping people", patients: "helping people",
   household: ["organising", "hands-on"], housework: ["organising", "hands-on"], home: ["organising", "hands-on"], kitchen: "hands-on", cleaning: "organising",
@@ -51,6 +56,25 @@ const SAYS: Record<string, string | string[]> = {
   lead: "leadership", team: "teamwork", plan: "organising", organise: "organising", write: "typing", type: "typing", english: "languages",
   hindi: "languages", marathi: "languages", electric: "electrical", wiring: "electrical", wood: "wood", carpenter: "wood", welding: "metal",
 };
+
+/** Words for the finer tags added to Career_Profile (what you do, how you work). They override the base map where both name a word. */
+const SAYS_MORE: Record<string, string | string[]> = {
+  patient: ["helping people", "patient care"], patients: ["helping people", "patient care"], nurse: ["health", "patient care"], nursing: ["health", "patient care"],
+  hospital: ["health", "hospital work"], injury: "first aid", bandage: "first aid", pregnancy: "women's health", midwife: "women's health", mothers: "women's health",
+  protect: "protecting people", security: "protecting people", guard: "protecting people", police: ["government job", "protecting people", "uniform"],
+  army: ["government job", "protecting people", "uniform"], uniform: "uniform", government: "government job", public: "public service",
+  customer: "customer service", customers: "customer service", solve: "problem solving", solving: "problem solving", puzzle: ["maths", "problem solving"],
+  logical: ["maths", "problem solving"], creative: "creativity", ideas: "creativity", imagination: "creativity", craft: "handicrafts", handmade: "handicrafts",
+  tools: "using tools", tool: "using tools", install: "installing", fitting: "installing", safe: "safety", safety: "safety",
+  weld: ["welding", "metal"], welding: ["welding", "metal"], wire: ["wiring", "electrical"], wiring: ["wiring", "electrical"],
+  paint: ["art", "painting"], painting: ["art", "painting"], colours: "painting", engine: "repairing engines", engines: "repairing engines", motor: "repairing engines",
+  factory: "assembly line", assembly: "assembly line", production: "assembly line", quality: "quality checking", inspect: "quality checking",
+  records: "record keeping", files: "record keeping", paperwork: "paperwork", forms: "paperwork", excel: "data entry", bank: ["accounts", "banking"],
+  savings: "banking", boss: "being your own boss", cow: ["animals", "animal care"], goat: ["animals", "animal care"], dog: ["animals", "animal care"], milk: "animal care",
+  drive: ["vehicles", "driving"], driving: ["vehicles", "driving"], driver: ["vehicles", "driving"], gym: "physical fitness",
+  fitness: ["sports", "physical fitness"], exercise: ["sports", "physical fitness"], running: ["sports", "physical fitness"],
+};
+const SAYS: Record<string, string | string[]> = { ...SAYS_BASE, ...SAYS_MORE };
 
 const LOCALES: Record<string, Record<string, string>> = { en, hi, mr, ta, bn, te, gu, kn, ml, pa, or, as };
 const norm = (s: string) => s.toLowerCase().replace(/[.,!?;:()]/g, " ").replace(/\bhouse hold\b/g, "household").replace(/\s+/g, " ").trim();
@@ -82,7 +106,13 @@ const fitLevel = (fit?: string): Level => (fit === "direct" ? "yes" : fit === "r
 const pts = (l: Level) => (l === "yes" ? 1 : l === "part" ? 0.5 : 0);
 
 /** The four checks for every career, best sweet spot first. `profile` carries class, marks, category, income, taluka. */
-export function sweetSpots(data: any, profile: any, love: string[], good: string[]): Spot[] {
+/** Interest = 30% keyword match + 70% match by meaning (when a model could score the student's words; otherwise keywords alone). */
+export type Semantic = { love?: Record<string, number>; good?: Record<string, number> };
+
+export function sweetSpots(data: any, profile: any, love: string[], good: string[], semantic: Semantic = {}): Spot[] {
+  const weights = ikigaiWeights(data);
+  const keywordShare = Number(data?.assumptions?.rank_keyword_share?.value ?? 0.3);  // Assumptions row rank_keyword_share
+  const blend = (keyword: number, sem?: number) => (sem === undefined ? keyword : Math.min(1, keywordShare * keyword + (1 - keywordShare) * sem));
   const byId = (list: any[]) => new Map(list.map((s: any) => [s.career.id, s]));
   const n = (data.careers ?? []).length;
   const lovers = byId(love.length ? rankCareers(data, { ...profile, interests: love }, n) : []);
@@ -104,7 +134,8 @@ export function sweetSpots(data: any, profile: any, love: string[], good: string
     const { plan, r, openings } = plansOf.get(career.id);
     const lv = lovers.get(career.id), gd = goods.get(career.id);
     // how much of what the student said this career covers (0 to 1); a related career counts for less
-    const loveP = Math.min(1, lv?.breakdown?.interest ?? 0), goodP = Math.min(1, gd?.breakdown?.interest ?? 0);
+    const loveP = blend(Math.min(1, lv?.breakdown?.interest ?? 0), semantic.love?.[career.id]);
+    const goodP = blend(Math.min(1, gd?.breakdown?.interest ?? 0), semantic.good?.[career.id]);
     let pays: Check = { level: "unknown", key: "ik_pays_unknown", text: "ik_pays_unknown" };
     let paysP = 0;
     if (r?.income?.median) {
@@ -117,12 +148,12 @@ export function sweetSpots(data: any, profile: any, love: string[], good: string
     const neededP = Math.max(demand, maxOpen ? Math.min(1, openings / maxOpen) : 0);
     const needed: Check = { level: levelOf(neededP), key: "ik_needed", text: "ik_needed", vars: { n: openings } };
     const checks: Record<Circle, Check> = {
-      love: { level: loveP > 0 ? fitLevel(lv?.fit) : "no", key: "ik_love", text: "ik_love", vars: { tags: (lv?.matched ?? []).slice(0, 2).join(", ") } },
-      good: { level: goodP > 0 ? fitLevel(gd?.fit) : "no", key: "ik_good", text: "ik_good", vars: { tags: (gd?.matched ?? []).slice(0, 2).join(", ") } },
+      love: { level: loveP > 0 ? (lv?.fit && lv.fit !== "none" ? fitLevel(lv.fit) : levelOf(loveP)) : "no", key: "ik_love", text: "ik_love", vars: { tags: (lv?.matched ?? []).slice(0, 2).join(", ") } },
+      good: { level: goodP > 0 ? (gd?.fit && gd.fit !== "none" ? fitLevel(gd.fit) : levelOf(goodP)) : "no", key: "ik_good", text: "ik_good", vars: { tags: (gd?.matched ?? []).slice(0, 2).join(", ") } },
       pays, needed,
     };
     const parts: Record<Circle, number> = { love: loveP, good: goodP, pays: Math.min(1, paysP), needed: neededP };
-    const pct = Math.round(100 * (Object.keys(parts) as Circle[]).reduce((sum, c) => sum + IKIGAI_WEIGHTS[c] * parts[c], 0));
+    const pct = Math.round(100 * (Object.keys(parts) as Circle[]).reduce((sum, c) => sum + weights[c] * parts[c], 0));
     spots.push({ career, plan, checks, parts, pct, score: (Object.values(checks) as Check[]).reduce((sum, c) => sum + pts(c.level), 0) });
   }
   // a career that matches nothing the student said is not a sweet spot; the rest go by match percentage
@@ -139,4 +170,18 @@ export function reachable(data: any, profile: any, spot: Spot) {
   const gain = (r.income?.median || 0) - (r.baseline_monthly || 0);
   const payback = gain > 0 ? Math.max(1, Math.ceil((r.net_cost || 0) / gain)) : 0;
   return { payback, total: r.costs.total, net: r.net_cost, perMonth: Math.round(r.family_gap / months), schol, centre: r.centres?.[0] ?? null, steps: plan.steps as string[], planId: plan.id };
+}
+
+
+/** The tags that most often sit beside the ones the student just named, taken from the careers themselves.
+ * They become the reply chips of the follow-up question, so the next answer narrows things down. */
+export function refiners(data: any, anchor: string[], have: string[], n = 3): string[] {
+  const seen = new Map<string, number>();
+  for (const c of data?.careers ?? []) {
+    const tags: string[] = c.tags ?? [];
+    const hits = tags.filter((t) => anchor.includes(t)).length;
+    if (!hits) continue;
+    for (const t of tags) if (!anchor.includes(t) && !have.includes(t)) seen.set(t, (seen.get(t) ?? 0) + hits);
+  }
+  return [...seen.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, n).map(([t]) => t);
 }

@@ -66,28 +66,28 @@ export function Mentors({ career, top }: { career: CareerChoice; top: string[] }
       <RelatedNote picked={picked} />
       <ul className="mt-2 space-y-2">
         {list.map((m: any, i: number) => (
-          <li key={m.id} className="rounded-xl bg-[var(--bg)] p-3 text-sm">
+          <li key={m.id} className="rounded-xl bg-(--bg) p-3 text-sm">
             <div className="flex items-start justify-between gap-2">
-              <div><b>{m.name}</b>{i === 0 && list.length > 1 && m.score > 0 && <> <Badge tone="green">{t("mentor_best")}</Badge></>}<div className="text-xs text-[var(--muted)]">{m.works_as}</div></div>
-              <span className="whitespace-nowrap text-xs text-[var(--muted)]">{placeLabel(t, m.taluka)}{m.km !== null ? ` · ~${Math.round(m.km)} ${t("distance_unit")}` : ""}</span>
+              <div><b>{m.name}</b>{i === 0 && list.length > 1 && m.score > 0 && <> <Badge tone="green">{t("mentor_best")}</Badge></>}<div className="text-xs text-(--muted)">{m.works_as}</div></div>
+              <span className="whitespace-nowrap text-xs text-(--muted)">{placeLabel(t, m.taluka)}{m.km !== null ? ` · ~${Math.round(m.km)} ${t("distance_unit")}` : ""}</span>
             </div>
-            {m.reasons.length > 0 && <div className="mt-1 text-xs font-semibold text-[var(--brand-ink)]">{t("mentor_why", { reasons: m.reasons.join(" · ") })}</div>}
+            {m.reasons.length > 0 && <div className="mt-1 text-xs font-semibold text-(--brand-ink)">{t("mentor_why", { reasons: m.reasons.join(" · ") })}</div>}
             <div className="mt-1">{m.helps_with}</div>
-            <div className="text-xs text-[var(--muted)]">{m.languages.map((x: string) => t(`langname_${x}`) === `langname_${x}` ? x : t(`langname_${x}`)).join(", ")} · {m.mode} · {m.available}</div>
+            <div className="text-xs text-(--muted)">{m.languages.map((x: string) => t(`langname_${x}`) === `langname_${x}` ? x : t(`langname_${x}`)).join(", ")} · {m.mode} · {m.available}</div>
             {m.note && <div className="mt-1"><Badge tone="amber">{m.note}</Badge></div>}
             {contacts[m.id] ? (
-              <a href={`tel:${contacts[m.id].replace(/\s/g, "")}`} className="mt-2 block rounded-lg bg-[var(--good,#138808)] py-2 text-center font-semibold text-white">{contacts[m.id]}</a>
+              <a href={`tel:${contacts[m.id].replace(/\s/g, "")}`} className="mt-2 block rounded-lg bg-(--good,#138808) py-2 text-center font-semibold text-white">{contacts[m.id]}</a>
             ) : asking === m.id ? (
-              <div className="mt-2 rounded-lg bg-[var(--card)] p-2 ring-1 ring-black/10">
+              <div className="mt-2 rounded-lg bg-(--card) p-2 ring-1 ring-black/10">
                 <p className="text-xs">{t("mentor_consent", { name: m.name })}</p>
                 <div className="mt-2 flex gap-2">
-                  <button onClick={() => accept(m.id)} className="flex-1 rounded-lg bg-[var(--brand)] py-2 text-sm font-semibold text-white">{t("agree_show_number")}</button>
+                  <button onClick={() => accept(m.id)} className="flex-1 rounded-lg bg-(--brand) py-2 text-sm font-semibold text-white">{t("agree_show_number")}</button>
                   <button onClick={() => setAsking(null)} className="rounded-lg px-3 text-sm underline">{t("cancel")}</button>
                 </div>
               </div>
             ) : (
               <button onClick={() => setAsking(m.id)} disabled={!online || auth?.user.role !== "student"}
-                className="mt-2 w-full rounded-lg bg-[var(--brand-soft)] py-2 text-sm font-semibold text-[var(--brand-ink)] disabled:opacity-50">
+                className="mt-2 w-full rounded-lg bg-(--brand-soft) py-2 text-sm font-semibold text-(--brand-ink) disabled:opacity-50">
                 {online ? `${t("request_mentor")}` : t("needs_internet")}
               </button>
             )}

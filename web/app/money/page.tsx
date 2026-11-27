@@ -44,14 +44,14 @@ export default function Money() {
     <Shell title={t("money_layer")} role="teacher">
       <Card>
         <h2 className="font-bold">{t("money_bank_title")}</h2>
-        <p className="text-xs text-[var(--muted)]">{t("money_bank_note")}</p>
+        <p className="text-xs text-(--muted)">{t("money_bank_note")}</p>
         {!consent ? (
-          <button onClick={doConsent} className="mt-2 w-full rounded-xl bg-[var(--brand)] py-3 font-semibold text-white">{t("money_consent_btn")}</button>
+          <button onClick={doConsent} className="mt-2 w-full rounded-xl bg-(--brand) py-3 font-semibold text-white">{t("money_consent_btn")}</button>
         ) : (
           <div className="mt-2 space-y-1 text-sm">
             <div>{t("money_consent")} <code className="text-xs">{consent.consentId.slice(0, 8)}…</code> <Badge tone="green">{consent.status}</Badge> · {t("money_purpose")} {consent.ConsentDetail.Purpose.text}</div>
             {fi && (
-              <ul className="rounded-lg bg-[var(--bg)] p-2">
+              <ul className="rounded-lg bg-(--bg) p-2">
                 <li><Mark kind={fi.analysis.account_active ? "yes" : "no"} /> {t("money_account_active", { account: fi.FI.Account.maskedAccNumber })}</li>
                 <li><Mark kind={fi.analysis.income_band_matches ? "yes" : "warn"} /> {t("money_income_match", { estimate: inr(fi.analysis.estimated_income_annual), declared: inr(fi.analysis.declared_income_annual) })}</li>
                 <li><Mark kind={fi.analysis.ready_for_dbt ? "yes" : "warn"} /> {t(fi.analysis.ready_for_dbt ? "money_dbt_yes" : "money_dbt_no")}</li>
@@ -62,14 +62,14 @@ export default function Money() {
       </Card>
       <Card>
         <h2 className="font-bold">{t("money_payout_title")}</h2>
-        <select value={scheme} onChange={(e) => setScheme(e.target.value)} className="mt-2 w-full rounded-lg bg-[var(--bg)] p-2 text-sm">
+        <select value={scheme} onChange={(e) => setScheme(e.target.value)} className="mt-2 w-full rounded-lg bg-(--bg) p-2 text-sm">
           {cashSchemes.map((s: any) => <option key={s.id} value={s.id}>{s.id} · {s.name}</option>)}
         </select>
-        <button onClick={doPay} className="mt-2 w-full rounded-xl bg-[var(--brand)] py-3 font-semibold text-white">{t("money_generate")}</button>
+        <button onClick={doPay} className="mt-2 w-full rounded-xl bg-(--brand) py-3 font-semibold text-white">{t("money_generate")}</button>
         {pay && (
           <div className="mt-2 space-y-1 text-sm">
-            <div>{t("money_amount", { amount: inr(pay.amount_each) })} <span className="text-xs text-[var(--muted)]">{t("money_from_scholarships", { scheme: pay.amount_source?.id ?? "", cell: pay.amount_source?.cell ?? "" })}</span></div>
-            <div><Badge tone={pay.validation.valid ? "green" : "red"}>{t(pay.validation.valid ? "money_valid" : "money_invalid")}</Badge> <span className="text-xs text-[var(--muted)]">{pay.validation.method}</span></div>
+            <div>{t("money_amount", { amount: inr(pay.amount_each) })} <span className="text-xs text-(--muted)">{t("money_from_scholarships", { scheme: pay.amount_source?.id ?? "", cell: pay.amount_source?.cell ?? "" })}</span></div>
+            <div><Badge tone={pay.validation.valid ? "green" : "red"}>{t(pay.validation.valid ? "money_valid" : "money_invalid")}</Badge> <span className="text-xs text-(--muted)">{pay.validation.method}</span></div>
             <pre className="max-h-72 overflow-auto rounded-lg bg-black p-2 text-[10px] leading-tight text-emerald-300">{pay.xml}</pre>
           </div>
         )}
@@ -84,7 +84,7 @@ export default function Money() {
       </Card>
       <Card>
         <h2 className="font-bold">{t("money_passport_title")}</h2>
-        <button onClick={doPassport} className="mt-2 w-full rounded-xl bg-[var(--brand)] py-3 font-semibold text-white">{t("money_issue")}</button>
+        <button onClick={doPassport} className="mt-2 w-full rounded-xl bg-(--brand) py-3 font-semibold text-white">{t("money_issue")}</button>
         {passport && (
           <>
             <ul className="mt-2 text-sm">
