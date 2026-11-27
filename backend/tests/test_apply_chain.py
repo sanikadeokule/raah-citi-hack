@@ -4,8 +4,18 @@ from fastapi.testclient import TestClient
 from raah import db
 from raah.main import app
 
+import pytest
+
 c = TestClient(app)
 _n = [0]
+
+
+@pytest.fixture(autouse=True)
+def _forget_students():
+    """These students must not linger as eligible candidates for other tests' recommendation scans."""
+    yield
+    with db.connect() as con:
+        con.execute("DELETE FROM users WHERE phone LIKE '91000001%'")
 
 
 def _student(age=16):
