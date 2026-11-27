@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 
 from . import dataset, db, engine
+from . import chain_graph
 from .today import log_activity
 from .auth import current_user
 
@@ -41,6 +42,13 @@ def _format(row) -> dict:
             "parent_agreed_at": row["parent_agreed_at"], "submitted_at": row["submitted_at"],
             "remind_at": row["remind_at"],
             "created_at": row["created_at"], "updated_at": row["updated_at"]}
+
+
+def sync_graph(row) -> None:
+    """Make sure the application's graph exists and is caught up with what the database records."""
+    prefill = json.loads(row["prefill"] or "{}")
+    chain_graph.ensure(row["id"], is_minor(prefill), bool(row["student_approved_at"]), bool(row["parent_agreed_at"]),
+                       bool(row["submitted_at"]))
 
 
 def _get_for_student(con, app_id: int, user_id: int):
@@ -149,6 +157,8 @@ def update_application(app_id: int, body: UpdateIn, user: dict = Depends(current
                     raise HTTPException(status.HTTP_409_CONFLICT, "Review and approve the application first")
             updates["column"] = patch["stage"]
             if patch["stage"] == "applied" and not row["submitted_at"]:
+                sync_graph(row)
+                chain_graph.advance(app_id, "student_submit")
                 updates["submitted_at"] = int(time.time())
                 log_activity(user["id"], "chose", "act_submitted", {"title": row["title"]}, "/apply/")
         if "checklist" in patch:
@@ -197,8 +207,11 @@ def approve(app_id: int, user: dict = Depends(current_user)):
         gaps = missing_fields(json.loads(row["prefill"] or "{}"))
         if gaps:
             raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, {"missing": gaps})
+        sync_graph(row)
+        if not row["student_approved_at"]:
+            chain_graph.advance(app_id, "student_approve")
         con.execute("UPDATE applications SET student_approved_at = ?, updated_at = ? WHERE id = ? AND user_id = ?",
-                    (now, now, app_id, user["id"]))
+                    (row["student_approved_at"] or now, now, app_id, user["id"]))
         out = _format(con.execute("SELECT * FROM applications WHERE id = ?", (app_id,)).fetchone())
     log_activity(user["id"], "chose", "act_approved", {"title": row["title"]}, "/apply/")
     return out
@@ -236,3 +249,13 @@ def remind(app_id: int, user: dict = Depends(current_user)):
     left = len([c for c in out["checklist"] if not c["ready"]])
     log_activity(user["id"], "chose", "act_remind", {"title": row["title"], "n": left}, "/apply/")
     return out
+
+
+@router.get("/{app_id}/graph")
+def graph_status(app_id: int, user: dict = Depends(current_user)):
+    """Where this application's agent graph is waiting, and the nodes it has passed."""
+    _student(user)
+    with db.connect() as con:
+        row = _get_for_student(con, app_id, user["id"])
+    sync_graph(row)
+    return chain_graph.status_of(app_id)

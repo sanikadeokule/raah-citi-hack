@@ -1112,5 +1112,7 @@
  "act_parent_agreed": "माता-पिता ने {title} के लिए सहमति दी।",
  "act_submitted": "आपने {title} को जमा किया चिह्नित किया।",
  "act_remind": "Raah {title} के बचे दस्तावेज़ों की याद दिलाएगा।",
- "ap_continue": "जारी रखें"
+ "ap_continue": "जारी रखें",
+ "step_why": "क्यों: {reason}",
+ "step_trace": "Raah ने कैसे तय किया"
 }

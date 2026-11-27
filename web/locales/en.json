@@ -1112,5 +1112,7 @@
  "act_parent_agreed": "Your parent agreed to {title}.",
  "act_submitted": "You marked {title} as submitted.",
  "act_remind": "Raah will remind you about the missing documents for {title}.",
- "ap_continue": "Continue"
+ "ap_continue": "Continue",
+ "step_why": "Why: {reason}",
+ "step_trace": "How Raah decided"
 }
