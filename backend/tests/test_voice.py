@@ -55,6 +55,16 @@ def test_tts_without_keys_tells_app_to_use_device_voice():
     assert c.get("/api/voice/status").json() == {"bhashini": False, "sarvam": False, "providers": [], "tts": False, "asr": False}
 
 
+def test_unsupported_speech_language_is_rejected_before_provider_or_cache(monkeypatch, tmp_path):
+    both_keys(monkeypatch)
+    monkeypatch.setattr(voice, "_run", lambda *a: (_ for _ in ()).throw(AssertionError("provider called")))
+    for code in ("ta", "xx"):
+        voice._tts_path("hello", code, "female").write_bytes(b"cached")
+        assert c.post("/api/voice/tts", json={"text": "hello", "lang": code}).status_code == 422
+        assert c.post("/api/voice/asr", json={"audio_b64": "dGVzdA==", "lang": code}).status_code == 422
+    assert list(tmp_path.glob("*.wav"))  # cached files existed but were not returned
+
+
 def test_tts_served_from_cache_without_keys_or_network(monkeypatch):
     monkeypatch.setattr(voice, "_pipeline", lambda *a: (_ for _ in ()).throw(AssertionError("network call")))
     wav = b"RIFF0000WAVEfmt "
@@ -121,13 +131,15 @@ def test_asr_through_sarvam(monkeypatch):
 
     def fake_post(url, **kw):
         seen.update(url=url, **kw)
-        return FakeResp(200, {"transcript": " मला ITI करायचं आहे "})
+        return FakeResp(200, {"transcript": " मला ITI करायचं आहे ", "language_code": "mr-IN", "language_probability": 0.98})
 
     monkeypatch.setattr(voice.httpx, "post", fake_post)
     audio = base64.b64encode(_wav(b"\x00\x00" * 160, 16000)).decode()
     j = c.post("/api/voice/asr", json={"audio_b64": audio, "lang": "mr"}).json()
-    assert j == {"text": "मला ITI करायचं आहे", "provider": "sarvam"}
-    assert seen["url"] == voice.SARVAM_ASR_URL and seen["data"]["language_code"] == "mr-IN"
+    assert j == {"text": "मला ITI करायचं आहे", "provider": "sarvam", "detected_lang": "mr",
+                 "language_code": "mr-IN", "language_probability": 0.98}
+    assert seen["url"] == voice.SARVAM_ASR_URL
+    assert seen["data"]["model"] == "saaras:v4" and seen["data"]["mode"] == "transcribe"
     assert seen["files"]["file"][0] == "speech.wav"
 
 

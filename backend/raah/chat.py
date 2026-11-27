@@ -18,10 +18,10 @@ from fastapi import APIRouter
 from pydantic import BaseModel, Field, ValidationError, field_validator
 
 from . import dataset, embed, engine, llm
+from .languages import language_name
 
 router = APIRouter(prefix="/api/chat", tags=["ai"])
 
-LANG_NAME = {"mr": "Marathi", "hi": "Hindi", "en": "English"}
 CATEGORIES = ["General", "EWS", "OBC", "SC", "ST", "DNT", "EBC", "SEBC", "VJNT", "SBC", "Navbouddha"]
 DOCS = ["aadhaar", "marksheet_10", "marksheet_12", "caste_certificate", "income_certificate",
         "domicile_certificate", "bank_passbook", "disability_certificate"]
@@ -194,7 +194,7 @@ def _system_turn(d: dict, lang: str, profile: dict) -> str:
     nxt = missing[0] if missing else None
     name = profile.get("name")
     return f"""You are Raah, a warm career guide for students from villages in Maharashtra. Many are using a phone for the first time.
-Speak {LANG_NAME.get(lang, 'English')} in very short, simple sentences a Class 8 student understands. No English jargon in Marathi or Hindi.
+Speak {language_name(lang)} in very short, simple sentences a Class 8 student understands. No English jargon in Marathi or Hindi.
 Rules:
 - Ask exactly ONE question per message, and add one example answer so the student knows what to type.
 - Be specific. Never ask vague questions like "how much did you score?" without naming the exam and asking "out of how many".
@@ -332,7 +332,7 @@ def ikigai_turn(body: IkigaiTurn):
     tags = sorted({t for c in d["careers"] for t in c["tags"]})
     ask = "what they love doing or learning about" if body.stage == "love" else "what they are good at"
     system = (
-        f"You are Raah, a warm career guide for a rural Indian student. Reply in {LANG_NAME.get(body.lang, 'English')}, "
+        f"You are Raah, a warm career guide for a rural Indian student. Reply in {language_name(body.lang)}, "
         f"in one or two short, simple sentences. The student is telling you {ask}. "
         "Accept their words as they are. Pick every topic from this list that fits what they said "
         "(a phrase can fit more than one): " + ", ".join(tags) + ". "
@@ -388,7 +388,7 @@ def explain(body: Explain):
         facts.update({"net_cost_rupees": r["net_cost"], "payback_months_after_training": r["payback"].get("median", {}).get("months_after_training"),
                       "scholarships_counted": [o["name"] for o in r["scholarship"]["options"] if o["id"] in r["scholarship"]["chosen"]]})
     context = json.dumps(facts, ensure_ascii=False)
-    msgs = [{"role": "system", "content": f"You explain career matches to rural students in {LANG_NAME.get(body.lang, 'English')}. "
+    msgs = [{"role": "system", "content": f"You explain career matches to rural students in {language_name(body.lang)}. "
              "Write at most two short, encouraging sentences saying why this career fits the student. Use ONLY the facts given. "
              "If interest_fit is 'none', do not say it matches their interests: say it is a different kind of path worth knowing about. "
              "Do not add any number that is not in the facts. No greetings, no lists."},
@@ -478,7 +478,7 @@ def colleges_for_you(body: CollegesRequest):
     }
     context = json.dumps(student_facts, ensure_ascii=False)
     msgs = [
-        {"role": "system", "content": f"You help rural students in {LANG_NAME.get(body.lang, 'English')} find training for their chosen career. "
+        {"role": "system", "content": f"You help rural students in {language_name(body.lang)} find training for their chosen career. "
          "Write 2-3 short encouraging sentences introducing these options to the student. "
          "Mention the career name and 1-2 specific centre names or courses from the data. "
          "Use ONLY the facts given. No numbers that are not in the facts. No greetings, no lists."},

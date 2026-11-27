@@ -27,6 +27,8 @@ import httpx
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
+from .languages import is_selectable_language
+
 router = APIRouter(prefix="/api/voice", tags=["voice"])
 
 CONFIG_URL = "https://meity-auth.ulcacontrib.org/ulca/apis/v0/model/getModelsPipeline"
@@ -159,7 +161,7 @@ def _sarvam_tts(text: str, lang: str, gender: str) -> bytes:
     wavs = []
     for part in _chunks(text):
         r = httpx.post(SARVAM_TTS_URL, timeout=30, headers=_sarvam_headers(), json={
-            "text": part, "target_language_code": LOCALE.get(lang, "en-IN"), "speaker": speaker,
+            "text": part, "target_language_code": LOCALE[lang], "speaker": speaker,
             "model": os.environ.get("SARVAM_TTS_MODEL", "bulbul:v3"), "pace": 0.95})
         if r.status_code != 200:
             raise VoiceError(f"Sarvam TTS returned {r.status_code}")
@@ -218,6 +220,8 @@ def status():
 
 @router.post("/tts")
 def tts(body: TTSIn):
+    if not is_selectable_language(body.lang) or body.lang not in LOCALE:
+        raise HTTPException(422, "unsupported speech language")
     path = _tts_path(body.text, body.lang, body.gender)
     if path.exists():  # served even when keys are gone or the service is down
         return {"audio_b64": base64.b64encode(path.read_bytes()).decode(), "mime": "audio/wav", "cached": True}
@@ -229,6 +233,8 @@ def tts(body: TTSIn):
 
 @router.post("/asr")
 def asr(body: ASRIn):
+    if not is_selectable_language(body.lang) or body.lang not in LOCALE:
+        raise HTTPException(422, "unsupported speech language")
     try:
         audio = base64.b64decode(body.audio_b64, validate=True)
     except Exception:
@@ -242,7 +248,7 @@ def asr(body: ASRIn):
         confidence = result.get("language_probability")
     else:  # BHASHINI returns text only; keep its explicitly selected language.
         text = result
-        language_code = LOCALE.get(body.lang)
+        language_code = LOCALE[body.lang]
         confidence = None
     detected_lang = next((short for short, code in (("mr", "mr-IN"), ("hi", "hi-IN"), ("en", "en-IN"))
                           if language_code and language_code.lower().startswith(short)), body.lang)

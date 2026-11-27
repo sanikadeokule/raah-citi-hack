@@ -41,6 +41,7 @@ from fastapi import APIRouter
 from pydantic import BaseModel, Field
 
 from . import dataset, embed, llm
+from .languages import language_name, normalize_language
 
 router = APIRouter(prefix="/api/ask", tags=["ai"])
 
@@ -376,7 +377,6 @@ def search(query: str, k: int = TOP_K, keywords: str = "") -> dict:
 
 # ------------------------------------------------------------------ 5-6. grounded answer
 
-LANG_NAME = {"mr": "Marathi", "hi": "Hindi", "en": "English"}
 MSG = {
     "not_found": {"en": "I could not find this in Raah's data. Please ask your teacher, or try other words.",
                   "hi": "यह जानकारी राह के डेटा में नहीं मिली। कृपया अपने शिक्षक से पूछें या दूसरे शब्दों में पूछें।",
@@ -482,7 +482,7 @@ class AskIn(BaseModel):
 
 
 def answer(body: AskIn) -> dict:
-    lang = body.lang if body.lang in LANG_NAME else "en"
+    lang = normalize_language(body.lang)
     prev = [str(m.get("content", ""))[:300] for m in body.history[-4:] if m.get("role") == "user"]
     query = " ".join(prev[-1:] + [body.question])  # a follow-up ("what documents?") keeps the last topic
     kw = english_keywords(body.question)
@@ -500,7 +500,7 @@ def answer(body: AskIn) -> dict:
                if k in ("class", "gender", "category", "family_income_annual", "taluka", "marks_pct", "can_stay_hostel", "age")}
     about = f"\nAbout the person asking (use it to judge what fits them): {json.dumps(profile, ensure_ascii=False)}" if profile else ""
     system = (f"You are Raah, a helpful guide for rural students, parents and teachers in Maharashtra. Answer entirely in "
-              f"{LANG_NAME[lang]} in short, simple sentences a Class 9 student understands. Do not switch languages mid-answer.\n"
+              f"{language_name(lang)} in short, simple sentences a Class 9 student understands. Do not switch languages mid-answer.\n"
               + llm.off_topic_rule(lang) +
               "Translate descriptive source content and spreadsheet field names into the requested language. Preserve only proper names, official scheme names, acronyms, codes, and exact figures in their original form. Never expose raw labels such as 'Topic ID', 'Career IDs', 'Step', or 'Kind'.\n"
               "In Hindi or Marathi always write the app name as राह, never as Raah.\n"

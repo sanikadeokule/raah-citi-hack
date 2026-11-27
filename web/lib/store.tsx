@@ -7,16 +7,23 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import en from "@/locales/en.json";
 import mr from "@/locales/mr.json";
 import hi from "@/locales/hi.json";
+import { normalizeLanguage, SELECTABLE_LANGUAGES } from "./languages";
 import { db, enqueue, getKV, setKV } from "./db";
 
 export const API = process.env.NEXT_PUBLIC_API_BASE || "";
 const LOCALES: Record<string, Record<string, string>> = { en, mr, hi };
-export const LANGS = [
+const SHORT_LABELS: Record<string, string> = { mr: "मरा", hi: "हिं", en: "Eng" };
+const DISPLAY_ORDER = ["mr", "hi", "en"];
+export const LANGS = SELECTABLE_LANGUAGES.map((language) => ({
   // short: what the header's language menu shows, to keep the bar uncluttered
-  { code: "mr", label: "मराठी", short: "मरा", speech: "mr-IN" },
-  { code: "hi", label: "हिन्दी", short: "हिं", speech: "hi-IN" },
-  { code: "en", label: "English", short: "Eng", speech: "en-IN" },
-];
+  code: language.code,
+  label: language.nativeName,
+  short: SHORT_LABELS[language.code] ?? language.nativeName,
+  speech: language.locale,
+})).sort((a, b) => {
+  const rank = (code: string) => DISPLAY_ORDER.includes(code) ? DISPLAY_ORDER.indexOf(code) : DISPLAY_ORDER.length;
+  return rank(a.code) - rank(b.code);
+});
 
 export interface AuthUser { id: number; role: "student" | "teacher"; name: string | null; phone: string; is_pro?: boolean }
 interface Auth { token: string; user: AuthUser }
@@ -118,7 +125,7 @@ export function Provider({ children }: { children: React.ReactNode }) {
       // only use the saved profile if it belongs to whoever is signed in (older versions kept a demo student here)
       if (p && a && owner === a.user.id) setProfileState(p);
       else if (a) setProfileState(blankProfile(a.user));
-      if (l) setLangState(l);
+      if (l) setLangState(normalizeLanguage(l));
       if (a) setAuth(a);
       setAuthReady(true);
       setOnline(navigator.onLine);
@@ -169,7 +176,11 @@ export function Provider({ children }: { children: React.ReactNode }) {
   }, [flushQueue]);
 
   const setProfile = useCallback((p: any) => { setProfileState(p); setKV("profile", p); }, []);
-  const setLang = useCallback((l: string) => { setLangState(l); setKV("lang", l); }, []);
+  const setLang = useCallback((l: string) => {
+    const code = normalizeLanguage(l);
+    setLangState(code);
+    setKV("lang", code);
+  }, []);
   useEffect(() => { document.title = lang === "hi" || lang === "mr" ? "राह" : "Raah"; }, [lang]);
   const queueAction = useCallback(async (kind: string, payload: unknown) => {
     await enqueue(kind, payload);
