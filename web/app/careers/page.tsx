@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Icon } from "@/components/icon";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Badge, Card, Shell } from "@/components/ui";
 import { computePlan, inr, rankCareers } from "@/lib/engine";
@@ -44,7 +44,7 @@ function flagBadges(c: any, t: (k: string) => string) {
 }
 
 export default function CareersPage() {
-  const { data, profile, t, lang } = useApp();
+  const { data, profile, t, lang, setProfile, queueAction } = useApp();
   const [q, setQ] = useState("");
   const [tab, setTab] = useState<"top" | "all">("top");
   const router = useRouter();
@@ -55,7 +55,26 @@ export default function CareersPage() {
     onClick: (e: React.MouseEvent) => { if (!(e.target as HTMLElement).closest("a")) openRoadmap(id); },
     onKeyDown: (e: React.KeyboardEvent) => { if (e.key === "Enter") openRoadmap(id); },
   });
-  const top = useMemo(() => (data && profile ? rankCareers(data, profile, 5) : []), [data, profile]);
+  // no interests yet: the list would be ordered by cost and openings alone, so show a prompt to Discover instead of a fake top 5
+  const hasInterests = (profile?.interests || []).some((i: string) => String(i).trim());
+  // the match uses the AI meaning scores too (same as Discover); fetch and save them when they are missing or for other interests
+  const interestKey = (profile?.interests || []).map((i: string) => String(i).trim().toLowerCase()).filter(Boolean).sort().join("|");
+  const asked = useRef("");
+  useEffect(() => {
+    if (!profile || !interestKey || asked.current === interestKey) return;
+    const m = profile.interest_meaning;
+    const have = m?.for ? (m.for as string[]).map((i) => String(i).trim().toLowerCase()).filter(Boolean).sort().join("|") : "";
+    if (have === interestKey && m?.scores) return;
+    asked.current = interestKey;
+    (async () => {
+      const r = await postAi("/api/interests/careers", { text: (profile.interests as string[]).join(", ") });
+      if (!r?.scores || !Object.keys(r.scores).length) return;
+      const prof = { ...profile, interest_meaning: { for: profile.interests, scores: r.scores } };
+      setProfile(prof);
+      await queueAction("profile", prof);
+    })();
+  }, [profile, interestKey, setProfile, queueAction]);
+  const top = useMemo(() => (data && profile && hasInterests ? rankCareers(data, profile, 5) : []), [data, profile, hasInterests]);
   const plans = useMemo(() => Object.fromEntries((data?.plans || []).map((p: any) => [p.career_id, p])), [data]);
   const quick = (planId: string) => computePlan(data, profile, planId);
   const all = (data?.careers || []).filter((c: any) => c.name.toLowerCase().includes(q.toLowerCase()));
@@ -83,6 +102,12 @@ export default function CareersPage() {
         </div>
         <p className="text-xs text-[var(--muted)]">{(profile?.interests || []).map((x: string) => tagLabel(t, x)).join(", ")}</p>
         <p className="mt-1 text-xs font-medium text-[var(--brand-ink)]">{t("rm_tap_hint")}</p>
+        {!hasInterests && (
+          <div className="mt-3 flex flex-col items-center gap-3 rounded-xl border-2 border-dashed border-black/15 p-6 text-center">
+            <p className="font-semibold">{t("careers_tell_first")}</p>
+            <Link href="/discover/" className="rounded-full bg-[var(--brand)] px-5 py-2 text-sm font-bold text-white">{t("careers_tell_first_btn")}</Link>
+          </div>
+        )}
         <ul className="mt-2 space-y-2 lg:grid lg:grid-cols-2 2xl:grid-cols-3 lg:items-start lg:gap-3 lg:space-y-0">
           {top.map((s: any, i: number) => {
             const r = s.plan_id ? quick(s.plan_id) : null;

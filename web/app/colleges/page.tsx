@@ -10,7 +10,6 @@ import { placeLabel } from "@/lib/questions";
 import { CentreMap } from "@/components/centremap";
 import { postAi } from "@/lib/ai";
 import { BUILD_ROADMAP_HREF } from "@/lib/roadmap";
-import { ExamsList } from "@/components/exams";
 import { Tabs } from "@/components/tabs";
 import { MODULE_COLOR, ModuleHero } from "@/components/modulehero";
 import { chanceFor } from "@/lib/chance";
@@ -165,7 +164,7 @@ export default function CollegesPage() {
   const [result, setResult] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [centrePage, setCentrePage] = useState(0);
-  const [tab, setTab] = useState<"colleges" | "exams" | "online">("colleges");
+  const [tab, setTab] = useState<"colleges" | "online">("colleges");
   const [chanceFilter, setChanceFilter] = useState<"all" | "safe" | "good" | "reach">("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
@@ -233,8 +232,8 @@ export default function CollegesPage() {
       <ModuleHero color={MODULE_COLOR.colleges} item="cap" pose={loading ? "think" : "wave"}
         line={careerName ? t("hero_colleges", { career: careerName }) : t("hero_colleges_none")}
         stats={centres.length ? [{ icon: "building", value: centres.length, label: t("hero_stat_centres") }, ...(courses.length ? [{ icon: "book", value: courses.length, label: t("hero_stat_courses") }] : [])] : []} />
-      <Tabs value={tab} onChange={setTab} tabs={[{ key: "exams", label: `${t("home_exams")}` }, { key: "colleges", label: `${t("adm_tab_colleges")}` }, ...(courses.length > 0 ? [{ key: "online" as const, label: `${t("colleges_online")}`, count: courses.length }] : [])]} />
-      {tab === "exams" ? <ExamsList /> : tab === "online" ? onlineCard : noRoadmap ? (
+      <Tabs value={tab} onChange={setTab} tabs={[{ key: "colleges", label: `${t("adm_tab_colleges")}` }, ...(courses.length > 0 ? [{ key: "online" as const, label: `${t("colleges_online")}`, count: courses.length }] : [])]} />
+      {tab === "online" ? onlineCard : noRoadmap ? (
         <Card className="text-center space-y-3">
           <Icon name="graduation" size={40} className="text-[var(--brand)]" />
           <p className="text-sm text-[var(--muted)]">{t("colleges_no_roadmap")}</p>
