@@ -12,6 +12,7 @@ import { paybackText } from "@/components/plan";
 import { aiAvailable, postAi } from "@/lib/ai";
 import { Pager, usePaged } from "@/components/pager";
 import { MODULE_COLOR, ModuleHero, Ring } from "@/components/modulehero";
+import { TypeTag } from "@/components/typetag";
 
 // National Career Service, Ministry of Labour & Employment, Government of India
 const NCS_URL = "https://www.ncs.gov.in/";
@@ -35,7 +36,6 @@ function WhyLine({ s, profile, lang }: { s: any; profile: any; lang: string }) {
 function flagBadges(c: any, t: (k: string) => string) {
   return (
     <span className="flex flex-wrap gap-1">
-      {c.flags.vocational && <Badge tone="blue">{t("tag_vocational")}</Badge>}
       {c.flags.self_employment && <Badge tone="amber">{t("tag_self_employment")}</Badge>}
       {c.flags.health && <Badge tone="green">{t("tag_health")}</Badge>}
       {c.flags.non_stem && !c.flags.self_employment && <Badge>{t("tag_non_stem")}</Badge>}
@@ -117,7 +117,7 @@ export default function CareersPage() {
                 className={`cursor-pointer rounded-xl p-3 ring-1 transition hover:ring-[var(--brand)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)] active:scale-[0.99] ${mine ? "bg-[var(--brand-soft)] ring-2 ring-[var(--brand)]" : "bg-[var(--bg)] ring-transparent"}`}>
                 <div className="flex items-start justify-between gap-2">
                   <div>{mine && <span className="mb-0.5 block text-[10px] font-bold uppercase tracking-wider text-[var(--brand-ink)]">{t("your_career")}</span>}<span className="mr-1 text-[var(--muted)]">{i + 1}.</span><b>{s.career.name}</b></div>
-                  <Ring value={s.score} color={MODULE_COLOR.careers} size={38} />
+                  <div className="flex shrink-0 flex-col items-end gap-1"><TypeTag c={s.career} t={t} /><Ring value={s.score} color={MODULE_COLOR.careers} size={38} /></div>
                 </div>
                 <div className="mt-1 flex flex-wrap gap-1">
                   {flagBadges(s.career, t)}

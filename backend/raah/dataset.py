@@ -355,6 +355,9 @@ def load(path: Path = DATASET_PATH) -> dict:
             warnings.append(f"Careers_Income {cid}: Pay year 3/5 given without Pay year 1, growth ignored")
         status = r.get("Income status") or ""
         cp = profile_rows.get(cid, {})
+        career_type = str(cp.get("Career type") or "").strip()
+        if career_type:  # the sheet's own tag wins over the one guessed from the category text
+            flags["vocational"] = career_type.lower() == "vocational"
         item = {
             "id": cid, "name": r.get("Career"), "category": r.get("Category"), "entry_path": r.get("Entry path"),
             "min_qualification": r.get("Minimum qualification"),
@@ -369,6 +372,7 @@ def load(path: Path = DATASET_PATH) -> dict:
             "tags": split_list(cp.get("Interest tags (use ;)")), "min_class": num_or_none(cp.get("Min class")),
             "stream": cp.get("Stream needed") or "any", "demand": num_or_none(cp.get("Local demand (1-5)")),
             "roadmap_path": str(cp.get("Roadmap path") or "").strip() or None,
+            "career_type": career_type or None,
         }
         if flags["baseline"]:
             daily = gendered(r.get("Income after training / entry pay"))
