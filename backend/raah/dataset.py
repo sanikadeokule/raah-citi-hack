@@ -465,12 +465,19 @@ def load(path: Path = DATASET_PATH) -> dict:
             warnings.append(f"Career_Profile {c['id']}: roadmap path '{c['roadmap_path']}' has no rows in Roadmap_Stages")
 
     # centres
-    # centres are matched to the original Pune-area points; the rest of India's talukas are only for the student's home place
+    # centres without their own Lat/Lon use their taluka's point: the original taluka HQ points first, then every
+    # Maharashtra taluka from the India Post list, matched by exact taluka name
     talukas = {str(r.get("Taluka")).lower(): (num_or_none(r.get("Lat")), num_or_none(r.get("Lon")))
                for r in _rows(wb, "Talukas") if r.get("Taluka") and str(r.get("Status") or "").startswith("Approximate taluka HQ")}
+    mh_points = {str(r.get("Taluka")).strip().lower(): (num_or_none(r.get("Lat")), num_or_none(r.get("Lon")))
+                 for r in _rows(wb, "Talukas") if r.get("Taluka") and r.get("State") == "Maharashtra"}
 
     def taluka_point(name: str):
         n = (name or "").lower()
+        if n.strip() in talukas:
+            return talukas[n.strip()]
+        if n.strip() in mh_points:
+            return mh_points[n.strip()]
         for key, pt in talukas.items():
             if key in n:
                 return pt
@@ -488,7 +495,7 @@ def load(path: Path = DATASET_PATH) -> dict:
                         "district": r.get("District"), "address": r.get("Address / place"),
                         "courses": r.get("Courses"), "seats": r.get("Seats"), "fees_text": r.get("Fees"),
                         "fees": first_money(r.get("Fees")) if "not in source" not in str(r.get("Fees")).lower() else None,
-                        "code": r.get("Code"), "lat": lat, "lon": lon, "coord_source": coord, "note": r.get("Note"),
+                        "code": r.get("Code"), "career_ids": split_list(r.get("Career IDs (use ;)")), "lat": lat, "lon": lon, "coord_source": coord, "note": r.get("Note"),
                         "source": r.get("Source"), "last_checked": str(r.get("Last checked") or "")})
     missing = sum(1 for c in centres if c["coord_source"] != "exact")
     if missing:

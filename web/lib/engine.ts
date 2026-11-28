@@ -229,7 +229,7 @@ export function computePlan(data: Data, profile: Profile, planId: string, opts: 
   const months = plan.course_months;
   const years = months / 12;
 
-  const centres = plan.centre_type ? nearestCentres(data, profile, plan.centre_type, 3) : [];
+  const centres = plan.centre_type ? nearestCentres(data, profile, plan.centre_type, 3, plan.career_id) : [];
   let km: number;
   if (opts.commute_km !== undefined && opts.commute_km !== null) km = Number(opts.commute_km);
   else if (centres.length && centres[0].distance_km !== null) km = centres[0].distance_km;
@@ -318,11 +318,13 @@ export function haversine(lat1: number, lon1: number, lat2: number, lon2: number
   return 2 * r * Math.asin(Math.sqrt(a));
 }
 
-export function nearestCentres(data: Data, profile: Profile, centreType: string | null, n = 3) {
+export function nearestCentres(data: Data, profile: Profile, centreType: string | null, n = 3, careerId: string | null = null) {
   const { lat, lon } = profile;
   const out: any[] = [];
+  // the Training_Centres "Career IDs" column decides when it lists this career; the centre type is the fallback
+  const listed = careerId ? data.centres.some((c: any) => (c.career_ids ?? []).includes(careerId)) : false;
   for (const c of data.centres) {
-    if (centreType && !String(c.type).toLowerCase().includes(centreType.toLowerCase())) continue;
+    if (listed ? !(c.career_ids ?? []).includes(careerId) : centreType && !String(c.type).toLowerCase().includes(centreType.toLowerCase())) continue;
     let d: number | null = null;
     if (lat != null && lon != null && c.lat != null) d = Math.round(haversine(lat, lon, c.lat, c.lon) * 10) / 10;
     out.push({ ...c, distance_km: d, approximate: c.coord_source !== "exact" });
