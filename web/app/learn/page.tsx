@@ -11,11 +11,15 @@ import { useApp } from "@/lib/store";
 import { StudentModules } from "@/components/modules";
 import { FreeCourses } from "@/components/freecourses";
 import { Tabs } from "@/components/tabs";
+import { Pager, usePaged } from "@/components/pager";
 import { getKV, setKV } from "@/lib/db";
 import { cachedAudio, fetchAudio, voiceAvailable } from "@/lib/audio";
 import Link from "next/link";
 import { postAi } from "@/lib/ai";
 import { HeroBar, MODULE_COLOR, ModuleHero } from "@/components/modulehero";
+
+const LESSONS_PAGE = 10;
+const QUIZ_PAGE = 5;
 
 export default function Learn() {
   const { data, profile, lang, setLang, t, queueAction } = useApp();
@@ -58,6 +62,8 @@ export default function Learn() {
     const next = [...done, id];
     setDone(next); await setKV("lessons_done", next); await queueAction("lesson_done", { id, at: new Date().toISOString() });
   };
+  const lessonsPg = usePaged(ls, LESSONS_PAGE, `${topic}|${ls.length}`);
+  const quizPg = usePaged(qs, QUIZ_PAGE, `${topic}|${qs.length}`);
   const score = qs.reduce((a, q, i) => a + (ans[i] === q.answer ? 1 : 0), 0);
   const check = async () => {
     setChecked(true);
@@ -87,51 +93,41 @@ export default function Learn() {
         line={doneCount ? t("hero_learn", { d: doneCount, n: all.length }) : t("hero_learn_start")}>
         <HeroBar value={doneCount} max={all.length} label={t("hero_learn_bar", { d: doneCount, n: all.length })} />
       </ModuleHero>
-      {/* on a laptop, lessons and free courses sit side by side with nothing to switch; a phone still taps between tabs */}
-      <Tabs value={tab} onChange={setTab} className="xl:hidden" tabs={[
+      {/* the four sections: For you (lessons), Free courses, Teachers, Quiz */}
+      <Tabs value={tab} onChange={setTab} tabs={[
         { key: "lessons", label: `${t("learn_tab_lessons")}`, count: ls.length },
         { key: "courses", label: `${t("learn_tab_courses")}` },
         { key: "modules", label: `${t("learn_tab_modules")}` },
         { key: "quiz", label: `${t("quiz")}`, count: qs.length },
       ]} />
-      <div className="hidden gap-2 xl:flex">
-        {(["modules", "quiz"] as const).map((k) => (
-          <button key={k} onClick={() => setTab(k)} aria-pressed={tab === k}
-            className={`rounded-full px-3.5 py-1.5 text-sm font-semibold ${tab === k ? "bg-[var(--brand)] text-white" : "bg-[var(--bg)] ring-1 ring-black/10"}`}>
-            {k === "modules" ? t("learn_tab_modules") : `${t("quiz")} (${qs.length})`}
-          </button>
-        ))}
-      </div>
 
       {tab === "modules" && <StudentModules emptyText={t("learn_no_modules")} />}
 
-      {/* lessons and free courses: two tabs on a phone, two columns side by side on a laptop so nothing has to switch */}
-      {(tab === "lessons" || tab === "courses") && (
-      <div className="xl:grid xl:grid-cols-2 xl:items-start xl:gap-4">
-      <div className={tab === "courses" ? "hidden xl:block" : ""}>
+      {tab === "courses" && <Card><FreeCourses /></Card>}
+
+      {tab === "lessons" && (
+      <Card>
         <label className="block text-sm font-medium">
           {t("lesson_topic")}
           <select value={topic} onChange={(e) => pickTopic(e.target.value)}
-            className="mt-1 block w-full rounded-lg bg-[var(--card)] px-3 py-2 text-base ring-1 ring-black/10">
+            className="mt-1 block w-full max-w-sm rounded-lg bg-[var(--bg)] px-3 py-2 text-base ring-1 ring-black/10">
             {mine.length > 0 && <option value={FOR_YOU}> {t("lesson_for_you")} ({mine.length})</option>}
             {topics.map((tp: any) => <option key={tp.id} value={tp.id}>{tp.name} ({all.filter((l) => l.topic === tp.id).length})</option>)}
           </select>
           {topic === FOR_YOU && <span className="mt-1 block text-xs font-normal text-[var(--muted)]">{t("lesson_for_you_note")}</span>}
         </label>
-      </div>
-      <div className={tab === "courses" ? "" : "hidden xl:block"}><FreeCourses /></div>
-      <div className={`mt-3 xl:col-start-1 xl:mt-0 ${tab === "courses" ? "hidden xl:block" : ""}`}><Card>
         {voice ? (
           <button onClick={saveAll} disabled={saving || savedCount === ls.length}
-            className="mb-3 w-full rounded-lg bg-[var(--brand-soft)] py-2 text-sm font-semibold text-[var(--brand-ink)] disabled:opacity-60">
+            className="mt-3 w-full rounded-lg bg-[var(--brand-soft)] py-2 text-sm font-semibold text-[var(--brand-ink)] disabled:opacity-60">
             {savedCount === ls.length ? `${t("audio_saved")}` : saving ? "…" : `${t("save_audio_offline")} (${savedCount}/${ls.length})`}
           </button>
         ) : (
-          <p className="mb-3 text-xs text-[var(--muted)]">{t("device_voice_note")}</p>
+          <p className="mt-3 text-xs text-[var(--muted)]">{t("device_voice_note")}</p>
         )}
+        <div ref={lessonsPg.top} />
         {/* titles only; tap one to read or play it */}
-        <ul className="space-y-2 lg:grid lg:grid-cols-2 lg:items-start lg:gap-3 lg:space-y-0">
-          {ls.map((l) => (
+        <ul className="mt-3 space-y-2 lg:grid lg:grid-cols-2 lg:items-start lg:gap-3 lg:space-y-0">
+          {lessonsPg.pageItems.map((l) => (
             <li key={l.id}>
               <details className="group rounded-xl bg-[var(--bg)]">
                 <summary className="flex cursor-pointer list-none items-center justify-between gap-2 p-3">
@@ -147,13 +143,16 @@ export default function Learn() {
             </li>
           ))}
         </ul>
-      </Card></div>
-      </div>
+        <Pager page={lessonsPg.page} pages={lessonsPg.pages} start={lessonsPg.start} shown={lessonsPg.pageItems.length} total={lessonsPg.total} go={lessonsPg.go} />
+      </Card>
       )}
 
       {tab === "quiz" && <Card>
+        <div ref={quizPg.top} />
         <ol className="space-y-3">
-          {qs.map((q, i) => (
+          {quizPg.pageItems.map((q, li) => {
+            const i = quizPg.start + li;
+            return (
             <li key={i}>
               <div className="text-sm font-medium">{i + 1}. {q.q}</div>
               <div className="mt-1 flex flex-wrap gap-2">
@@ -164,8 +163,10 @@ export default function Learn() {
                 })}
               </div>
             </li>
-          ))}
+            );
+          })}
         </ol>
+        <Pager page={quizPg.page} pages={quizPg.pages} start={quizPg.start} shown={quizPg.pageItems.length} total={quizPg.total} go={quizPg.go} />
         {!checked ? (
           <button onClick={check} disabled={Object.keys(ans).length < qs.length} className="mt-3 w-full rounded-xl bg-[var(--brand)] py-3 font-semibold text-white disabled:opacity-40">{t("check")}</button>
         ) : (
