@@ -120,11 +120,9 @@ export function Provider({ children }: { children: React.ReactNode }) {
       const r = await fetch(`${API}/api/data`, { cache: "no-store" });
       if (!r.ok) throw new Error(String(r.status));
       const d = await r.json();
-      const changed = version.current && version.current !== d.version.modified;
       version.current = d.version.modified;
       setData(d);
       await setKV("data", d);
-      if (announce && changed) showToast(LOCALES[lang]?.dataset_updated ?? "Updated");
     } catch {
       /* offline: keep cached copy */
     }
