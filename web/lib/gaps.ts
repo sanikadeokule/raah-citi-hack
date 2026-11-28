@@ -34,7 +34,9 @@ export function matchFor(item: Tagged, g: Gaps): Ranked<any>["reason"] & { score
   const tags = (item.tags ?? []).map(norm);
   if (g.careerId && ids.includes(g.careerId)) return { kind: "first", career: g.careerName, score: 3 };
   const gapHit = g.gap.filter((x) => tags.includes(norm(x)));
-  if (gapHit.length) return { kind: "gap", career: g.careerName, tag: gapHit[0], score: 2 + Math.min(gapHit.length, 3) / 10 };
+  // a course made for other careers needs two shared skills, not one generic word like "hands-on"
+  const needed = ids.length ? 2 : 1;
+  if (gapHit.length >= needed) return { kind: "gap", career: g.careerName, tag: gapHit[0], score: 2 + Math.min(gapHit.length, 3) / 10 };
   const near = g.top.find((c) => ids.includes(c.id));
   if (near) return { kind: ids.length === 1 ? "about" : "first", career: near.name, score: 1.8 };
   const enjoyHit = g.enjoy.find((x) => tags.includes(norm(x)));

@@ -42,6 +42,21 @@
   --header-bg: #1e40af; --m-shadow: rgba(255, 255, 255, .12); --m-path: #2a3240; --m-path-line: #3d4757;
 }
 
+/* Reading and listening settings (components/profilemenu.tsx, app/accessibility/page.tsx), applied app-wide via lib/a11y.ts. */
+:root[data-textsize="large"] { font-size: 112.5%; }
+:root[data-textsize="xlarge"] { font-size: 125%; }
+
+:root[data-contrast="high"] {
+  --ink: #000000; --muted: #262a30; --brand-ink: #062064; --accent: #6b3700; --good: #0a5c00; --bad: #7a0000;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"])[data-contrast="high"] { --ink: #ffffff; --muted: #e4e8f0; --brand-ink: #dbe8ff; --accent: #ffc27a; --good: #7CE29A; --bad: #ffb0a8; }
+}
+:root[data-theme="dark"][data-contrast="high"] { --ink: #ffffff; --muted: #e4e8f0; --brand-ink: #dbe8ff; --accent: #ffc27a; --good: #7CE29A; --bad: #ffb0a8; }
+/* strengthen the faint black hairlines Tailwind draws (ring-black/5..15, border-black/5..15) so cards and buttons stay legible */
+:root[data-contrast="high"] [class*="ring-black"],
+:root[data-contrast="high"] [class*="border-black"] { outline: 1.5px solid var(--ink); outline-offset: -1px; }
+
 /* thin tricolour strip under the app bar */
 .tricolour { height: 3px; background: linear-gradient(90deg, var(--saffron) 0 33.34%, #ffffff 33.34% 66.67%, var(--india-green) 66.67% 100%); }
 

@@ -2,20 +2,23 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import Link from "next/link";
 import { categoryLabel } from "@/lib/labels";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Card, Shell, SpeakButton } from "@/components/ui";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/icon";
 import { Mascot } from "@/components/mascot";
 import { MODULE_COLOR } from "@/components/modulehero";
 import { todaysStep, type Step } from "@/lib/todaysstep";
-import { myCareer } from "@/lib/tailor";
+import { myCareer, examsForStudent, coursesForStudent } from "@/lib/tailor";
 import { TeacherInbox } from "@/components/inbox";
 import { ProShelf } from "@/components/pro";
 import { getKV, setKV } from "@/lib/db";
 import { useApp } from "@/lib/store";
 import { placeLabel } from "@/lib/questions";
 import { BUILD_ROADMAP_HREF } from "@/lib/roadmap";
+import { eligibility, rankCareers } from "@/lib/engine";
+import { tradeMatches } from "@/lib/listings";
+import { notifTitle, notifLink } from "@/lib/notiflabel";
 
 // icon values are names from components/icon.tsx
 const TILES = [
@@ -80,6 +83,66 @@ function ClassDashboardCard() {
   );
 }
 
+// the home sidebar (xl and up): the latest things Raah did for the student, from the same log as the activity page
+function RaahDid() {
+  const { t, data, auth, authFetch } = useApp();
+  const [rows, setRows] = useState<any[]>([]);
+  useEffect(() => {
+    if (!auth) return;
+    authFetch("/api/activity").then((r) => (r.ok ? r.json() : [])).then((j) => Array.isArray(j) && setRows(j.slice(0, 6))).catch(() => {});
+  }, [auth, authFetch]);
+  if (!rows.length) return null;
+  const name = (id?: string) => data?.careers?.find((c: any) => c.id === id)?.name ?? id ?? "";
+  const text = (r: any) => {
+    const v = { ...r.vars, ...(r.vars?.career ? { career: name(r.vars.career) } : {}) };
+    return r.kind === "today" ? t("act_today", { step: t(r.text_key, v) }) : t(r.text_key, v);
+  };
+  return (
+    <section className="rounded-2xl bg-(--card) p-4 shadow-sm ring-1 ring-black/10">
+      <h2 className="text-[11px] font-bold uppercase tracking-wider text-(--muted)">{t("act_title")}</h2>
+      <ul className="mt-2 space-y-1.5">
+        {rows.map((r) => <li key={r.id} className="rounded-xl bg-(--bg) px-3 py-2 text-xs leading-snug">{text(r)}</li>)}
+      </ul>
+      <Link href="/activity/" className="mt-2 inline-block text-xs font-semibold text-(--brand-ink) underline">{t("act_see_full")}</Link>
+    </section>
+  );
+}
+
+// the home sidebar (xl and up): the student's own alerts, same data as the Notifications page
+function AlertsPanel() {
+  const { t, auth, authFetch } = useApp();
+  const [items, setItems] = useState<any[]>([]);
+  useEffect(() => {
+    if (!auth) return;
+    authFetch("/api/auth/notifications").then((r) => (r.ok ? r.json() : null)).then((j) => Array.isArray(j) && setItems(j.slice(0, 5))).catch(() => {});
+  }, [auth, authFetch]);
+  return (
+    <section className="rounded-2xl bg-(--card) p-4 shadow-sm ring-1 ring-black/10">
+      <h2 className="text-[11px] font-bold uppercase tracking-wider text-(--muted)">{t("alerts")}</h2>
+      {items.length ? (
+        <ul className="mt-2 space-y-1.5">
+          {items.map((n) => (
+            <li key={n.id} className={`rounded-xl bg-(--bg) px-3 py-2 text-xs leading-snug ${n.read ? "opacity-60" : "font-semibold"}`}>
+              <Link href={notifLink(n)}>{notifTitle(n, t)}</Link>
+            </li>
+          ))}
+        </ul>
+      ) : <p className="mt-2 text-xs text-(--muted)">{t("no_notifs")}</p>}
+      <Link href="/notifications/" className="mt-2 inline-block text-xs font-semibold text-(--brand-ink) underline">{t("see_all_alerts")}</Link>
+    </section>
+  );
+}
+
+// the home sidebar (xl and up): Alerts above What Raah did for you, as a column beside the main content
+function HomeAside() {
+  return (
+    <div className="flex flex-col gap-3">
+      <AlertsPanel />
+      <RaahDid />
+    </div>
+  );
+}
+
 export default function Home() {
   const { t, profile, setProfile, data, auth, authFetch, showToast } = useApp();
   const router = useRouter();
@@ -116,6 +179,26 @@ export default function Home() {
     setStepRun((n) => n + 1);
   };
   const details = profile ? [profile.class && t("class_n", { n: profile.class }), placeLabel(t, profile.taluka), categoryLabel(profile.category, t)].filter(Boolean).join(" · ") : "";
+  // tile subtitles: next exam for you, how many free courses close the gap, jobs near you
+  const examRows = useMemo(() => (data && profile ? examsForStudent(data, profile) : []), [data, profile]);
+  const nextExam = examRows.find((r) => r.mine) ?? examRows[0] ?? null;
+  const courseRows = useMemo(() => (data && profile ? coursesForStudent(data, profile) : []), [data, profile]);
+  const gapCount = courseRows.filter((r) => r.mine).length;
+  const schCount = useMemo(() => (data && profile ? eligibility(data, profile).filter((e: any) => e.status !== "not_eligible").length : 0), [data, profile]);
+  const topCount = useMemo(() => (data && profile ? rankCareers(data, profile, 5).length : 0), [data, profile]);
+  const jobsForMine = useMemo(() => {
+    const naps: any[] = data?.naps ?? [];
+    return mine ? naps.filter((n) => tradeMatches(n, mine.career)) : [];
+  }, [data, mine]);
+  const jobNearCount = jobsForMine.length || (data?.naps?.length ?? 0);
+  const tileSub: Record<string, string> = {
+    home_careers: t("home_tile_careers_sub", { n: topCount || 5 }),
+    home_colleges: t("home_tile_colleges_sub"),
+    home_eligibility: t("home_tile_schol_sub", { n: schCount }),
+    home_exams: nextExam ? t("home_tile_exams_sub", { exam: nextExam.item.name, date: nextExam.item.dates || nextExam.item.timing || "" }) : t("home_tile_exams_sub_none"),
+    home_learn: t("home_tile_learn_sub", { n: gapCount }),
+    home_opportunity: t("home_tile_jobs_sub", { n: jobNearCount }),
+  };
   return (
     <Shell back={null} fit wide>
       {/* language is switched from the header; the home screen fits one phone screen without scrolling */}
@@ -173,80 +256,88 @@ export default function Home() {
         </>}
         </>
       ) : (
-        // big screen: today's step on the left, the modules on the right; a phone keeps one column in the same order
-        <div className="flex flex-1 flex-col gap-3 lg:grid lg:grid-cols-12 lg:items-start lg:gap-6">
-        <div className="flex flex-col gap-3 lg:col-span-5">
+        // the whole screen fits without scrolling on a laptop: main column on the left, Alerts + the activity
+        // log beside it on the right (xl and up); a phone keeps one stacked column in the same order
+        <div className="flex flex-1 flex-col gap-3 xl:grid xl:grid-cols-[1fr_300px] xl:items-start xl:gap-4">
+        <div className="flex min-w-0 flex-col gap-3">
         <TeacherInbox />
 
-        {/* one step chosen for the student today, with the reason and the source */}
-        <section aria-labelledby="step-h" className="rounded-2xl border-2 border-[var(--brand)] bg-[var(--card)] flex gap-3 p-4 shadow-sm">
+        {/* one step chosen for the student today, with the reason and the source; "How Raah decided" sits beside it on a big screen */}
+        <section aria-labelledby="step-h" className="rounded-2xl border-2 border-(--brand) bg-(--card) p-4 shadow-sm xl:grid xl:grid-cols-[1fr_14rem] xl:items-stretch xl:gap-4">
+          <div className="flex h-full gap-3">
           {/* Maina presents the step: thinking while Raah picks it, a clipboard for a follow-up question, a wave otherwise */}
-          <Mascot pose={stepLoading && !agentStep ? "think" : checkin ? "clipboard" : "wave"} size={64} className="-ml-1 shrink-0 self-start" />
-          <div className="min-w-0 flex-1">
-          <h2 id="step-h" className="text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">{t("step_title")}</h2>
+          <Mascot pose={stepLoading && !agentStep ? "think" : checkin ? "clipboard" : "wave"} size={56} className="-ml-1 shrink-0 self-start" />
+          <div className="flex h-full min-w-0 flex-1 flex-col justify-between">
+          <div>
+          <h2 id="step-h" className="text-[11px] font-bold uppercase tracking-wider text-(--muted)">{t("step_title")}</h2>
           <div className="mt-1 flex items-start gap-2">
             <p className="min-w-0 flex-1 text-base font-bold leading-snug">{t(step.key, step.vars)}</p>
             <SpeakButton text={`${t(step.key, step.vars)} ${t(`${step.key}_why`, step.vars)}`} label="" />
           </div>
-          <p className="mt-1 text-xs text-[var(--muted)]">{t(`${step.key}_why`, step.vars)}</p>
-          {step.source && <p className="mt-1 truncate text-[11px] text-[var(--muted)]">{t("source")}: <a href={step.source.split(" ; ")[0]} target="_blank" rel="noreferrer" className="underline">{step.source.split(" ; ")[0].replace(/^https?:\/\/(www\.)?/, "")}</a></p>}
-          {agentStep?.looked?.length ? <p className="mt-1 text-[11px] text-[var(--muted)]">{t("step_looked", { tools: agentStep.looked.map((x) => x.label).join(", ") })}</p> : null}
-          {agentStep?.agent?.reason ? <p className="mt-1 text-[11px] text-[var(--muted)]">{t("step_why", { reason: agentStep.agent.reason })}</p> : null}
-          {agentStep?.agent?.trace?.length ? <details className="mt-1 text-[11px] text-[var(--muted)]"><summary className="cursor-pointer">{t("step_trace")}</summary>
-            <ol className="mt-1 list-decimal space-y-0.5 pl-4">{agentStep.agent.trace.map((x, i) => <li key={i}>{x}</li>)}</ol></details> : null}
+          <p className="mt-1 text-xs text-(--muted)">{t(`${step.key}_why`, step.vars)}</p>
+          {step.source && <p className="mt-1 truncate text-[11px] text-(--muted)">{t("source")}: <a href={step.source.split(" ; ")[0]} target="_blank" rel="noreferrer" className="underline">{step.source.split(" ; ")[0].replace(/^https?:\/\/(www\.)?/, "")}</a></p>}
+          </div>
           {checkin ? (
             <div className="mt-3 flex flex-wrap items-center gap-2" role="group" aria-label={t(step.key, step.vars)}>
-              <button onClick={() => answerCheckin("yes")} disabled={answering} className="rounded-xl bg-[var(--brand)] px-4 py-2.5 text-sm font-bold text-white active:scale-95 disabled:opacity-50">{t("ci_yes")}</button>
-              <button onClick={() => answerCheckin("later")} disabled={answering} className="rounded-xl bg-[var(--brand-soft)] px-4 py-2.5 text-sm font-bold text-[var(--brand-ink)] active:scale-95 disabled:opacity-50">{t("ci_later")}</button>
-              <button onClick={() => answerCheckin("help")} disabled={answering} className="px-1 py-2.5 text-sm font-semibold text-[var(--brand-ink)] underline disabled:opacity-50">{t("ci_help")}</button>
+              <button onClick={() => answerCheckin("yes")} disabled={answering} className="rounded-xl bg-(--brand) px-4 py-2.5 text-sm font-bold text-white active:scale-95 disabled:opacity-50">{t("ci_yes")}</button>
+              <button onClick={() => answerCheckin("later")} disabled={answering} className="rounded-xl bg-(--brand-soft) px-4 py-2.5 text-sm font-bold text-(--brand-ink) active:scale-95 disabled:opacity-50">{t("ci_later")}</button>
+              <button onClick={() => answerCheckin("help")} disabled={answering} className="px-1 py-2.5 text-sm font-semibold text-(--brand-ink) underline disabled:opacity-50">{t("ci_help")}</button>
             </div>
           ) : (
             <div className="mt-3 flex items-center gap-3">
-              <Link href={step.href} className="inline-block rounded-xl bg-[var(--brand)] px-4 py-2.5 text-sm font-bold text-white active:scale-95">{t("step_do_it")}</Link>
-              <Link href="/activity/" className="text-sm font-semibold text-[var(--brand-ink)] underline">{t("act_title")}</Link>
+              <Link href={step.href} className="inline-block rounded-xl bg-(--brand) px-4 py-2.5 text-sm font-bold text-white active:scale-95">{t("step_do_it")}</Link>
+              <Link href="/activity/" className="text-sm font-semibold text-(--brand-ink) underline">{t("act_title")}</Link>
             </div>
           )}
           </div>
+          </div>
+          {(agentStep?.looked?.length || agentStep?.agent?.reason || agentStep?.agent?.trace?.length) ? (
+            <div className="mt-3 flex h-full flex-col border-t border-black/10 pt-3 xl:mt-0 xl:border-l xl:border-t-0 xl:pl-4 xl:pt-0">
+              <h3 className="text-[11px] font-bold uppercase tracking-wider text-(--muted)">{t("step_trace")}</h3>
+              <ul className="mt-2 space-y-1.5 text-xs text-(--muted)">
+                {agentStep?.looked?.length ? <li className="rounded-lg bg-(--bg) px-2 py-1.5">{t("step_looked", { tools: agentStep.looked.map((x) => x.label).join(", ") })}</li> : null}
+                {agentStep?.agent?.reason ? <li className="rounded-lg bg-(--bg) px-2 py-1.5">{t("step_why", { reason: agentStep.agent.reason })}</li> : null}
+                {agentStep?.agent?.trace?.map((x, i) => <li key={i} className="rounded-lg bg-(--bg) px-2 py-1.5">{x}</li>)}
+              </ul>
+            </div>
+          ) : null}
         </section>
 
         {mine && (
-          <div className="flex items-center gap-2 rounded-xl bg-[var(--brand-soft)] px-3 py-2.5 text-sm">
-            <span className="min-w-0 flex-1">{t("your_career")}: <b>{mine.career.name}</b>{!mine.saved && <span className="block text-[11px] text-[var(--muted)]">{t("best_match_note")}</span>}</span>
-            <Link href={BUILD_ROADMAP_HREF} className="shrink-0 text-sm font-semibold text-[var(--brand-ink)] underline">{t("change")}</Link>
+          <div className="flex items-center gap-2 rounded-xl bg-(--brand-soft) px-3 py-2.5 text-sm">
+            <span className="min-w-0 flex-1">{t("your_career")}: <b>{mine.career.name}</b>{!mine.saved && <span className="block text-[11px] text-(--muted)">{t("best_match_note")}</span>}</span>
+            <Link href={BUILD_ROADMAP_HREF} className="shrink-0 text-sm font-semibold text-(--brand-ink) underline">{t("change")}</Link>
           </div>
         )}
-        {/* a big screen has room for Maina at the fork in the raah, under the day's step */}
-        <div className="hidden justify-center pt-4 lg:flex">
-          <Mascot pose="wave" size={150} stack scene speak={t("mascot_hi")}><p className="text-base font-semibold leading-snug">{t("mascot_hi")}</p></Mascot>
-        </div>
 
-        </div>
-        <div className="flex flex-1 flex-col gap-3 lg:col-span-7">
-        {/* tiles grow to fill the free height on tall screens and shrink (never below a big tap target) on short ones */}
-        <div className="grid max-h-[30rem] min-h-[14rem] flex-1 grid-cols-3 gap-2 lg:max-h-none lg:flex-none lg:auto-rows-[10rem] lg:gap-4">
+        {/* six small tiles (two rows of three), then the three Pro features as a third row, all one consistent grid */}
+        <div className="grid grid-cols-3 gap-2">
           {STUDENT_TILES.map((x) => (
-            // each module keeps its own colour, the same one its page banner uses
-            <Link key={x.href} href={x.href} className="flex flex-col items-center justify-center rounded-2xl border-b-4 bg-[var(--card)] px-1 py-2 text-center text-[var(--brand-ink)] shadow-sm ring-1 ring-black/10 active:scale-95"
+            <Link key={x.href} href={x.href} className="flex flex-col items-center rounded-2xl border-b-4 bg-(--card) px-1.5 py-2 text-center text-(--brand-ink) shadow-sm ring-1 ring-black/10 active:scale-95"
               style={{ borderBottomColor: x.color }}>
-              <span className="tile-icon grid h-12 w-12 place-items-center rounded-2xl lg:h-16 lg:w-16" style={{ background: `color-mix(in srgb, ${x.color} 16%, transparent)`, color: x.color }}>
-                <Icon name={x.icon} size={28} />
+              <span className="tile-icon grid h-9 w-9 place-items-center rounded-xl" style={{ background: `color-mix(in srgb, ${x.color} 16%, transparent)`, color: x.color }}>
+                <Icon name={x.icon} size={20} />
               </span>
-              <span className="mt-2 font-semibold leading-tight text-sm lg:text-base">{t(x.key)}</span>
+              <span className="mt-1.5 text-xs font-semibold leading-tight">{t(x.key)}</span>
+              <span className="mt-0.5 hidden text-[10px] leading-tight text-(--muted) sm:line-clamp-2">{tileSub[x.key]}</span>
             </Link>
           ))}
         </div>
 
         <ProShelf />
 
-        <Link href="/ask/" className="flex items-center gap-3 rounded-2xl bg-[var(--brand)] px-4 py-3 text-white shadow-sm active:scale-95">
-          <Icon name="chat" size={28} />
+        <Link href="/ask/" className="flex items-center gap-3 rounded-2xl bg-(--brand) px-4 py-3 text-white shadow-sm active:scale-95">
+          <Icon name="chat" size={24} />
           <span className="min-w-0 flex-1">
-            <span className="block text-base font-semibold">{t("home_ask")}</span>
+            <span className="block text-sm font-semibold">{t("home_ask")}</span>
             <span className="block truncate text-xs text-white/80">{t("ask_ex1")}</span>
           </span>
-          <Icon name="mic" size={20} />
+          <Icon name="mic" size={18} />
         </Link>
         </div>
+
+        {/* Alerts and the activity log, beside everything else on a big screen */}
+        <div className="hidden xl:block"><HomeAside /></div>
         </div>
       )}
       {cheer && (

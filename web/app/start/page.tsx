@@ -13,8 +13,8 @@ import { QUESTIONS } from "@/lib/questions";
 import { API, LANGS, useApp, type AuthUser } from "@/lib/store";
 import { setKV } from "@/lib/db";
 
-type Step = "welcome" | "language" | "class" | "goal" | "marks" | "category" | "income" | "taluka" | "achieve" | "result" | "reminders" | "save";
-const FLOW: Step[] = ["welcome", "language", "class", "goal", "marks", "category", "income", "taluka", "achieve", "result", "reminders", "save"];
+type Step = "welcome" | "language" | "class" | "goal" | "marks" | "category" | "income" | "taluka" | "documents" | "achieve" | "result" | "reminders" | "save";
+const FLOW: Step[] = ["welcome", "language", "class", "goal", "marks", "category", "income", "taluka", "documents", "achieve", "result", "reminders", "save"];
 const QUESTION_STEPS: Record<string, string> = { class: "class", category: "category", income: "family_income_annual", taluka: "taluka" };
 // a marks band stands in for the exact percentage: the middle of the band
 const MARKS: [string, number][] = [["marks_b1", 45], ["marks_b2", 55], ["marks_b3", 68], ["marks_b4", 82], ["marks_b5", 93]];
@@ -216,6 +216,24 @@ function Start() {
         <>
           {qHead("taluka")}
           <div className="grid grid-cols-2 gap-2">{opts("taluka").map((o: any) => <Big key={o.label} on={p.taluka === o.v} onClick={() => choose({ taluka: o.v })}>{o.label}</Big>)}</div>
+        </>
+      )}
+
+      {step === "documents" && (
+        <>
+          {qHead("documents")}
+          <div className="space-y-2">
+            {opts("documents").map((o: any) => (
+              <Big key={o.label} on={(p.documents ?? []).includes(o.v)}
+                onClick={() => setP((x) => { const cur: string[] = x.documents ?? []; const has = cur.includes(o.v); return { ...x, documents: has ? cur.filter((d) => d !== o.v) : [...cur, o.v], documents_none: false }; })}>
+                {o.label}
+              </Big>
+            ))}
+            {(p.documents ?? []).length === 0 && (
+              <Big on={p.documents_none === true} onClick={() => setP((x) => ({ ...x, documents: [], documents_none: true }))}>{t("opt_none_of_these")}</Big>
+            )}
+          </div>
+          <div className="mt-auto"><Primary onClick={() => next()}>{t("continue")}</Primary></div>
         </>
       )}
 

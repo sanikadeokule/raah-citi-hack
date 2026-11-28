@@ -7,7 +7,7 @@ import { useEffect, useRef } from "react";
 import { THEME } from "@/lib/theme";
 import { useApp } from "@/lib/store";
 
-export function CentreMap({ centres, home }: { centres: any[]; home: { lat?: number; lon?: number; label: string } }) {
+export function CentreMap({ centres, home, className = "h-56" }: { centres: any[]; home: { lat?: number; lon?: number; label: string }; className?: string }) {
   const { t, online } = useApp();
   const el = useRef<HTMLDivElement>(null);
 
@@ -44,7 +44,7 @@ export function CentreMap({ centres, home }: { centres: any[]; home: { lat?: num
   if (!online) return <p className="mb-2 text-xs text-[var(--muted)]">{t("map_offline")}</p>;
   return (
     <>
-      <div ref={el} className="mb-1 h-56 w-full overflow-hidden rounded-xl ring-1 ring-black/10" role="img" aria-label={t("nearest_centres")} />
+      <div ref={el} className={`mb-1 w-full overflow-hidden rounded-xl ring-1 ring-black/10 ${className}`} role="img" aria-label={t("nearest_centres")} />
       {centres.some((c) => c.approximate) && <p className="mb-2 text-xs text-[var(--muted)]">{t("map_approx_note")}</p>}
     </>
   );

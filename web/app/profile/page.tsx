@@ -37,7 +37,8 @@ export default function ProfilePage() {
   const set = (k: string, v: any) => setP({ ...p, [k]: v });
   return (
     <Shell title={t("your_profile")} back="/careers/">
-      <Card className="space-y-3">
+      <Card>
+        <div className="gap-x-6 gap-y-3 space-y-3 lg:grid lg:grid-cols-2 lg:space-y-0 xl:grid-cols-3">
         {FIELDS.map((f) => (
           <label key={f.k} className="block text-sm">
             <span className="text-[var(--muted)]">{t(f.labelKey)}</span>
@@ -60,7 +61,8 @@ export default function ProfilePage() {
             setP({ ...p, taluka: e.target.value, lat: tk?.lat ?? p.lat, lon: tk?.lon ?? p.lon });
           }}>{data.talukas.map((x: any) => <option key={x.name} value={x.name}>{placeLabel(t, x.name)}</option>)}</select>
         </label>
-        <button onClick={() => { setProfile(p); queueAction("profile", p); showToast(t("saved")); }} className="w-full rounded-xl bg-[var(--brand)] py-3 font-semibold text-white">{t("save")}</button>
+        </div>
+        <button onClick={() => { setProfile(p); queueAction("profile", p); showToast(t("saved")); }} className="mt-4 w-full rounded-xl bg-[var(--brand)] py-3 font-semibold text-white">{t("save")}</button>
       </Card>
       {consent && (
         <Card><h2 className="font-bold">{t("consent_recorded")}</h2>

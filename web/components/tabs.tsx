@@ -1,11 +1,11 @@
 "use client";
 // A row (or grid) of tabs, so a long page shows one group at a time instead of everything stacked.
 
-export function Tabs<K extends string>({ tabs, value, onChange, cols }: {
-  tabs: { key: K; label: React.ReactNode; count?: number }[]; value: K; onChange: (k: K) => void; cols?: number;
+export function Tabs<K extends string>({ tabs, value, onChange, cols, className = "" }: {
+  tabs: { key: K; label: React.ReactNode; count?: number }[]; value: K; onChange: (k: K) => void; cols?: number; className?: string;
 }) {
   return (
-    <div role="tablist" className="grid gap-1 rounded-xl bg-[var(--card)] p-1 ring-1 ring-black/5"
+    <div role="tablist" className={`grid gap-1 rounded-xl bg-[var(--card)] p-1 ring-1 ring-black/5 ${className}`}
       style={{ gridTemplateColumns: `repeat(${cols ?? tabs.length}, minmax(0, 1fr))` }}>
       {tabs.map((x) => (
         <button key={x.key} role="tab" aria-selected={value === x.key} onClick={() => onChange(x.key)}

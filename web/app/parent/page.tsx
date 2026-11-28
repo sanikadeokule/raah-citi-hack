@@ -167,8 +167,22 @@ function Dashboard({ token, studentName, onSignOut, onExpired }: { token: string
   if (!data) return <div className="py-16 text-center text-sm text-(--muted)">{globalT("loading")}</div>;
 
   const name = data.student_name || studentName;
+  const waiting = (data.applications ?? []).filter((a: any) => a.student_approved_message && !a.parent_agreed_at);
   return (
-    <>
+    <div className="xl:space-y-4">
+      {waiting.length > 0 && (
+        <Card className="border-2 border-(--brand)">
+          <h3 className="font-bold">{t("waiting_for_you")}</h3>
+          <ul className="mt-2 space-y-2">{waiting.map((app: any, i: number) => (
+            <li key={`${app.title}-${i}`} className="rounded-xl bg-(--brand-soft) p-3 text-sm">
+              <b>{app.title}</b>
+              <p className="mt-2 border-t border-black/10 pt-2 text-(--muted)"><b>{t("student_message")}:</b> {app.student_approved_message}</p>
+              <button onClick={() => agree(app.id)} className="mt-2 w-full rounded-xl bg-(--brand) py-2.5 text-sm font-semibold text-white">{t("agree")}</button>
+            </li>))}</ul>
+        </Card>
+      )}
+      <div className="space-y-4 xl:grid xl:grid-cols-2 xl:items-start xl:gap-4 xl:space-y-0">
+      <div className="space-y-4">
       <Card className="!bg-linear-to-br from-(--brand) to-[#0f2547] text-white">
         <div className="text-sm text-white/70">{t("welcome")}</div>
         <div className="mt-1 text-2xl font-extrabold leading-tight">{name}</div>
@@ -226,10 +240,11 @@ function Dashboard({ token, studentName, onSignOut, onExpired }: { token: string
               <div><dt className="text-xs text-(--muted)">{t("scholarship")}</dt><dd className="font-bold">₹{plan.scholarship.toLocaleString("en-IN")}</dd></div>
               <div><dt className="text-xs text-(--muted)">{t("paid_back")}</dt><dd className="font-bold">{plan.payback_months != null ? t("months", { n: plan.payback_months }) : "-"}</dd></div>
             </dl>
-            {plan.estimate && <p className="mt-2 text-xs text-(--muted)">{t("estimate")}</p>}
           </div>)}
       </Card>
+      </div>
 
+      <div className="space-y-4">
       <Card>
         <h3 className="font-bold">{t("ask_title")}</h3>
         <p className="mt-1 text-xs text-(--muted)">{t("ask_hint")}</p>
@@ -284,11 +299,13 @@ function Dashboard({ token, studentName, onSignOut, onExpired }: { token: string
                 {n.body && <p className="mt-0.5 text-xs text-(--muted)">{n.body}</p>}
               </li>))}</ul>}
       </Card>
+      </div>
+      </div>
 
       <button onClick={onSignOut} className="mt-2 w-full rounded-xl bg-(--bg) py-3 text-sm font-semibold text-(--muted)">
         {t("sign_out")}
       </button>
-    </>
+    </div>
   );
 }
 
@@ -309,7 +326,7 @@ export default function ParentPage() {
   }
 
   return (
-    <Shell title={t("title")} publicPage>
+    <Shell title={t("title")} publicPage wide>
       {familyToken
         ? <Dashboard token={familyToken} studentName={studentName} onSignOut={signOut} onExpired={() => { signOut(); setExpired(true); }} />
         : <>

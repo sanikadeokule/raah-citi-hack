@@ -6,12 +6,15 @@ import { useEffect, useRef, useState } from "react";
 import { LANGS, useApp } from "@/lib/store";
 import { ProfileMenu } from "@/components/profilemenu";
 import { Icon } from "@/components/icon";
+import { SideInfo } from "@/components/sideinfo";
 import { ROADMAP_HREF } from "@/lib/roadmap";
 import { cachedAudio, fetchAudio, micErrorKind, micProblem, pickVoice, startRecording, transcribe, voiceStatus, type Recording, type VoiceProblem } from "@/lib/audio";
+import { readReadAloud } from "@/lib/a11y";
 
-// the student's main places, shown as a row under the app bar on a big screen (laptop, projector)
+// the student's main places, shown as a side menu on a big screen (laptop, projector)
 const DESK_NAV = [
   { href: "/", key: "nav_home", icon: "home" },
+  { href: "/discover/", key: "home_discover", icon: "sparkle" },
   { href: "/careers/", key: "home_careers", icon: "compass" },
   { href: "/colleges/", key: "home_colleges", icon: "graduation" },
   { href: "/eligibility/", key: "home_eligibility", icon: "rupee" },
@@ -26,8 +29,8 @@ const DESK_NAV = [
  * On a big screen (lg and up) the app bar spans the window and the page is centred: a reading width by default,
  * the full desktop width with `wide` (pages that lay themselves out in columns). Phones are unchanged.
  */
-export function Shell({ title, back = "/", role = "any", publicPage = false, fit = false, wide = false, children }: {
-  title?: string; back?: string | null; role?: "any" | "teacher"; publicPage?: boolean; fit?: boolean; wide?: boolean; children: React.ReactNode;
+export function Shell({ title, back = "/", role = "any", publicPage = false, fit = false, wide = false, aside, children }: {
+  title?: string; back?: string | null; role?: "any" | "teacher"; publicPage?: boolean; fit?: boolean; wide?: boolean; aside?: React.ReactNode; children: React.ReactNode;
 }) {
   const { t, online, toast, lang, setLang, data, auth, authReady, signOut, profile } = useApp();
   const router = useRouter();
@@ -38,12 +41,36 @@ export function Shell({ title, back = "/", role = "any", publicPage = false, fit
   }, [needsLogin, path, role, router]);
   const wrongRole = !publicPage && auth && role === "teacher" && auth.user.role !== "teacher";
   const ready = publicPage || (authReady && auth);
+  // side menu (big screens): closed on Home, open everywhere else, and the person can flip it at any time.
+  // Navigating resets it to the page's own default.
+  const onHome = path === "/";
+  const [railOpen, setRailOpen] = useState(!onHome);
+  useEffect(() => { setRailOpen(!onHome); }, [onHome]);
+  const isStudent = auth?.user.role === "student";
+  const withAside = isStudent && !onHome && !!ready;
   const onRoadmap = (path.endsWith("/") ? path : `${path}/`) === ROADMAP_HREF;
+  // "Read answers aloud" (components/profilemenu.tsx -> /accessibility/): Raah speaks each screen's title as it opens.
+  useEffect(() => {
+    if (!ready || !readReadAloud()) return;
+    const ss = typeof window !== "undefined" ? window.speechSynthesis : undefined;
+    if (!ss || typeof SpeechSynthesisUtterance === "undefined") return;
+    let cancelled = false;
+    pickVoice(speechLang(lang)).then((pick) => {
+      if (cancelled || !pick) return;
+      const u = new SpeechSynthesisUtterance(title ?? t("app_name"));
+      u.lang = pick.voice?.lang ?? speechLang(lang);
+      if (pick.voice) u.voice = pick.voice;
+      u.rate = 0.95;
+      ss.cancel();
+      ss.speak(u);
+    });
+    return () => { cancelled = true; ss.cancel(); };
+  }, [ready, path, title, lang, t]);
   return (
-    <div className={`mx-auto max-w-md bg-(--bg) lg:max-w-none ${fit ? "flex min-h-dvh flex-col" : "min-h-screen pb-24"}`}>
+    <div className={`mx-auto max-w-md bg-(--bg) lg:max-w-none ${fit ? "flex min-h-dvh flex-col" : "min-h-screen pb-24 lg:pb-0"}`}>
       <div className="sticky top-0 z-20 shadow">
       <header className="bg-(--header-bg) px-4 py-3 text-white">
-      <div className="mx-auto flex items-center gap-2 lg:max-w-6xl lg:px-4">
+      <div className="mx-auto flex items-center gap-2 lg:max-w-none lg:px-4">
         {back !== null && (
           <Link href={back} aria-label={t("back")} className="rounded-full px-2 text-2xl leading-none">‹</Link>
         )}
@@ -72,24 +99,33 @@ export function Shell({ title, back = "/", role = "any", publicPage = false, fit
       </div>
       </header>
       <div aria-hidden className="tricolour" />
-      {auth?.user.role === "student" && (
-        <nav aria-label={t("app_name")} className="hidden border-b border-black/10 bg-(--card) lg:block">
-          <div className="mx-auto flex max-w-6xl gap-1 overflow-x-auto px-8 py-2">
-            {DESK_NAV.map((n) => {
-              const here = n.href === "/" ? path === "/" : path.startsWith(n.href.replace(/\/$/, ""));
-              return (
-                <Link key={n.href} href={n.href} aria-current={here ? "page" : undefined}
-                  className={`flex items-center gap-1.5 whitespace-nowrap rounded-full px-3.5 py-1.5 text-sm font-semibold ${here ? "bg-(--brand) text-white" : "text-(--brand-ink) hover:bg-(--brand-soft)"}`}>
-                  <Icon name={n.icon} size={16} />{t(n.key)}
-                </Link>
-              );
-            })}
-          </div>
+      </div>
+      <div className={`flex min-w-0 flex-1 flex-col ${isStudent ? "lg:flex-row" : ""}`}>
+      {isStudent && (
+        <nav aria-label={t("app_name")} style={{ width: railOpen ? "15rem" : "4.75rem" }}
+          className="hidden shrink-0 border-r border-black/10 bg-(--card) transition-[width] lg:block">
+        <div className="sticky top-[59px] flex h-[calc(100dvh-59px)] flex-col gap-1 overflow-y-auto p-3">
+          {DESK_NAV.map((n) => {
+            const here = n.href === "/" ? path === "/" : path.startsWith(n.href.replace(/\/$/, ""));
+            return (
+              <Link key={n.href} href={n.href} aria-current={here ? "page" : undefined} title={railOpen ? undefined : t(n.key)} aria-label={railOpen ? undefined : t(n.key)}
+                className={`flex items-center gap-3 rounded-xl py-2.5 text-base font-semibold ${railOpen ? "px-3" : "justify-center px-0"} ${here ? "bg-(--brand) text-white" : "text-(--brand-ink) hover:bg-(--brand-soft)"}`}>
+                <Icon name={n.icon} size={22} />{railOpen && <span className="truncate">{t(n.key)}</span>}
+              </Link>
+            );
+          })}
+          <div className="flex-1" />
+          <button type="button" onClick={() => setRailOpen(!railOpen)} aria-expanded={railOpen} aria-label={t(railOpen ? "nav_collapse" : "nav_expand")} title={t(railOpen ? "nav_collapse" : "nav_expand")}
+            className="flex items-center justify-center gap-2 rounded-xl border border-black/15 py-2 text-sm font-semibold text-(--brand-ink) hover:bg-(--brand-soft)">
+            <span aria-hidden className="text-lg leading-none">{railOpen ? "‹" : "›"}</span>{railOpen && t("nav_collapse")}
+          </button>
+        </div>
         </nav>
       )}
-      </div>
+      <div className="flex min-w-0 flex-1 flex-col">
       {!online && <div className="bg-amber-500 px-4 py-2 text-center text-sm font-medium text-black"><Icon name="offline" size={16} className="mr-1 align-[-3px]" />{t("offline_banner")}</div>}
-      <main className={`${fit ? "flex flex-1 flex-col gap-3 p-3" : "space-y-4 p-4"} lg:mx-auto lg:w-full lg:px-8 lg:py-6 ${wide ? "lg:max-w-6xl" : "lg:max-w-3xl"}`}>
+      <div className={`flex min-w-0 flex-1 flex-col lg:flex-row lg:justify-center ${withAside ? "xl:gap-2 xl:pr-6" : ""}`}>
+      <main className={`${fit ? "flex flex-1 flex-col gap-3 p-3" : "space-y-4 p-4"} lg:mx-0 lg:w-full lg:min-w-0 lg:px-8 lg:py-6 ${wide ? "lg:max-w-[1600px]" : "lg:max-w-6xl"}`}>
         {!ready ? <Loading /> : wrongRole ? (
           <Card>
             <p><Icon name="lock" size={16} className="mr-1 align-[-3px]" />{t("teacher_only")}</p>
@@ -98,6 +134,10 @@ export function Shell({ title, back = "/", role = "any", publicPage = false, fit
           </Card>
         ) : data || publicPage ? children : <Loading />}
       </main>
+      {withAside && <div className="hidden xl:block xl:py-6"><div className="flex flex-col gap-3">{aside ?? <SideInfo />}<div id="aside-extra" className="flex w-80 flex-col gap-3 empty:hidden" /></div></div>}
+      </div>
+      </div>
+      </div>
       {toast && (
         <div role="status" className="fixed bottom-6 left-1/2 z-50 w-max max-w-[min(92vw,28rem)] -translate-x-1/2 rounded-2xl bg-black/85 px-5 py-3 text-center text-sm text-white shadow-lg">{toast}</div>
       )}

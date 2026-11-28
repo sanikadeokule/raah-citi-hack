@@ -130,10 +130,26 @@ export default function ApplyPage() {
   const eligibleRows = eligibilityRows.filter((e: any) => !apps.some((a) => a.scheme_id === e.id) && ["eligible", "eligible_missing_docs"].includes(e.status));
   const title = view === "list" || !active ? t("my_apps") : active.title;
 
+  // the four-step strip the wireframe shows across the top, once an application is open
+  const STEP_AT: Record<View, number> = { list: 0, docs: 1, review: 2, parent: 3 };
+  const submittedStep = active?.submitted_at ? 4 : null;
+  const curStep = submittedStep ?? STEP_AT[view];
+
   return (
-    <Shell title={t("title")} back={view === "list" ? "/" : null}>
+    <Shell title={t("title")} back={view === "list" ? "/" : null} wide>
       {!authReady && <Card><p className="text-sm text-[var(--muted)]">…</p></Card>}
       {authReady && !auth && <Card><a className="font-semibold text-[var(--brand-ink)] underline" href="/login/">{t("sign_in")}</a></Card>}
+      {auth && active && view !== "list" && (
+        <div className="hidden items-center gap-1 rounded-2xl bg-[var(--card)] p-3 ring-1 ring-black/10 lg:flex">
+          {[t("documents"), t("review_title"), t("parent_title"), t("submitted_step")].map((label, i) => (
+            <div key={label} className="flex flex-1 items-center gap-2">
+              <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-full text-xs font-bold ${i <= curStep ? "bg-[var(--brand)] text-white" : "bg-[var(--bg)] text-[var(--muted)]"}`}>{i + 1}</span>
+              <span className={`text-sm font-semibold ${i <= curStep ? "" : "text-[var(--muted)]"}`}>{label}</span>
+              {i < 3 && <span className={`h-0.5 flex-1 ${i < curStep ? "bg-[var(--brand)]" : "bg-[var(--bg)]"}`} />}
+            </div>
+          ))}
+        </div>
+      )}
 
       {auth && view === "list" && (
         <>
@@ -162,6 +178,7 @@ export default function ApplyPage() {
         return (
           <>
             <h2 className="px-1 text-lg font-bold">{active.title}</h2>
+            <div className="space-y-4 lg:grid lg:grid-cols-2 lg:items-start lg:gap-4 lg:space-y-0">
             <Card className="space-y-2">
               <div className="flex items-center justify-between"><h3 className="font-bold">{t("documents")}</h3><Badge tone={ready === total ? "green" : "amber"}>{t("n_of_m", { n: ready, m: total })}</Badge></div>
               <div className="h-2 overflow-hidden rounded-full bg-[var(--bg)]"><div className="h-full bg-[var(--brand)]" style={{ width: `${total ? (ready / total) * 100 : 0}%` }} /></div>
@@ -176,6 +193,7 @@ export default function ApplyPage() {
               {ready < total && <button onClick={remind} disabled={busy} className={quiet}>{t("remind_me")}</button>}
               {active.remind_at && ready < total && <p className="text-xs text-[var(--muted)]">{t("check_again", { date: date(active.remind_at) })}</p>}
             </Card>
+            <div className="space-y-3">
             {!active.student_approved_at && <button onClick={() => { setNotice(""); setView("review"); }} className={primary}>{t("next_form")}</button>}
             {active.student_approved_at && minor(active) && !active.parent_agreed_at && (
               <Card className="space-y-2"><p className="text-sm">{active.parent_sent_at ? t("awaiting") : t("minor_gate")}</p>
@@ -187,6 +205,8 @@ export default function ApplyPage() {
                 <button onClick={() => patch({ stage: "applied" })} disabled={busy} className={primary}>{t("submitted")}</button>
               </Card>)}
             {active.submitted_at && <p className="px-1 text-sm font-semibold text-[var(--good)]">{t("submitted_on", { date: date(active.submitted_at) })}</p>}
+            </div>
+            </div>
             <button onClick={() => setView("list")} className={quiet}>{t("back_list")}</button>
             <p className="px-1 text-xs text-[var(--muted)]">{t("source_note")}</p>
           </>);

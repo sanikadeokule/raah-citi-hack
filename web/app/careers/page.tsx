@@ -29,7 +29,7 @@ function WhyLine({ s, profile, lang }: { s: any; profile: any; lang: string }) {
     });
     return () => { live = false; };
   }, [s.career.id, profile, lang]);
-  return <p className="mt-1 text-sm">{ai ? <> {ai}</> : s.why}</p>;
+  return <p className="mt-1 line-clamp-2 text-sm">{ai ? <> {ai}</> : s.why}</p>;
 }
 
 function flagBadges(c: any, t: (k: string) => string) {
@@ -76,21 +76,21 @@ export default function CareersPage() {
         {tabBtn("top", `${t("shortlist")}`)}
         {tabBtn("all", t("all_careers", { n: data?.careers?.length ?? 0 }))}
       </div>
-      {tab === "top" && <Card>
+      {tab === "top" && <Card className="lg:!p-3">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-bold">{t("shortlist")}</h2>
           <Link href="/profile/" className="text-sm underline">{t("edit_profile")}</Link>
         </div>
         <p className="text-xs text-[var(--muted)]">{(profile?.interests || []).map((x: string) => tagLabel(t, x)).join(", ")}</p>
         <p className="mt-1 text-xs font-medium text-[var(--brand-ink)]">{t("rm_tap_hint")}</p>
-        <ul className="mt-2 space-y-2 lg:grid lg:grid-cols-2 lg:items-start lg:gap-3 lg:space-y-0">
+        <ul className="mt-2 space-y-2 lg:grid lg:grid-cols-2 2xl:grid-cols-3 lg:items-start lg:gap-3 lg:space-y-0">
           {top.map((s: any, i: number) => {
             const r = s.plan_id ? quick(s.plan_id) : null;
             return (
               <li key={s.career.id} {...cardProps(s.career.id)}
-                className="cursor-pointer rounded-xl bg-[var(--bg)] p-3 ring-1 ring-transparent transition hover:ring-[var(--brand)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)] active:scale-[0.99]">
+                className={`cursor-pointer rounded-xl p-3 ring-1 transition hover:ring-[var(--brand)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)] active:scale-[0.99] ${i === 0 ? "bg-[var(--brand-soft)] ring-2 ring-[var(--brand)]" : "bg-[var(--bg)] ring-transparent"}`}>
                 <div className="flex items-start justify-between gap-2">
-                  <div><span className="mr-1 text-[var(--muted)]">{i + 1}.</span><b>{s.career.name}</b></div>
+                  <div>{i === 0 && <span className="mb-0.5 block text-[10px] font-bold uppercase tracking-wider text-[var(--brand-ink)]">{t("your_career")}</span>}<span className="mr-1 text-[var(--muted)]">{i + 1}.</span><b>{s.career.name}</b></div>
                   <Ring value={s.score} color={MODULE_COLOR.careers} size={38} />
                 </div>
                 <div className="mt-1 flex flex-wrap gap-1">
@@ -113,31 +113,37 @@ export default function CareersPage() {
               </li>
             );
           })}
+          {top.length > 0 && (
+            <li className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-black/15 p-3 text-center">
+              <p className="font-semibold">{t("not_sure_yet")}</p>
+              <p className="text-xs text-[var(--muted)]">{t("not_sure_yet_sub")}</p>
+              <div className="mt-1 flex gap-2">
+                <Link href="/compare/" className="rounded-full bg-[var(--bg)] px-3 py-1.5 text-xs font-semibold ring-1 ring-black/10">{t("home_compare")}</Link>
+                <Link href="/ask/" className="rounded-full bg-[var(--bg)] px-3 py-1.5 text-xs font-semibold ring-1 ring-black/10">{t("home_ask")}</Link>
+              </div>
+            </li>
+          )}
         </ul>
       </Card>}
       {/* the Government of India's own career portal, for careers beyond this list */}
       <a href={NCS_URL} target="_blank" rel="noreferrer"
-        className="flex items-center gap-3 rounded-xl bg-[var(--card)] p-3 text-sm ring-1 ring-black/5 active:scale-[.98]">
-        <Icon name="building" size={24} className="text-[var(--brand)]" />
-        <span className="min-w-0 flex-1">
-          <span className="block font-semibold">{t("careers_gov_title")}</span>
-          <span className="block text-xs text-[var(--muted)]">{t("careers_gov_sub")}</span>
-          <span className="block truncate text-xs font-semibold text-[var(--brand-ink)] underline">ncs.gov.in</span>
-        </span>
-        <span aria-hidden className="text-lg text-[var(--muted)]"></span>
+        className="flex items-center gap-3 rounded-xl bg-[var(--card)] px-3 py-2 text-sm ring-1 ring-black/5 active:scale-[.98]">
+        <Icon name="building" size={20} className="text-[var(--brand)]" />
+        <span className="min-w-0 flex-1 truncate"><b>{t("careers_gov_title")}</b> <span className="text-xs text-[var(--muted)]">{t("careers_gov_sub")}</span></span>
+        <span className="shrink-0 text-xs font-semibold text-[var(--brand-ink)] underline">ncs.gov.in</span>
       </a>
       {tab === "all" && <Card>
         <h2 className="text-lg font-bold">{t("all_careers", { n: all.length })}</h2>
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("careers_search_placeholder")} className="mt-2 w-full rounded-lg bg-[var(--bg)] p-2" />
         <div ref={pg.top} />
-        <ul className="mt-2 divide-y divide-black/5 lg:grid lg:grid-cols-2 lg:gap-x-6 lg:divide-y-0">
+        <ul className="mt-2 divide-y divide-black/5 lg:grid lg:grid-cols-2 2xl:grid-cols-3 lg:gap-x-6 lg:divide-y-0">
           {pg.pageItems.map((c: any) => (
             <li key={c.id} {...cardProps(c.id)} className="cursor-pointer py-2 hover:bg-[var(--bg)] lg:border-b lg:border-black/5">
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <div className="font-medium">{c.name}</div>
                   <div className="text-xs text-[var(--muted)]">{c.entry_path}</div>
-                  <div className="text-xs text-[var(--muted)]">{c.income_estimate && <Badge tone="amber">{t("estimate")}</Badge>} {c.income_text}</div>
+                  <div className="text-xs text-[var(--muted)]">{c.income_text}</div>
                 </div>
                 <span className="flex shrink-0 flex-col items-end gap-1">
                 <span className="rounded-full bg-[var(--brand)] px-3 py-1 text-xs font-semibold text-white"><Icon name="map" size={14} className="align-[-2px]" /></span>

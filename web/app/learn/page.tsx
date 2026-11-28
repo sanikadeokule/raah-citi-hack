@@ -2,8 +2,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Icon, Mark } from "@/components/icon";
 import { useEffect, useMemo, useState } from "react";
-import { Card, MicButton, Shell, SpeakButton } from "@/components/ui";
-import { ChatInput } from "@/components/chatinput";
+import { Card, Shell, SpeakButton } from "@/components/ui";
 import { FOR_YOU, forYouRanked, lessonTopics, lessons, quiz } from "@/lib/lessons";
 import { becauseText } from "@/lib/gaps";
 import { tagLabel } from "@/lib/questions";
@@ -11,14 +10,17 @@ import { useApp } from "@/lib/store";
 import { StudentModules } from "@/components/modules";
 import { FreeCourses } from "@/components/freecourses";
 import { Tabs } from "@/components/tabs";
+import { Pager, usePaged } from "@/components/pager";
 import { getKV, setKV } from "@/lib/db";
 import { cachedAudio, fetchAudio, voiceAvailable } from "@/lib/audio";
 import Link from "next/link";
-import { postAi } from "@/lib/ai";
 import { HeroBar, MODULE_COLOR, ModuleHero } from "@/components/modulehero";
 
+const LESSONS_PAGE = 10;
+const QUIZ_PAGE = 5;
+
 export default function Learn() {
-  const { data, profile, lang, setLang, t, queueAction } = useApp();
+  const { data, profile, lang, t, queueAction } = useApp();
   const all = useMemo(() => (data ? lessons(data, lang) : []), [data, lang]);
   const topics = useMemo(() => (data ? lessonTopics(data, lang, all) : []), [data, lang, all]);
   const [done, setDone] = useState<string[]>([]);
@@ -32,9 +34,6 @@ export default function Learn() {
   const qs = useMemo(() => quiz(ls), [ls]);
   const [ans, setAns] = useState<Record<number, number>>({});
   const [checked, setChecked] = useState(false);
-  const [learnQuestion, setLearnQuestion] = useState("");
-  const [learnTurns, setLearnTurns] = useState<any[]>([]);
-  const [asking, setAsking] = useState(false);
   const pickTopic = (id: string) => { setPicked(id); setAns({}); setChecked(false); };
   const [tab, setTab] = useState<"lessons" | "modules" | "courses" | "quiz">("lessons");
   useEffect(() => { getKV<string[]>("lessons_done").then((v) => v && setDone(v)); }, []);
@@ -58,27 +57,13 @@ export default function Learn() {
     const next = [...done, id];
     setDone(next); await setKV("lessons_done", next); await queueAction("lesson_done", { id, at: new Date().toISOString() });
   };
+  const lessonsPg = usePaged(ls, LESSONS_PAGE, `${topic}|${ls.length}`);
+  const quizPg = usePaged(qs, QUIZ_PAGE, `${topic}|${qs.length}`);
   const score = qs.reduce((a, q, i) => a + (ans[i] === q.answer ? 1 : 0), 0);
   const check = async () => {
     setChecked(true);
     const rec = { quiz: `topic_${topic}`, score, total: qs.length, at: new Date().toISOString() };
     await setKV(`quiz_topic_${topic}`, rec); await queueAction("quiz", rec);
-  };
-  const askLearn = async (question: string, responseLang = lang) => {
-    question = question.trim();
-    if (!question || asking) return;
-    if (responseLang !== lang) setLang(responseLang);
-    setLearnQuestion("");
-    setAsking(true);
-    const history = learnTurns.slice(-2).flatMap((turn) => [
-      { role: "user", content: turn.question }, { role: "assistant", content: turn.answer },
-    ]);
-    const result = await postAi("/api/ask", { question, lang: responseLang, history, profile });
-    setLearnTurns((turns) => [...turns, {
-      question, answer: result?.answer || t("learn_ask_error"), lang: responseLang,
-      citations: result?.citations || [],
-    }]);
-    setAsking(false);
   };
   const doneCount = all.filter((l) => done.includes(l.id)).length;
   return (
@@ -87,6 +72,7 @@ export default function Learn() {
         line={doneCount ? t("hero_learn", { d: doneCount, n: all.length }) : t("hero_learn_start")}>
         <HeroBar value={doneCount} max={all.length} label={t("hero_learn_bar", { d: doneCount, n: all.length })} />
       </ModuleHero>
+      {/* the four sections: For you (lessons), Free courses, Teachers, Quiz */}
       <Tabs value={tab} onChange={setTab} tabs={[
         { key: "lessons", label: `${t("learn_tab_lessons")}`, count: ls.length },
         { key: "courses", label: `${t("learn_tab_courses")}` },
@@ -94,35 +80,33 @@ export default function Learn() {
         { key: "quiz", label: `${t("quiz")}`, count: qs.length },
       ]} />
 
-      {/* one topic drives both the lessons and the quiz built from them */}
-      {tab !== "modules" && tab !== "courses" && (
+      {tab === "modules" && <StudentModules emptyText={t("learn_no_modules")} />}
+
+      {tab === "courses" && <Card><FreeCourses /></Card>}
+
+      {tab === "lessons" && (
+      <Card>
         <label className="block text-sm font-medium">
           {t("lesson_topic")}
           <select value={topic} onChange={(e) => pickTopic(e.target.value)}
-            className="mt-1 block w-full rounded-lg bg-[var(--card)] px-3 py-2 text-base ring-1 ring-black/10">
+            className="mt-1 block w-full max-w-sm rounded-lg bg-[var(--bg)] px-3 py-2 text-base ring-1 ring-black/10">
             {mine.length > 0 && <option value={FOR_YOU}> {t("lesson_for_you")} ({mine.length})</option>}
             {topics.map((tp: any) => <option key={tp.id} value={tp.id}>{tp.name} ({all.filter((l) => l.topic === tp.id).length})</option>)}
           </select>
           {topic === FOR_YOU && <span className="mt-1 block text-xs font-normal text-[var(--muted)]">{t("lesson_for_you_note")}</span>}
         </label>
-      )}
-
-      {tab === "courses" && <FreeCourses />}
-
-      {tab === "modules" && <StudentModules emptyText={t("learn_no_modules")} />}
-
-      {tab === "lessons" && <Card>
         {voice ? (
           <button onClick={saveAll} disabled={saving || savedCount === ls.length}
-            className="mb-3 w-full rounded-lg bg-[var(--brand-soft)] py-2 text-sm font-semibold text-[var(--brand-ink)] disabled:opacity-60">
+            className="mt-3 w-full rounded-lg bg-[var(--brand-soft)] py-2 text-sm font-semibold text-[var(--brand-ink)] disabled:opacity-60">
             {savedCount === ls.length ? `${t("audio_saved")}` : saving ? "…" : `${t("save_audio_offline")} (${savedCount}/${ls.length})`}
           </button>
         ) : (
-          <p className="mb-3 text-xs text-[var(--muted)]">{t("device_voice_note")}</p>
+          <p className="mt-3 text-xs text-[var(--muted)]">{t("device_voice_note")}</p>
         )}
+        <div ref={lessonsPg.top} />
         {/* titles only; tap one to read or play it */}
-        <ul className="space-y-2 lg:grid lg:grid-cols-2 lg:items-start lg:gap-3 lg:space-y-0">
-          {ls.map((l) => (
+        <ul className="mt-3 space-y-2 lg:grid lg:grid-cols-2 lg:items-start lg:gap-3 lg:space-y-0">
+          {lessonsPg.pageItems.map((l) => (
             <li key={l.id}>
               <details className="group rounded-xl bg-[var(--bg)]">
                 <summary className="flex cursor-pointer list-none items-center justify-between gap-2 p-3">
@@ -138,11 +122,16 @@ export default function Learn() {
             </li>
           ))}
         </ul>
-      </Card>}
+        <Pager page={lessonsPg.page} pages={lessonsPg.pages} start={lessonsPg.start} shown={lessonsPg.pageItems.length} total={lessonsPg.total} go={lessonsPg.go} />
+      </Card>
+      )}
 
       {tab === "quiz" && <Card>
+        <div ref={quizPg.top} />
         <ol className="space-y-3">
-          {qs.map((q, i) => (
+          {quizPg.pageItems.map((q, li) => {
+            const i = quizPg.start + li;
+            return (
             <li key={i}>
               <div className="text-sm font-medium">{i + 1}. {q.q}</div>
               <div className="mt-1 flex flex-wrap gap-2">
@@ -153,8 +142,10 @@ export default function Learn() {
                 })}
               </div>
             </li>
-          ))}
+            );
+          })}
         </ol>
+        <Pager page={quizPg.page} pages={quizPg.pages} start={quizPg.start} shown={quizPg.pageItems.length} total={quizPg.total} go={quizPg.go} />
         {!checked ? (
           <button onClick={check} disabled={Object.keys(ans).length < qs.length} className="mt-3 w-full rounded-xl bg-[var(--brand)] py-3 font-semibold text-white disabled:opacity-40">{t("check")}</button>
         ) : (
@@ -163,28 +154,6 @@ export default function Learn() {
         <p className="mt-2 text-xs text-[var(--muted)]">{t("learn_sync_note")}</p>
         <Link href="/progress/" className="mt-3 inline-block text-sm font-semibold text-[var(--brand-ink)] underline">{t("progress_view_dashboard")}</Link>
       </Card>}
-
-      <Card>
-        <h2 className="font-bold">{t("learn_ask_title")}</h2>
-        <p className="mt-1 text-xs text-[var(--muted)]">{t("learn_ask_hint")}</p>
-        {learnTurns.map((turn, i) => (
-          <div key={`${i}-${turn.question}`} className="mt-3 space-y-2 text-sm">
-            <p className="rounded-xl bg-[var(--bg)] p-2">{turn.question}</p>
-            <div className="rounded-xl bg-[var(--brand-soft)] p-2">
-              <p className="whitespace-pre-line">{turn.answer}</p>
-              <SpeakButton text={turn.answer} label="" lang={turn.lang} />
-            </div>
-          </div>
-        ))}
-        {asking && <p className="mt-2 text-sm text-[var(--muted)]">{t("thinking")}</p>}
-        <div className="mt-3 flex items-end gap-2">
-          <MicButton onText={(spoken, detectedLang) => askLearn(spoken, detectedLang || lang)} />
-          <ChatInput value={learnQuestion} onChange={setLearnQuestion}
-            onSend={() => askLearn(learnQuestion)} placeholder={t("learn_ask_placeholder")} maxLength={500} />
-          <button onClick={() => askLearn(learnQuestion)} disabled={asking || !learnQuestion.trim()}
-            className="rounded-full bg-[var(--brand)] px-4 py-3 text-white disabled:opacity-40">{t("send")}</button>
-        </div>
-      </Card>
     </Shell>
   );
 }

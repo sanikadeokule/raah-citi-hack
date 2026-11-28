@@ -107,6 +107,9 @@ export function ProfileMenu() {
               ))}
             </div>
           )}
+          <Link href="/accessibility/" onClick={close} role="menuitem" className="flex items-center gap-3 rounded-xl px-2 py-2.5 text-sm hover:bg-[var(--bg)]">
+            <Icon name="speaker" size={18} />{t("menu_reading_settings")}
+          </Link>
           <button type="button" role="menuitem" onClick={async () => { close(); await signOut(); router.replace("/login/"); }}
             className="flex w-full items-center gap-3 rounded-xl px-2 py-2.5 text-left text-sm text-[var(--bad)] hover:bg-[var(--bg)]">
             <Icon name="logout" size={18} />{t("logout")}

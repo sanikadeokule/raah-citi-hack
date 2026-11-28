@@ -118,7 +118,8 @@ export function ageFitsClass(age: any, cls: any) {
 
 const INCOME: [number, string][] = [[100000, "inc_lt1"], [180000, "inc_1_2"], [240000, "inc_2_25"], [320000, "inc_25_35"],
   [450000, "inc_35_45"], [700000, "inc_45_8"], [900000, "inc_gt8"]];
-const DOCS = ["aadhaar", "marksheet_10", "caste_certificate", "income_certificate", "domicile_certificate", "bank_passbook"];
+const DOCS = ["aadhaar", "marksheet_10", "caste_certificate", "income_certificate", "domicile_certificate", "bank_passbook",
+  "disability_certificate", "ews_certificate", "ex_serviceman_certificate", "occupation_certificate", "mahabocw_registration", "school_bonafide", "hostel_proof"];
 const CATEGORIES = ["General", "EWS", "OBC", "SC", "ST", "DNT", "EBC", "SEBC", "VJNT", "SBC", "Navbouddha"];
 
 const ask = (key: string, vars?: (p: any, t: T) => Record<string, string | number>) => (t: T, p: any) => {
