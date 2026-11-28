@@ -9,13 +9,13 @@ import { useApp } from "@/lib/store";
 import { myCareer } from "@/lib/tailor";
 import { BUILD_ROADMAP_HREF } from "@/lib/roadmap";
 
-export function SideInfo() {
+export function SideInfo({ rows: maxRows = 4 }: { rows?: number } = {}) {
   const { t, data, profile, auth, authFetch } = useApp();
   const [rows, setRows] = useState<any[]>([]);
   useEffect(() => {
     if (!auth) return;
-    authFetch("/api/activity").then((r) => (r.ok ? r.json() : [])).then((j) => Array.isArray(j) && setRows(j.slice(0, 4))).catch(() => {});
-  }, [auth, authFetch]);
+    authFetch("/api/activity").then((r) => (r.ok ? r.json() : [])).then((j) => Array.isArray(j) && setRows(j.slice(0, maxRows))).catch(() => {});
+  }, [auth, authFetch, maxRows]);
   const mine = myCareer(data, profile);
   const name = (id?: string) => data?.careers?.find((c: any) => c.id === id)?.name ?? id ?? "";
   const text = (r: any) => {

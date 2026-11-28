@@ -67,7 +67,7 @@ export function Shell({ title, back = "/", role = "any", publicPage = false, fit
     return () => { cancelled = true; ss.cancel(); };
   }, [ready, path, title, lang, t]);
   return (
-    <div className={`mx-auto max-w-md bg-(--bg) lg:max-w-none ${fit ? "flex min-h-dvh flex-col" : "min-h-screen pb-24"}`}>
+    <div className={`mx-auto max-w-md bg-(--bg) lg:max-w-none ${fit ? "flex min-h-dvh flex-col" : "min-h-screen pb-24 lg:pb-0"}`}>
       <div className="sticky top-0 z-20 shadow">
       <header className="bg-(--header-bg) px-4 py-3 text-white">
       <div className="mx-auto flex items-center gap-2 lg:max-w-none lg:px-4">
@@ -103,7 +103,8 @@ export function Shell({ title, back = "/", role = "any", publicPage = false, fit
       <div className={`flex min-w-0 flex-1 flex-col ${isStudent ? "lg:flex-row" : ""}`}>
       {isStudent && (
         <nav aria-label={t("app_name")} style={{ width: railOpen ? "15rem" : "4.75rem" }}
-          className="sticky top-[59px] hidden h-[calc(100dvh-59px)] shrink-0 flex-col gap-1 self-start overflow-y-auto border-r border-black/10 bg-(--card) p-3 transition-[width] lg:flex">
+          className="hidden shrink-0 border-r border-black/10 bg-(--card) transition-[width] lg:block">
+        <div className="sticky top-[59px] flex h-[calc(100dvh-59px)] flex-col gap-1 overflow-y-auto p-3">
           {DESK_NAV.map((n) => {
             const here = n.href === "/" ? path === "/" : path.startsWith(n.href.replace(/\/$/, ""));
             return (
@@ -118,6 +119,7 @@ export function Shell({ title, back = "/", role = "any", publicPage = false, fit
             className="flex items-center justify-center gap-2 rounded-xl border border-black/15 py-2 text-sm font-semibold text-(--brand-ink) hover:bg-(--brand-soft)">
             <span aria-hidden className="text-lg leading-none">{railOpen ? "‹" : "›"}</span>{railOpen && t("nav_collapse")}
           </button>
+        </div>
         </nav>
       )}
       <div className="flex min-w-0 flex-1 flex-col">
@@ -132,7 +134,7 @@ export function Shell({ title, back = "/", role = "any", publicPage = false, fit
           </Card>
         ) : data || publicPage ? children : <Loading />}
       </main>
-      {withAside && <div className="hidden xl:block xl:py-6">{aside ?? <SideInfo />}</div>}
+      {withAside && <div className="hidden xl:block xl:py-6"><div className="flex flex-col gap-3">{aside ?? <SideInfo />}<div id="aside-extra" className="flex w-80 flex-col gap-3 empty:hidden" /></div></div>}
       </div>
       </div>
       </div>

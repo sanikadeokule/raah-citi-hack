@@ -5,11 +5,14 @@ import { Mascot } from "@/components/mascot";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+// @ts-expect-error -- @types/react-dom is not installed
+import { createPortal } from "react-dom";
 import { Badge, Card, Shell, Source } from "@/components/ui";
 import { buildRoadmap, computePlan, inr, nearestCentres, rankCareers } from "@/lib/engine";
 import { coursesFor } from "@/lib/helpers";
 import { ParentNote, RoadmapParentNote } from "@/components/plan";
 import { CentresCard, CoursesCard } from "@/components/getstarted";
+import { SideInfo } from "@/components/sideinfo";
 import { useApp } from "@/lib/store";
 
 // One colour and icon per kind of stage, so the road reads at a glance.
@@ -46,6 +49,9 @@ function RoadmapView() {
   const [cheer, setCheer] = useState(false);
   const cheerTimer = useRef<number | undefined>(undefined);
   useEffect(() => () => window.clearTimeout(cheerTimer.current), []);
+  // the money summary lives in the right-hand column on a laptop, under Ask Raah
+  const [slot, setSlot] = useState<HTMLElement | null>(null);
+  useEffect(() => { setSlot(document.getElementById("aside-extra")); }, []);
   const startClass = cls ?? profileClass;
   const r = useMemo(() => (data && profile && careerId ? buildRoadmap(data, profile, careerId, startClass) : null),
     [data, profile, careerId, startClass]);
@@ -76,23 +82,62 @@ function RoadmapView() {
   const journey = r.stages.filter((s: any) => s.months > 0);
   const others = top.filter((s: any) => s.career.id !== careerId);
 
+  const costBlock = (compact: boolean) => (
+    <>
+      <Card>
+        <div className="grid grid-cols-2 gap-2">
+          <Tile label={t("rm_total_cost")} value={range(tot.cost_low, tot.cost_high)} />
+          <Tile label={t("rm_scholarships")} value={tot.scholarship_high ? `− ${range(tot.scholarship_low, tot.scholarship_high)}` : "—"} tone="good" />
+          <Tile label={t("rm_stipend")} value={tot.stipend ? `− ${inr(tot.stipend)}` : "—"} tone="good" />
+          <Tile label={t("rm_family_pays")} value={range(tot.net_low, tot.net_high)} strong
+            sub={tot.net_high && tot.months_to_job ? t("rm_per_month", { v: range(tot.per_month_low, tot.per_month_high) }) : undefined} />
+        </div>
+        {r.income && (
+          <div className="mt-2 flex items-center justify-between rounded-xl bg-emerald-50 p-3 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-100">
+            <div>
+              <div className="text-xs">{t("rm_first_salary")}</div>
+              <div className="text-lg font-bold">{inr(r.income.median)}<span className="text-xs font-normal">/{t("rm_month")}</span></div>
+              {!compact && r.income.low !== r.income.high && <div className="text-xs">{range(r.income.low, r.income.high)}</div>}
+            </div>
+            {r.payback && (
+              <div className="text-right text-xs">
+                <div>{t("rm_payback")}</div>
+                <div className="text-base font-semibold">{paybackLine(t, r.payback.high_cost)}</div>
+              </div>
+            )}
+          </div>
+        )}
+        {!compact && <p className="mt-2 text-xs text-[var(--muted)]">{t("rm_cost_note")}</p>}
+        {tot.estimated_stages > 0 && <p className="mt-1"><Badge tone="amber"> {t("rm_estimates", { n: tot.estimated_stages })}</Badge></p>}
+      </Card>
+      <MakeMine />
+      {!compact && <p className="text-center text-xs text-[var(--muted)]">{t("rm_footer", { file: data.version.file })}</p>}
+    </>
+  );
+  const nCols = Math.min(Math.max(r.stages.length, 1), 4);
+  const colClass = ["", "lg:grid-cols-1", "lg:grid-cols-2", "lg:grid-cols-3", "lg:grid-cols-4"][nCols];
+
   return (
     <>
       {/* hero: where you are, where this road ends */}
-      <section className="overflow-hidden rounded-2xl bg-[var(--brand)] p-4 text-white shadow">
-        <div className="text-xs uppercase tracking-wide opacity-80">{t("rm_title")}</div>
-        <h2 className="mt-1 text-xl font-bold leading-snug">{r.career.name}</h2>
-        <p className="mt-1 text-sm opacity-90">
-          {t("rm_summary", { from: classLabel(startClass), y: duration(t, tot.months_to_job) || t("rm_now") })}
-        </p>
-        <div className="mt-3 text-xs opacity-80">{t("rm_i_am_in")}</div>
-        <div className="mt-1 flex flex-wrap gap-1.5" role="group" aria-label={t("rm_i_am_in")}>
-          {CLASSES.map((c) => (
-            <button key={c} onClick={() => setCls(c)} aria-pressed={startClass === c}
-              className={`rounded-full px-3 py-1 text-sm font-semibold ${startClass === c ? "bg-white text-[var(--brand)]" : "bg-white/15"}`}>
-              {classLabel(c)}
-            </button>
-          ))}
+      <section className="overflow-hidden rounded-2xl bg-[var(--brand)] p-4 text-white shadow lg:flex lg:items-end lg:justify-between lg:gap-6 lg:py-3">
+        <div>
+          <div className="text-xs uppercase tracking-wide opacity-80">{t("rm_title")}</div>
+          <h2 className="mt-1 text-xl font-bold leading-snug">{r.career.name}</h2>
+          <p className="mt-1 text-sm opacity-90">
+            {t("rm_summary", { from: classLabel(startClass), y: duration(t, tot.months_to_job) || t("rm_now") })}
+          </p>
+        </div>
+        <div>
+          <div className="mt-3 text-xs opacity-80 lg:mt-0">{t("rm_i_am_in")}</div>
+          <div className="mt-1 flex flex-wrap gap-1.5" role="group" aria-label={t("rm_i_am_in")}>
+            {CLASSES.map((c) => (
+              <button key={c} onClick={() => setCls(c)} aria-pressed={startClass === c}
+                className={`rounded-full px-3 py-1 text-sm font-semibold ${startClass === c ? "bg-white text-[var(--brand)]" : "bg-white/15"}`}>
+                {classLabel(c)}
+              </button>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -150,7 +195,7 @@ function RoadmapView() {
           })}
         </ul>
       ) : !r.available ? <Card>{t("rm_not_added")}</Card> : (<>
-        {/* the whole road, full width: the journey bar, a jump-to-step row, then every step's detail, one after another */}
+        {/* the whole road across the full width: journey bar, then every step as a column - circle on the line, its detail underneath */}
         <Card className="flex flex-col">
           {journey.length > 0 && (
             <>
@@ -162,57 +207,46 @@ function RoadmapView() {
               <div className="mt-1 flex justify-between text-xs text-[var(--muted)]">
                 <span>{year0}</span><span>{year0 + Math.ceil(tot.months_to_job / 12)}</span>
               </div>
-              <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs">
-                {Object.entries(KIND).filter(([k]) => r.stages.some((s: any) => s.kind === k)).map(([k, v]) => (
-                  <span key={k} className="flex items-center gap-1"><span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: v.color }} />{t(`rm_kind_${k}`)}</span>
-                ))}
+              <div className="mt-1 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs">
+                <div className="flex flex-wrap gap-x-3 gap-y-1">
+                  {Object.entries(KIND).filter(([k]) => r.stages.some((s: any) => s.kind === k)).map(([k, v]) => (
+                    <span key={k} className="flex items-center gap-1"><span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: v.color }} />{t(`rm_kind_${k}`)}</span>
+                  ))}
+                </div>
+                <span className="font-semibold text-[var(--brand-ink)]">{t("rm_finish", { y: year0 + Math.ceil(tot.months_to_job / 12) })}</span>
               </div>
             </>
           )}
 
-          {/* stage circles: a quick jump to a step's detail below, not a separate "page" */}
-          <div className="mt-3 overflow-x-auto pb-1">
-            <div className="flex min-w-max items-start">
-              {r.stages.map((s: any, i: number) => {
-                const k = KIND[s.kind] || KIND.course;
-                const last = i === r.stages.length - 1;
-                return (
-                  <div key={i} className="flex items-start">
-                    <a href={`#stage-${i}`} className="flex w-24 flex-col items-center gap-1 text-center sm:w-28">
-                      {s.now ? (
-                        <span className="relative mb-0.5 h-11 w-11 shrink-0">
-                          <span aria-hidden className="absolute inset-x-1.5 bottom-0 h-2 rounded-full bg-amber-300/70" />
-                          <Mascot pose="wave" size={58} className="absolute -left-2 -top-5" />
-                        </span>
-                      ) : (
-                        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full shadow" style={{ background: k.color }}>
-                          <Icon name={k.icon} size={20} className="text-white" />
-                        </span>
-                      )}
-                      <span className="text-[10px] font-bold uppercase tracking-wide text-[var(--muted)]">{t("rm_step", { n: i + 1 })}</span>
-                      <span className="text-xs font-semibold leading-tight">{stageName(s, lang)}</span>
-                    </a>
-                    {!last && <span aria-hidden className="mt-5 h-1 w-8 shrink-0 rounded-full sm:w-12" style={{ background: `linear-gradient(90deg, ${k.color}, ${KIND[r.stages[i + 1].kind]?.color})` }} />}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* every step's detail, stacked - nothing hidden behind an arrow */}
-          <div className="mt-3 space-y-2.5 lg:grid lg:grid-cols-2 lg:gap-2.5 lg:space-y-0">
+          <div className={`mt-3 grid gap-2.5 pt-5 ${colClass}`}>
           {r.stages.map((s: any, i: number) => {
+            const k = KIND[s.kind] || KIND.course;
+            const last = i === r.stages.length - 1;
             const y1 = year0 + Math.floor(s.start_month / 12);
             const y2 = year0 + Math.floor((s.start_month + Math.max(s.months, 1) - 1) / 12);
             return (
-              <div key={i} id={`stage-${i}`} className={`scroll-mt-20 rounded-xl bg-[var(--bg)] p-3 ${s.now ? "ring-2 ring-amber-400" : ""}`}>
+              <div key={i} id={`stage-${i}`} className="flex flex-col items-center">
+                <div className="relative flex w-full flex-col items-center">
+                  {!last && <span aria-hidden className="absolute left-1/2 top-5 z-0 hidden h-1 w-[calc(100%+0.625rem)] rounded-full lg:block" style={{ background: `linear-gradient(90deg, ${k.color}, ${KIND[r.stages[i + 1].kind]?.color})` }} />}
+                  {s.now ? (
+                    <span className="relative z-10 h-11 w-11 shrink-0">
+                      <span aria-hidden className="absolute inset-x-1.5 bottom-0 h-2 rounded-full bg-amber-300/70" />
+                      <Mascot pose="wave" size={58} className="absolute -left-2 -top-6" />
+                    </span>
+                  ) : (
+                    <span className="relative z-10 grid h-11 w-11 shrink-0 place-items-center rounded-full shadow" style={{ background: k.color }}>
+                      <Icon name={k.icon} size={20} className="text-white" />
+                    </span>
+                  )}
+                  <span className="mt-1 text-[10px] font-bold uppercase tracking-wide text-[var(--muted)]">{t("rm_step", { n: i + 1 })}</span>
+                  <span className="text-center text-sm font-bold leading-tight">{stageName(s, lang)}</span>
+                </div>
+              <div className={`mt-2 w-full flex-1 rounded-xl bg-[var(--bg)] p-3 ${s.now ? "ring-2 ring-amber-400" : ""}`}>
                 <div className="flex flex-wrap items-center gap-1.5 text-xs text-[var(--muted)]">
                   {s.now && <span className="rounded-full bg-amber-300 px-2 py-0.5 font-bold text-black">{t("rm_you_are_here")}</span>}
-                  <span>{t("rm_step", { n: i + 1 })}</span>
-                  {s.kind !== "job" && <span>· {y1 === y2 ? y1 : `${y1}–${y2}`}</span>}
-                  {s.months > 0 && <span>· {duration(t, s.months)}</span>}
+                  {s.kind !== "job" && <span>{y1 === y2 ? y1 : `${y1}–${y2}`}</span>}
+                  {s.months > 0 && <span>{s.kind !== "job" && "· "}{duration(t, s.months)}</span>}
                 </div>
-                <h3 className="mt-0.5 font-bold leading-snug">{stageName(s, lang)}</h3>
 
                 <div className="mt-1.5 flex flex-wrap gap-1.5 text-xs">
                   {s.kind !== "job" && s.kind !== "earn" && (
@@ -249,47 +283,20 @@ function RoadmapView() {
                     label={s.kind === "job" ? undefined : s.stipend_source || s.source ? undefined : s.fee_from} />}
                 </div>
               </div>
+              </div>
             );
           })}
           </div>
-
-          {/* the end of the road: Maina plants her flag */}
-          <Mascot pose="flag" size={56} className="mt-3">
-            <p className="text-sm font-semibold text-[var(--brand-ink)]">{t("rm_finish", { y: year0 + Math.ceil(tot.months_to_job / 12) })}</p>
-          </Mascot>
         </Card>
 
-        {/* money summary, below the whole road */}
-        <Card>
-          <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
-            <Tile label={t("rm_total_cost")} value={range(tot.cost_low, tot.cost_high)} />
-            <Tile label={t("rm_scholarships")} value={tot.scholarship_high ? `− ${range(tot.scholarship_low, tot.scholarship_high)}` : "—"} tone="good" />
-            <Tile label={t("rm_stipend")} value={tot.stipend ? `− ${inr(tot.stipend)}` : "—"} tone="good" />
-            <Tile label={t("rm_family_pays")} value={range(tot.net_low, tot.net_high)} strong
-              sub={tot.net_high && tot.months_to_job ? t("rm_per_month", { v: range(tot.per_month_low, tot.per_month_high) }) : undefined} />
-          </div>
-          {r.income && (
-            <div className="mt-2 flex items-center justify-between rounded-xl bg-emerald-50 p-3 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-100">
-              <div>
-                <div className="text-xs">{t("rm_first_salary")}</div>
-                <div className="text-lg font-bold">{inr(r.income.median)}<span className="text-xs font-normal">/{t("rm_month")}</span></div>
-                {r.income.low !== r.income.high && <div className="text-xs">{range(r.income.low, r.income.high)}</div>}
-              </div>
-              {r.payback && (
-                <div className="text-right text-xs">
-                  <div>{t("rm_payback")}</div>
-                  <div className="text-base font-semibold">{paybackLine(t, r.payback.high_cost)}</div>
-                </div>
-              )}
-            </div>
-          )}
-          <p className="mt-2 text-xs text-[var(--muted)]">{t("rm_cost_note")}</p>
-          {tot.estimated_stages > 0 && <p className="mt-1"><Badge tone="amber"> {t("rm_estimates", { n: tot.estimated_stages })}</Badge></p>}
-        </Card>
-
-        <MakeMine />
+        {/* the money summary: under Ask Raah in the right-hand column on a laptop, below the road on a phone */}
+        <div className="flex flex-col gap-3 xl:hidden">{costBlock(false)}</div>
+        <div className="hidden space-y-1 text-xs text-[var(--muted)] xl:block">
+          <p>{t("rm_cost_note")}</p>
+          <p>{t("rm_footer", { file: data.version.file })}</p>
+        </div>
+        {slot && createPortal(costBlock(true), slot)}
       </>)}
-      <p className="text-center text-xs text-[var(--muted)]">{t("rm_footer", { file: data.version.file })}</p>
       {cheer && (
         <div role="status" className="pointer-events-none fixed inset-x-0 bottom-8 z-50 flex justify-center px-4">
           <Mascot pose="cheer" size={110} stack><p className="text-base font-bold">{t("rm_saved")}</p></Mascot>
@@ -318,7 +325,7 @@ function Tile({ label, value, sub, tone, strong }: { label: string; value: strin
 export default function RoadmapPage() {
   const { t } = useApp();
   return (
-    <Shell title={t("rm_title")} back="/careers/" wide>
+    <Shell title={t("rm_title")} back="/careers/" wide aside={<SideInfo rows={2} />}>
       <Suspense><RoadmapView /></Suspense>
     </Shell>
   );

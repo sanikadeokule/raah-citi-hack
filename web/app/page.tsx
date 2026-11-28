@@ -313,7 +313,7 @@ export default function Home() {
         {/* six small tiles (two rows of three), then the three Pro features as a third row, all one consistent grid */}
         <div className="grid grid-cols-3 gap-2">
           {STUDENT_TILES.map((x) => (
-            <Link key={x.href} href={x.href} className="flex flex-col items-center rounded-2xl border-b-4 bg-(--card) px-1.5 py-2.5 text-center text-(--brand-ink) shadow-sm ring-1 ring-black/10 active:scale-95"
+            <Link key={x.href} href={x.href} className="flex flex-col items-center rounded-2xl border-b-4 bg-(--card) px-1.5 py-2 text-center text-(--brand-ink) shadow-sm ring-1 ring-black/10 active:scale-95"
               style={{ borderBottomColor: x.color }}>
               <span className="tile-icon grid h-9 w-9 place-items-center rounded-xl" style={{ background: `color-mix(in srgb, ${x.color} 16%, transparent)`, color: x.color }}>
                 <Icon name={x.icon} size={20} />
