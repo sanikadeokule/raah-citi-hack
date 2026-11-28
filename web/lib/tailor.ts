@@ -83,6 +83,33 @@ function fitsCurrentEligibility(exam: any, profile: any): { fits: boolean; marks
   return { fits: true, marksKnown };
 }
 
+function matchesCareerPath(exam: any, mc: MyCareer | null): boolean {
+  if (!mc) return false;
+  if ((mc.plan?.exams || []).includes(exam.id)) return true;
+
+  const career = mc.career;
+  const careerText = `${career.name || ""} ${career.category || ""} ${(career.tags || []).join(" ")}`.toLowerCase();
+  const examText = `${exam.name || ""} ${exam.leads_to || ""}`.toLowerCase();
+  const degreePath = /\b(degree|b\.?sc|b\.?ca|b\.?com|b\.?tech|b\.?e\.?|bachelor|undergraduate)\b/i.test(careerText);
+
+  // Use the stated destination, not merely the student's class, to avoid unrelated tests.
+  if (/computer|programming|software|information technology|\bIT\b/i.test(careerText)) {
+    if (/computer|software|information technology|\bJEE\b|\bMHT[- ]?CET\b|\bCUET(?:[- ]UG)?\b|B\.?Tech|B\.?E\.?/i.test(examText)) return true;
+  }
+  if (/engineer|engineering|b\.?tech|b\.?e\.?|polytechnic/i.test(careerText)) {
+    if (/engineering|B\.?Tech|B\.?E\.?|\bJEE\b|\bMHT[- ]?CET\b|polytechnic|engineering diploma/i.test(examText)) return true;
+  }
+  if (/nurs/i.test(careerText) && /nurs|GNM/i.test(examText)) return true;
+  if (/doctor|medical|medicine|MBBS|dent/i.test(careerText) && /NEET|medical|MBBS|BDS/i.test(examText)) return true;
+  if (/pharm/i.test(careerText) && /pharm|MHT[- ]?CET/i.test(examText)) return true;
+  if (/agricultur/i.test(careerText) && /agricultur|MHT[- ]?CET/i.test(examText)) return true;
+  if (/army|defen[cs]e|navy|air force|police|constable/i.test(careerText) && /NDA|army|defen[cs]e|navy|air force|police|constable/i.test(examText)) return true;
+  if (/railway/i.test(careerText) && /railway|RRC/i.test(examText)) return true;
+
+  // A general undergraduate entrance can fit degree careers when the dataset describes it that way.
+  return degreePath && /\b(CUET(?:[- ]UG)?|undergraduate admission|UG admission)\b/i.test(examText);
+}
+
 /** Current-class matches first, then the rest of the catalog. Recommended exams sort by the next known window. */
 export function examsForStudent(data: any, profile: any): Reasoned<any, { key: string; vars?: Record<string, any> } | null>[] {
   const exams: any[] = data?.exams ?? [];
@@ -90,14 +117,16 @@ export function examsForStudent(data: any, profile: any): Reasoned<any, { key: s
   const onPath = new Set<string>(mc?.plan?.exams ?? []);
   const rows = exams.map((item) => {
     const eligibility = fitsCurrentEligibility(item, profile);
-    const pathMatch = onPath.has(item.id) || (mc ? (item.career_ids ?? []).includes(mc.career.id) : false);
-    // with a career chosen, "for you" means an exam that leads to that career (or one open to everyone) and that the student's class fits
-    const forCareer = !mc || pathMatch || (item.career_ids ?? []).includes("ALL");
+    const pathMatch = onPath.has(item.id);
+    // an exam the dataset lists for this career (Exams sheet "Career IDs") or for everyone, or one the wording of the career points to
+    const listed = mc ? (item.career_ids ?? []).includes(mc.career.id) || (item.career_ids ?? []).includes("ALL") : false;
+    const explicit = (item.career_ids ?? []).length > 0;
+    const careerMatch = explicit ? listed : matchesCareerPath(item, mc);
     return {
-      item, mine: eligibility.fits && forCareer,
-      reason: eligibility.fits && forCareer ? pathMatch && mc
+      item, mine: eligibility.fits && careerMatch,
+      reason: eligibility.fits && careerMatch ? (pathMatch && mc
         ? { key: "because_career", vars: { career: mc.career.name } }
-        : { key: eligibility.marksKnown ? "because_class_marks" : "because_class", vars: { class: profile.class } }
+        : { key: "because_career", vars: { career: mc!.career.name } })
         : null,
       nextWindow: nextExamWindow(item),
     };

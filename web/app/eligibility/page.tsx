@@ -40,9 +40,12 @@ export default function EligibilityPage() {
   const forCourse = new Set(changes?.for_this_course || []);
   // one status group at a time; open on the recommended scheme's group, else the best non-empty one
   const [picked, setPicked] = useState<Status | null>(null);
+  // A previously selected tab can be empty after the student changes their profile or plan.
+  useEffect(() => { setPicked(null); }, [planId, hostel, profile]);
   const focusStatus = focus ? list.find((e: any) => e.id === focus)?.status : undefined;
   const status: Status = picked ?? focusStatus ?? STATUSES.find((s) => counts[s]) ?? "eligible";
   const shown = useMemo(() => list.filter((e: any) => e.status === status), [list, status]);
+  const otherPopulatedStatus = STATUSES.find((s) => s !== status && counts[s]);
   const pg = usePaged(shown, PAGE, `${planId}|${hostel}|${focus}|${status}`);
   return (
     <Shell title={t("eligibility")} wide>
@@ -100,7 +103,13 @@ export default function EligibilityPage() {
       <div ref={pg.top} />
       <Tabs cols={2} value={status} onChange={setPicked}
         tabs={STATUSES.map((s) => ({ key: s, label: <span className="inline-flex items-center gap-1"><Icon name={STATUS_ICON[s]} size={14} />{t(`st_${s}`)}</span>, count: counts[s] || 0 }))} />
-      {shown.length === 0 && <Card><p className="text-sm text-[var(--muted)]">{t("st_none")}</p></Card>}
+      {shown.length === 0 && <Card>
+        <p className="text-sm text-[var(--muted)]">{t("st_none")}</p>
+        {otherPopulatedStatus && <button onClick={() => setPicked(otherPopulatedStatus)}
+          className="mt-3 rounded-lg bg-[var(--brand)] px-3 py-2 text-sm font-semibold text-white">
+          {t(`st_${otherPopulatedStatus}`)} ({counts[otherPopulatedStatus]})
+        </button>}
+      </Card>}
       <div className="space-y-2 lg:grid lg:grid-cols-2 lg:items-start lg:gap-3 lg:space-y-0">
         {pg.pageItems.map((e: any) => (
           <SchemeResult key={`${e.id}-${focus}-${planId}`} e={e} hideStatus onPage open={e.id === focus}
