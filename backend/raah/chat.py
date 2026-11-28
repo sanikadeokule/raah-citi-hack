@@ -455,9 +455,7 @@ def find_colleges(d: dict, profile: dict, career_id: str) -> dict | None:
         centres = [c for c in all_near if _relevant(c)][:5]
 
     # find online courses linked to this career
-    cname_lower = career["name"].lower()
-    courses = [c for c in d["courses"] if cname_lower in str(c.get("career_text") or "").lower()
-               or career_id in str(c.get("career_text") or "")][:6]
+    courses = [c for c in d["courses"] if career_id in (c.get("career_ids") or [])][:6]
 
     return {"career": career, "centres": centres, "courses": courses}
 

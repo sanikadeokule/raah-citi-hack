@@ -55,7 +55,7 @@ WEAVIATE_CLASS = "RaahChunk"
 # sheets that are not knowledge: synthetic demo students, map points
 SKIP_SHEETS = {"Demo_Students", "Talukas"}
 # columns never put in a chunk (mentor phones are server-only; coordinates are noise)
-SKIP_COLS = {"Phone", "Lat", "Lon"}
+SKIP_COLS = {"Phone", "Lat", "Lon", "Career IDs (use ;)"}
 ID_COLS = ("ID", "Plan ID", "Career ID", "Scheme ID", "Student ID", "Key", "Apprentice category", "Taluka")
 TITLE_COLS = ("Scheme", "Career", "Exam / admission", "Course / trade", "Course", "Trade", "Name",
               "Path shown to student", "Key", "Apprentice category")
