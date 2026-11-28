@@ -1,4 +1,4 @@
-"""Adds the 31 non-Pune government ITIs from the DVET EOI Annexure 1, fills averaged fees for every centre,
+"""Fills averaged fees for every centre,
 removes 'Not in source' text, and fills the Training_Centres 'Career IDs' column from the plans' centre types."""
 import openpyxl, re, sys
 P = sys.argv[1] if len(sys.argv) > 1 else "raah-dataset.xlsx"
@@ -11,23 +11,6 @@ col = {n: i + 1 for i, n in enumerate(h)}
 D = "2026-11-28"
 SRC = "https://www.mahaswayam.gov.in/public/img/news/EOI_PPP_DVET_13Oct2025_vf.pdf (Annexure 1)"
 ITI_FEE = "About ₹5,000 a year (govt ITI average; the full 2-year course costs ₹1,000-20,000 by trade); trainees may get a ₹500/month stipend, see SCH14"
-itis = [("GITI, Ahilyanagar","Ahmednagar","Ahilyanagar","Ahilyanagar"),("GITI, Akola","Akola","Akola","Akola"),("GITI, Amravati","Amravati","Amravati","Amravati"),
-("GITI (Woman), Beed","Beed","Beed","Beed"),("GITI, Beed","Beed","Beed","Beed"),("GITI, Khamgaon","Khamgaon","Buldhana","Khamgaon"),
-("GITI, Chandrapur","Chandrapur","Chandrapur","Chandrapur"),("GITI, Chh. Sambhaji Nagar","Aurangabad","Chh. Sambhaji Nagar","Chh. Sambhaji Nagar"),
-("GITI, Dhule","Dhule","Dhule","Dhule"),("GITI, Jalgaon","Jalgaon","Jalgaon","Jalgaon"),("GITI, Jalna","Jalna","Jalna","Jalna"),
-("GITI, Kolhapur","Karvir","Kolhapur","Karvir"),("GITI, Latur","Latur","Latur","Latur"),
-("GITI (Woman), Dadar","Mumbai","Mumbai Shahar","Dadar"),("GITI, Dadar","Mumbai","Mumbai Shahar","Dadar"),("GITI, Mumbai-11","Mumbai","Mumbai Shahar","Mumbai"),
-("GITI, Andheri","Mumbai","Mumbai Suburban","Andheri"),("GITI, Borivali","Mumbai","Mumbai Suburban","Borivali"),("GITI, Govandi","Mumbai","Mumbai Suburban","Govandi (Kurla taluka)"),
-("GITI, Kurla","Mumbai","Mumbai Suburban","Kurla"),("GITI, Mulund","Mumbai","Mumbai Suburban","Mulund"),
-("GITI, Nagpur","Nagpur","Nagpur","Nagpur"),("GITI, Nanded","Nanded","Nanded","Nanded"),("GITI, Nashik","Nashik","Nashik","Nashik"),
-("GITI, Dharashiv","Osmanabad","Dharashiv","Dharashiv"),("GITI, Parbhani","Parbhani","Parbhani","Parbhani"),
-("GITI, Panvel","Panvel","Raigad","Panvel"),("GITI, Karad","Karad","Satara","Karad"),("GITI, Solapur","North Solapur","Solapur","North Solapur"),
-("GITI (Woman), Thane","Thane","Thane","Thane"),("GITI, Thane","Thane","Thane","Thane")]
-have = {str(r[col["Name"] - 1].value).lower() for r in tc.iter_rows(min_row=2)}
-for name, tal, dist, place in itis:
-    cid = "CEN%02d" % tc.max_row
-    tc.append([cid, name, "Government ITI", tal, dist, f"Tal: {place}, Dist: {dist}", "ITI trades (Craftsman Training Scheme)", None, ITI_FEE, None, None, None,
-               "Listed as a government ITI in DVET Maharashtra PPP EOI (13 Oct 2025), Annexure 1; trade list and seats are on the ITI's own page", SRC, D, None])
 # ---- fees by type / name
 F = {
  "Government ITI": ITI_FEE,
