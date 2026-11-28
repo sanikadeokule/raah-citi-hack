@@ -1598,5 +1598,10 @@
  "a11y_high_contrast": "उच्च कॉन्ट्रास्ट",
  "a11y_high_contrast_hint": "मजकूर आणि सीमारेषा गडद आणि पाहण्यास सोप्या बनवते.",
  "exams_pick_career": "आधी करिअर रोडमॅप निवडा, मग Raah इथे तुमच्यासाठी असलेल्या परीक्षा दाखवेल.",
- "exams_pick_career_btn": "करिअर निवडा"
+ "exams_pick_career_btn": "करिअर निवडा",
+ "apply_opens": "अर्ज सुरू",
+ "apply_by": "अर्जाची शेवटची तारीख",
+ "exam_on": "परीक्षा",
+ "dates_auto_checked": "{date} रोजी आपोआप तपासले",
+ "dates_seen_here": "येथे पाहिले"
 }

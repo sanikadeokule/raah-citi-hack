@@ -1603,5 +1603,10 @@
  "a11y_high_contrast": "High contrast",
  "a11y_high_contrast_hint": "Makes text and borders darker and easier to see.",
  "exams_pick_career": "Pick a career roadmap first and Raah will show the exams made for you here.",
- "exams_pick_career_btn": "Choose a career"
+ "exams_pick_career_btn": "Choose a career",
+ "apply_opens": "Apply from",
+ "apply_by": "Apply by",
+ "exam_on": "Exam",
+ "dates_auto_checked": "Checked automatically on {date}",
+ "dates_seen_here": "seen here"
 }

@@ -211,6 +211,16 @@ def parse_rule_value(raw: Any, op: str, scheme: dict, warnings: list, where: str
 
 # ------------------------------------------------------------------ sheet readers
 
+def _iso_date(v) -> str | None:
+    """A date cell as YYYY-MM-DD, whether Excel stored a real date or someone typed the text."""
+    if isinstance(v, datetime):
+        return v.date().isoformat()
+    if hasattr(v, "isoformat"):
+        return v.isoformat()
+    m = re.match(r"\s*(\d{4}-\d{2}-\d{2})", str(v or ""))
+    return m.group(1) if m else None
+
+
 def _rows(wb, name: str) -> list[dict]:
     if name not in wb.sheetnames:
         return []
@@ -398,7 +408,10 @@ def load(path: Path = DATASET_PATH) -> dict:
                       "fee_reserved": first_money(fee_res) if fee_res not in (None, "") else None,
                       "fee_note": r.get("Fee note"), "dates": r.get("Last cycle dates"), "timing": r.get("Usual timing"),
                       "site": r.get("Official site"), "source": r.get("Source"), "last_checked": str(r.get("Last checked") or ""),
-                      "career_ids": split_list(r.get("Career IDs (use ;)"))})
+                      "career_ids": split_list(r.get("Career IDs (use ;)")),
+                      "next_dates": {k: _iso_date(r.get(col)) for k, col in (("open", "Applications open"), ("close", "Applications close"),
+                                                                            ("exam", "Exam date"), ("checked", "Dates auto-checked"))},
+                      "dates_evidence": r.get("Dates evidence"), "dates_url": r.get("Dates found on")})
     exam_ids = {e["id"] for e in exams}
 
     # plans

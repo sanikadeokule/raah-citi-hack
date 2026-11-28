@@ -36,6 +36,24 @@ export function examFee(e: any, t: (k: string) => string) {
   return [part(e.fee_open, "fee_open"), part(e.fee_reserved, "fee_reserved")].filter(Boolean).join(" · ");
 }
 
+// The next dates the refresh job found on the official site or its source page (Exams sheet columns
+// Applications open / close and Exam date). Only dates still ahead are shown, with the day they were checked.
+export function NextDates({ e }: { e: any }) {
+  const { t, lang } = useApp();
+  const n = e.next_dates || {};
+  const today = new Date().toISOString().slice(0, 10);
+  const fmt = (d: string) => new Date(d + "T00:00:00").toLocaleDateString(lang === "en" ? "en-IN" : `${lang}-IN`, { day: "numeric", month: "short", year: "numeric" });
+  const items = ([["open", "apply_opens"], ["close", "apply_by"], ["exam", "exam_on"]] as const)
+    .filter(([k]) => n[k] && n[k] >= today).map(([k, label]) => `${t(label)} ${fmt(n[k])}`);
+  if (!items.length) return null;
+  return (
+    <div className="mt-1 rounded-lg bg-[var(--brand-soft)] px-2 py-1 text-xs font-semibold text-[var(--brand-ink)]">
+      {items.join(" · ")}
+      {n.checked && <div className="font-normal text-[var(--muted)]">{t("dates_auto_checked", { date: fmt(n.checked) })}{e.dates_url && <> · <a href={e.dates_url} target="_blank" rel="noreferrer" className="underline">{t("dates_seen_here")}</a></>}</div>}
+    </div>
+  );
+}
+
 export function ExamCard({ e, compact }: { e: any; compact?: boolean }) {
   const { t } = useApp();
   return (
@@ -50,7 +68,7 @@ export function ExamCard({ e, compact }: { e: any; compact?: boolean }) {
         <dt className="text-[var(--muted)]">{t("who_can_apply")}</dt><dd>{e.eligibility}</dd>
         <dt className="text-[var(--muted)]">{t("selection")}</dt><dd>{e.selection}</dd>
         <dt className="text-[var(--muted)]">{t("application_fee")}</dt><dd>{examFee(e, t)}{e.fee_note && e.fee_open !== null ? <span className="text-[var(--muted)]"> ({e.fee_note})</span> : null}</dd>
-        <dt className="text-[var(--muted)]">{t("when")}</dt><dd>{e.timing}<div className="text-xs text-[var(--muted)]">{e.dates}</div></dd>
+        <dt className="text-[var(--muted)]">{t("when")}</dt><dd>{e.timing}<NextDates e={e} /><div className="text-xs text-[var(--muted)]">{e.dates}</div></dd>
       </dl>
       <p className="mt-1 text-xs text-amber-700">{t("check_dates")}</p>
       <WatchButton examId={e.id} />
@@ -82,7 +100,7 @@ export function ExamTile({ e, paths = [], reason }: { e: any; paths?: any[]; rea
         <div className="grid gap-2">
           {fact("graduation", t("who_can_apply"), <span className="line-clamp-2">{e.eligibility}</span>)}
           {fact("rupee", t("application_fee"), examFee(e, t))}
-          {fact("calendar", t("when"), e.timing)}
+          {fact("calendar", t("when"), <>{e.timing}<NextDates e={e} /></>)}
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {e.site && <a href={e.site} target="_blank" rel="noreferrer" className="rounded-full bg-[var(--brand)] px-3 py-1 text-xs font-semibold text-white">{t("official_site")} </a>}
