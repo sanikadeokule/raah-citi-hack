@@ -164,7 +164,7 @@ export const QUESTIONS: Q[] = [
     answered: (p) => !isMissing(p.marks_pct) || p.marks_exam === "unknown",
     options: (_d, t) => [{ v: null, label: t("opt_dont_remember"), patch: { marks_exam: "unknown" } }] },
   { key: "taluka", kind: "choice", free: true, ask: ask("taluka"),
-    options: (d, t) => d.talukas.filter((x: any) => x.name !== "Pune city").map((x: any) => ({ v: x.name, label: placeLabel(t, x.name) })) },
+    options: (d, t, p) => d.talukas.filter((x: any) => x.name !== "Pune city" && (x.state || "Maharashtra") === (p?.state || "Maharashtra")).map((x: any) => ({ v: x.name, label: placeLabel(t, x.name) })) },
   { key: "category", kind: "choice", ask: ask("category"),
     options: (_d, t) => CATEGORIES.map((c) => ({ v: c, label: c === "General" ? t("opt_general") : c })) },
   { key: "family_income_annual", kind: "choice", ask: ask("income"),

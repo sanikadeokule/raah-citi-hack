@@ -464,8 +464,9 @@ def load(path: Path = DATASET_PATH) -> dict:
             warnings.append(f"Career_Profile {c['id']}: roadmap path '{c['roadmap_path']}' has no rows in Roadmap_Stages")
 
     # centres
+    # centres are matched to the original Pune-area points; the rest of India's talukas are only for the student's home place
     talukas = {str(r.get("Taluka")).lower(): (num_or_none(r.get("Lat")), num_or_none(r.get("Lon")))
-               for r in _rows(wb, "Talukas") if r.get("Taluka")}
+               for r in _rows(wb, "Talukas") if r.get("Taluka") and str(r.get("Status") or "").startswith("Approximate taluka HQ")}
 
     def taluka_point(name: str):
         n = (name or "").lower()
@@ -576,7 +577,8 @@ def load(path: Path = DATASET_PATH) -> dict:
             "exams_passed": split_list(r.get("Exams passed (use ;)")), "note": r.get("Note"),
         })
 
-    taluka_list = [{"name": r.get("Taluka"), "lat": num_or_none(r.get("Lat")), "lon": num_or_none(r.get("Lon"))}
+    taluka_list = [{"name": r.get("Taluka"), "lat": num_or_none(r.get("Lat")), "lon": num_or_none(r.get("Lon")),
+                    "state": r.get("State") or "Maharashtra", "district": r.get("District")}
                    for r in _rows(wb, "Talukas") if r.get("Taluka")]
     readme = [r[0] for r in wb["README"].iter_rows(values_only=True) if r and r[0]] if "README" in wb.sheetnames else []
     wb.close()

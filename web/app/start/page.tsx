@@ -9,12 +9,13 @@ import { Icon } from "@/components/icon";
 import { Mascot, type Pose } from "@/components/mascot";
 import { Shell, SpeakButton } from "@/components/ui";
 import { computePlan, eligibility, inr, nearestCentres, rankCareers } from "@/lib/engine";
-import { QUESTIONS } from "@/lib/questions";
+import { QUESTIONS, placeLabel } from "@/lib/questions";
+import { Pager, usePaged } from "@/components/pager";
 import { API, LANGS, useApp, type AuthUser } from "@/lib/store";
 import { setKV } from "@/lib/db";
 
-type Step = "welcome" | "language" | "class" | "goal" | "marks" | "category" | "income" | "taluka" | "documents" | "achieve" | "result" | "reminders" | "save";
-const FLOW: Step[] = ["welcome", "language", "class", "goal", "marks", "category", "income", "taluka", "documents", "achieve", "result", "reminders", "save"];
+type Step = "welcome" | "language" | "class" | "goal" | "marks" | "category" | "income" | "state" | "taluka" | "documents" | "achieve" | "result" | "reminders" | "save";
+const FLOW: Step[] = ["welcome", "language", "class", "goal", "marks", "category", "income", "state", "taluka", "documents", "achieve", "result", "reminders", "save"];
 const QUESTION_STEPS: Record<string, string> = { class: "class", category: "category", income: "family_income_annual", taluka: "taluka" };
 // a marks band stands in for the exact percentage: the middle of the band
 const MARKS: [string, number][] = [["marks_b1", 45], ["marks_b2", 55], ["marks_b3", 68], ["marks_b4", 82], ["marks_b5", 93]];
@@ -69,6 +70,16 @@ function Start() {
   };
   const back = () => (i === 0 ? router.push("/login/") : setI(i - 1));
 
+  const states = useMemo(() => [...new Set<string>((data?.talukas ?? []).map((x: any) => x.state || "Maharashtra"))].sort(), [data]);
+  const [placeQ, setPlaceQ] = useState("");
+  const placeList = useMemo(() => {
+    const q = placeQ.trim().toLowerCase();
+    return (data?.talukas ?? [])
+      .filter((x: any) => x.name !== "Pune city" && (x.state || "Maharashtra") === (p.state || "Maharashtra"))
+      .map((x: any) => ({ key: `${x.district}-${x.name}`, v: x.name, label: placeLabel(t, x.name), district: x.district }))
+      .filter((o: any) => !q || o.label.toLowerCase().includes(q) || String(o.district || "").toLowerCase().includes(q));
+  }, [data, p.state, placeQ, t]);
+  const places = usePaged(placeList, 12, `${p.state}|${placeQ}`);
   const question = (key: string) => QUESTIONS.find((q) => q.key === key)!;
   const opts = (key: string) => (data ? question(key).options!(data, t, p) : []);
 
@@ -76,7 +87,7 @@ function Start() {
   const result = useMemo(() => {
     if (step !== "result" || !data) return null;
     const prof = { ...p };
-    const tk = data.talukas?.find((x: any) => x.name === p.taluka);
+    const tk = data.talukas?.find((x: any) => x.name === p.taluka && (x.state || "Maharashtra") === (p.state || "Maharashtra"));
     if (tk) { prof.lat = tk.lat; prof.lon = tk.lon; }
     if (goal === "scholarship") return { kind: "scholarship" as const, list: eligibility(data, prof).filter((s: any) => s.status === "eligible" || s.status === "eligible_missing_docs").slice(0, 3) };
     if (goal === "college") return { kind: "college" as const, list: nearestCentres(data, prof, null, 3) };
@@ -105,7 +116,7 @@ function Start() {
       catch (e: any) { throw existing ? new Error(t("start_exists_wrong_pin")) : e; }
       await signIn(j.access_token, j.user as AuthUser);
       if (existing) { await setKV("guest_profile", null); router.replace("/"); return; } // their saved profile stays as it is; the answers just given are not added over it
-      const tk = data?.talukas?.find((x: any) => x.name === p.taluka);
+      const tk = data?.talukas?.find((x: any) => x.name === p.taluka && (x.state || "Maharashtra") === (p.state || "Maharashtra"));
       const merged = { ...p, name, ...(tk ? { lat: tk.lat, lon: tk.lon } : {}), reminder_channel: channel, reminder_frequency: freq };
       setProfile(merged);
       await queueAction("profile", merged);
@@ -212,10 +223,21 @@ function Start() {
         </>
       )}
 
+      {step === "state" && (
+        <>
+          {head(t("q_state"), t("q_state_hint"))}
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">{states.map((s) => <Big key={s} on={p.state === s} onClick={() => choose({ state: s, taluka: undefined })}>{s}</Big>)}</div>
+        </>
+      )}
+
       {step === "taluka" && (
         <>
           {qHead("taluka")}
-          <div className="grid grid-cols-2 gap-2">{opts("taluka").map((o: any) => <Big key={o.label} on={p.taluka === o.v} onClick={() => choose({ taluka: o.v })}>{o.label}</Big>)}</div>
+          <input value={placeQ} onChange={(e) => setPlaceQ(e.target.value)} placeholder={t("start_search_place")} aria-label={t("start_search_place")}
+            className="w-full rounded-xl bg-[var(--card)] p-3 ring-1 ring-black/10" />
+          <div ref={places.top} className="grid grid-cols-2 gap-2">{places.pageItems.map((o: any) => <Big key={o.key} on={p.taluka === o.v} onClick={() => choose({ taluka: o.v })}>{o.label}{o.district ? <span className="block text-xs font-normal opacity-70">{o.district}</span> : null}</Big>)}</div>
+          {placeList.length === 0 && <p className="text-sm text-[var(--muted)]">{t("start_no_place")}</p>}
+          <Pager page={places.page} pages={places.pages} start={places.start} shown={places.pageItems.length} total={places.total} go={places.go} />
         </>
       )}
 
