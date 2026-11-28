@@ -1601,5 +1601,7 @@
  "a11y_screen_reader_title": "Screen reader",
  "a11y_screen_reader_desc": "Raah's screens are labelled for TalkBack and VoiceOver: every button, image and form field has a name your screen reader can announce, and the reading order follows the order on screen.",
  "a11y_high_contrast": "High contrast",
- "a11y_high_contrast_hint": "Makes text and borders darker and easier to see."
+ "a11y_high_contrast_hint": "Makes text and borders darker and easier to see.",
+ "exams_pick_career": "Pick a career roadmap first and Raah will show the exams made for you here.",
+ "exams_pick_career_btn": "Choose a career"
 }

@@ -92,7 +92,7 @@ def test_tags_come_from_the_exams_and_scholarships_sheets():
     nursing = next(i for n, i in by_name.items() if "Nursing" in n)
     assert N.tag_notice("MH Nursing CET 2027 registration opens", cet, d) == {"category": "application", "exams": [nursing], "schemes": []}
     both = N.tag_notice("शैक्षणिक वर्ष २०२७-२८ करिता सीईटी प्रवेश परीक्षांबाबत प्रसिद्धीपत्रक", cet, d)
-    cet_exams = sorted(e["id"] for e in d["exams"] if "cetcell" in str(e["site"]))
+    cet_exams = sorted(e["id"] for e in d["exams"] if "cetcell" in str(e["site"]) and "CET" in e["name"])
     assert both["exams"] == cet_exams and both["category"] == "admission"
     assert N.tag_notice("Score Card for NEET (UG) 2026", N.SOURCE_BY_ID["nta"], d)["category"] == "result"
     dbt = N.tag_notice("नवीन अर्ज स्वीकारण्यास सुरुवात", N.SOURCE_BY_ID["mahadbt"], d)

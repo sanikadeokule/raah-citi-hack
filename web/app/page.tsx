@@ -134,11 +134,12 @@ function AlertsPanel() {
 }
 
 // the home sidebar (xl and up): Alerts above What Raah did for you, as a column beside the main content
-function HomeAside() {
+function HomeAside({ trace }: { trace?: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-3">
       <AlertsPanel />
       <RaahDid />
+      {trace}
     </div>
   );
 }
@@ -199,6 +200,20 @@ export default function Home() {
     home_learn: t("home_tile_learn_sub", { n: gapCount }),
     home_opportunity: t("home_tile_jobs_sub", { n: jobNearCount }),
   };
+  // "How Raah decided": under What Raah did for you on a big screen, under the step card on a phone; it scrolls inside a fixed box so it never changes the page's size
+  const traceItems = [
+    ...(agentStep?.looked?.length ? [t("step_looked", { tools: agentStep.looked.map((x) => x.label).join(", ") })] : []),
+    ...(agentStep?.agent?.reason ? [t("step_why", { reason: agentStep.agent.reason })] : []),
+    ...(agentStep?.agent?.trace ?? []),
+  ];
+  const traceCard = traceItems.length ? (
+    <div className="rounded-2xl bg-(--card) p-4 shadow-sm ring-1 ring-black/10">
+      <h3 className="text-[11px] font-bold uppercase tracking-wider text-(--muted)">{t("step_trace")}</h3>
+      <ul className="mt-2 max-h-40 space-y-1.5 overflow-y-auto text-xs text-(--muted)">
+        {traceItems.map((x, i) => <li key={i} className="rounded-lg bg-(--bg) px-2 py-1.5">{x}</li>)}
+      </ul>
+    </div>
+  ) : null;
   return (
     <Shell back={null} fit wide>
       {/* language is switched from the header; the home screen fits one phone screen without scrolling */}
@@ -263,7 +278,7 @@ export default function Home() {
         <TeacherInbox />
 
         {/* one step chosen for the student today, with the reason and the source; "How Raah decided" sits beside it on a big screen */}
-        <section aria-labelledby="step-h" className="rounded-2xl border-2 border-(--brand) bg-(--card) p-4 shadow-sm xl:grid xl:grid-cols-[1fr_24rem] xl:items-stretch xl:gap-4">
+        <section aria-labelledby="step-h" className="rounded-2xl border-2 border-(--brand) bg-(--card) p-4 shadow-sm xl:h-44">
           <div className="flex h-full gap-3">
           {/* Maina presents the step: thinking while Raah picks it, a clipboard for a follow-up question, a wave otherwise */}
           <Mascot pose={stepLoading && !agentStep ? "think" : checkin ? "clipboard" : "wave"} size={56} className="-ml-1 shrink-0 self-start" />
@@ -291,17 +306,8 @@ export default function Home() {
           )}
           </div>
           </div>
-          {(agentStep?.looked?.length || agentStep?.agent?.reason || agentStep?.agent?.trace?.length) ? (
-            <div className="mt-3 flex h-full flex-col border-t border-black/10 pt-3 xl:mt-0 xl:border-l xl:border-t-0 xl:pl-4 xl:pt-0">
-              <h3 className="text-[11px] font-bold uppercase tracking-wider text-(--muted)">{t("step_trace")}</h3>
-              <ul className="mt-2 space-y-1.5 text-xs text-(--muted)">
-                {agentStep?.looked?.length ? <li className="rounded-lg bg-(--bg) px-2 py-1.5">{t("step_looked", { tools: agentStep.looked.map((x) => x.label).join(", ") })}</li> : null}
-                {agentStep?.agent?.reason ? <li className="rounded-lg bg-(--bg) px-2 py-1.5">{t("step_why", { reason: agentStep.agent.reason })}</li> : null}
-                {agentStep?.agent?.trace?.map((x, i) => <li key={i} className="rounded-lg bg-(--bg) px-2 py-1.5">{x}</li>)}
-              </ul>
-            </div>
-          ) : null}
         </section>
+        <div className="xl:hidden">{traceCard}</div>
 
         {mine && (
           <div className="flex items-center gap-2 rounded-xl bg-(--brand-soft) px-3 py-2.5 text-sm">
@@ -337,7 +343,7 @@ export default function Home() {
         </div>
 
         {/* Alerts and the activity log, beside everything else on a big screen */}
-        <div className="hidden xl:block"><HomeAside /></div>
+        <div className="hidden xl:block"><HomeAside trace={traceCard} /></div>
         </div>
       )}
       {cheer && (

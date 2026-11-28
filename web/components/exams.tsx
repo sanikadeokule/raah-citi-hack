@@ -8,7 +8,7 @@ import { Card, Source } from "./ui";
 import { inr } from "@/lib/engine";
 import { Pager, usePaged } from "./pager";
 import { useApp } from "@/lib/store";
-import { examsForStudent } from "@/lib/tailor";
+import { examsForStudent, myCareer } from "@/lib/tailor";
 
 function WatchButton({ examId, inline = false }: { examId: string; inline?: boolean }) {
   const { t, auth, authFetch, online } = useApp();
@@ -125,7 +125,14 @@ export function ExamsList() {
       </div>
       <div ref={pg.top} />
       {tab === "you" && mineCount === 0
-        ? <Card><p className="text-sm text-[var(--muted)]">{profile?.class ? t("exams_none_for_you") : t("exams_need_profile")}</p></Card>
+        ? <Card>
+            {profile?.class && !myCareer(data, profile)
+              ? <div className="flex flex-wrap items-center gap-3">
+                  <p className="min-w-0 flex-1 text-sm text-[var(--muted)]">{t("exams_pick_career")}</p>
+                  <Link href="/roadmap/" className="rounded-full bg-[var(--brand)] px-4 py-2 text-sm font-semibold text-white">{t("exams_pick_career_btn")}</Link>
+                </div>
+              : <p className="text-sm text-[var(--muted)]">{profile?.class ? t("exams_none_for_you") : t("exams_need_profile")}</p>}
+          </Card>
         : <div className="space-y-2 lg:grid lg:grid-cols-2 lg:items-start lg:gap-3 lg:space-y-0">
             {pg.pageItems.map((r) => <ExamTile key={r.item.id} e={r.item} paths={usedBy(r.item.id)} reason={tab === "you" ? r.reason : null} />)}
           </div>}
