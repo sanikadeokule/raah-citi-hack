@@ -180,6 +180,18 @@ All figures are loaded from `raah-dataset.xlsx` at runtime. Editing a cell and s
 | `Talukas` | Taluka points used for distance while a centre has no Lat/Lon. Exact centre coordinates take priority once filled in. |
 | `Demo_Students` | Hero profiles for the demo (Priya, Rohan, Sana). |
 
+### Exam dates refresh (cron)
+
+`backend/raah/exam_refresh.py` keeps the `Exams` sheet's dates current without anyone typing them. For every exam it reads the `Official site` cell (plus up to 4 notice pages that site links to, such as a schedule or information bulletin) and every address in the `Source` cell, PDFs included. It keeps lines that name the exam and carry a date, reads them as *applications open*, *applications close* or *exam date*, and keeps the next upcoming value of each. Correction windows, admit cards and results are ignored. When the rules leave a gap and a model is reachable, the model may point at a line, and its answer is kept only if that exact date is printed in that exact line (the same check as the exam watcher's alerts).
+
+It writes six columns at the end of the `Exams` sheet: `Applications open`, `Applications close`, `Exam date` (YYYY-MM-DD), `Dates evidence` (the published line), `Dates found on` (the page) and `Dates auto-checked`. The hand-written `Last cycle dates` cell is never changed, a page that is down leaves its row alone, and a stored date is replaced only by a different upcoming date the pages printed. The workbook is saved to a temp file and swapped in, and the run stops without saving if someone saved the file while the sites were being read. Exam cards show the dates that are still ahead, with the day they were checked and a link to the page.
+
+It runs in three places:
+
+- **In the server**, every `RAAH_REFRESH_INTERVAL_HOURS` (default 24, `0` turns it off), next to the exam watcher. Teachers can run it now with `POST /api/refresh/exams` and see the last run with `GET /api/refresh/exams`.
+- **On GitHub**, daily at 07:00 IST (`.github/workflows/refresh-exam-dates.yml`, or "Run workflow" by hand). It commits `raah-dataset.xlsx` only when a date changed.
+- **By hand**: `cd backend && python -m raah.exam_refresh` prints what would change; add `--write` to save, `--exam EX08` for one exam, `--no-model` for rules only. If Excel has the file open on Windows the save fails; close it and run again.
+
 `backend/scripts/add_app_sheets.py` adds the app sheets to a workbook that does not have them yet and never overwrites a sheet that already exists. `backend/scripts/add_income_detail.py` adds `Occupation_Earnings` and the per-career income columns the same way (it only fills empty cells).
 
 ## How the numbers are calculated
