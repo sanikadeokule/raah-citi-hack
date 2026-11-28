@@ -1603,6 +1603,8 @@
  "a11y_high_contrast": "High contrast",
  "a11y_high_contrast_hint": "Makes text and borders darker and easier to see.",
  "exams_pick_career": "Pick a career roadmap first and Raah will show the exams made for you here.",
+ "careers_tell_first": "Tell Raah what you love and what you are good at in Discover first. Then your top 5 careers will show here.",
+ "careers_tell_first_btn": "Go to Discover",
  "exams_pick_career_btn": "Choose a career",
  "apply_opens": "Apply from",
  "apply_by": "Apply by",
