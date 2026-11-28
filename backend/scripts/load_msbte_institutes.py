@@ -54,11 +54,21 @@ TYPE = {"poly": "Polytechnic", "pharm": "Allied health / pharmacy college", "par
 COURSE = {"poly": "Diploma engineering (3 years, MSBTE)", "pharm": "D.Pharm / pharmacy programmes", "para": "Paramedical diplomas (DMLT, X-ray, etc.)"}
 CAR = {"poly": "CAR23;CAR51", "pharm": "CAR53", "para": "CAR52;CAR54;CAR55"}
 cnt = collections.Counter(); nocoord = 0
+# MSBTE lists some institutes twice under one name (two institute codes); show each name once per district, keeping the larger intake
+best = {}
 for r in ids.values():
     if r[3] != "Affiliated": continue
     full = r[6].replace("\\'", "'"); name, _, dist = full.rpartition(" - ")
     c = cls(name)
     if not c: continue
+    if name.strip().upper() == "GOVERNMENT POLYTECHNIC" and dist not in ("", "undefined"):
+        name = f"Government Polytechnic, {dist}"  # many districts have an institute with just this name
+    k = (" ".join(name.lower().split()), dist)
+    def intake(x):
+        try: return int(x[7])
+        except Exception: return 0
+    if k not in best or intake(r) > intake(best[k][0]): best[k] = (r, name, dist, c)
+for r, name, dist, c in best.values():
     place, pt, how = locate(name, dist)
     if dist == "undefined": dist = ""
     gov = r[5].lower().startswith("government")

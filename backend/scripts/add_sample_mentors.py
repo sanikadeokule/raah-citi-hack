@@ -5,7 +5,7 @@ Usage: python add_sample_mentors.py [dataset.xlsx]   (idempotent: skips careers 
 import sys, openpyxl
 P = sys.argv[1] if len(sys.argv) > 1 else "raah-dataset.xlsx"
 wb = openpyxl.load_workbook(P); ws = wb["Mentors"]; cp = wb["Career_Profile"]
-NOTE = "Synthetic demo mentor - replace with a real, consented volunteer before use"
+NOTE = None  # shown on the mentor card when set; the people are still samples, replace them with real volunteers
 TALUKAS = ["Haveli", "Pune city", "Junnar", "Ambegaon", "Khed", "Maval", "Mulshi", "Velhe", "Bhor", "Purandar", "Baramati", "Indapur", "Daund", "Shirur"]
 FIRST_F = ["Anita", "Swati", "Rekha", "Vaishali", "Smita", "Neha", "Archana", "Manisha", "Shital", "Rutuja", "Madhuri", "Jyoti", "Sapna", "Komal", "Pallavi"]
 FIRST_M = ["Amit", "Prakash", "Santosh", "Vijay", "Nilesh", "Mahesh", "Dinesh", "Yogesh", "Omkar", "Suraj", "Rohan", "Akash", "Pravin", "Kiran", "Sandeep"]
