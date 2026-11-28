@@ -241,20 +241,21 @@ export default function CollegesPage() {
             {!loading && centres.length === 0 && (
               <p className="mt-3 text-sm text-[var(--muted)]">{t("colleges_no_centres")}</p>
             )}
-            <div className="mt-3 lg:grid lg:grid-cols-2 lg:items-start lg:gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_20rem]">
-            {!loading && pagedCentres.some((c: any) => c.lat != null) && (
-<div className="lg:sticky lg:top-32">
-              <CentreMap centres={pagedCentres.filter((c: any) => c.lat != null).map((c: any) => ({ ...c, approximate: c.approximate ?? c.coord_source !== "exact", highlighted: c.id === selected?.id }))}
-                home={{ lat: profile?.lat, lon: profile?.lon, label: placeLabel(t, profile?.taluka) || t("your_profile") }} />
-              </div>
-            )}
+            {/* list, map, detail: three even columns on a wide screen, each filling the same height */}
+            <div className="mt-3 lg:grid lg:grid-cols-2 lg:items-stretch lg:gap-5 xl:grid-cols-[20rem_minmax(0,1fr)_18rem]">
             <ul className="space-y-2">
               {pagedCentres.map((c: any) => (
                 <CentreCard key={c.id} c={c} t={t} profile={profile} lang={lang} selected={c.id === selected?.id} onSelect={() => setSelectedId(c.id)} />
               ))}
             </ul>
+            {!loading && pagedCentres.some((c: any) => c.lat != null) && (
+              <div className="mt-3 flex flex-col lg:mt-0 lg:h-full">
+                <CentreMap className="h-full min-h-[18rem]" centres={pagedCentres.filter((c: any) => c.lat != null).map((c: any) => ({ ...c, approximate: c.approximate ?? c.coord_source !== "exact", highlighted: c.id === selected?.id }))}
+                  home={{ lat: profile?.lat, lon: profile?.lon, label: placeLabel(t, profile?.taluka) || t("your_profile") }} />
+              </div>
+            )}
             {selected && (
-              <div className="hidden rounded-2xl bg-[var(--bg)] p-4 ring-1 ring-black/8 xl:block xl:sticky xl:top-32">
+              <div className="mt-3 hidden rounded-2xl bg-[var(--bg)] p-4 ring-1 ring-black/8 xl:mt-0 xl:flex xl:flex-col">
                 <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">{centreTypeLabel(selected.type, t) || t("colleges_centres")}</p>
                 <p className="mt-0.5 text-lg font-bold leading-snug">{selected.name}</p>
                 <div className="mt-2"><CentreDetail c={selected} t={t} /></div>
