@@ -35,27 +35,29 @@ function PlanView() {
         </ol>
       </Card>
 
-      <PlanExams plan={plan} />
-
-      <PaybackCard r={r} />
-      <WhatIf r={r} opts={opts} setOpts={setOpts} />
-
-      <Card>
-        <h2 className="mb-1 text-lg font-bold">{t("cumulative")}</h2>
-        <CashChart results={[r]} />
-      </Card>
-
-      <Card>
-        <h2 className="mb-2 text-lg font-bold">{t("eligibility")}</h2>
-        <div className="space-y-2">
-          {r.eligibility.filter((e: any) => e.status !== "not_eligible").slice(0, 5).map((e: any, i: number) => <SchemeResult key={e.id} e={e} open={i === 0} />)}
-        </div>
-        <Link href="/eligibility/" className="mt-2 block text-sm text-[var(--brand-ink)] underline">{t("plan_all_schemes", { n: data.scholarships.length })} →</Link>
-      </Card>
-
-      <CentresCard centres={r.centres} />
-      <CoursesCard courses={courses} />
-      <ParentNote r={r} />
+      <div className="space-y-4 lg:grid lg:grid-cols-2 lg:items-start lg:gap-4 lg:space-y-0">
+      <div className="space-y-4">
+        <PlanExams plan={plan} />
+        <PaybackCard r={r} />
+        <WhatIf r={r} opts={opts} setOpts={setOpts} />
+        <Card>
+          <h2 className="mb-1 text-lg font-bold">{t("cumulative")}</h2>
+          <CashChart results={[r]} />
+        </Card>
+      </div>
+      <div className="space-y-4">
+        <Card>
+          <h2 className="mb-2 text-lg font-bold">{t("eligibility")}</h2>
+          <div className="space-y-2">
+            {r.eligibility.filter((e: any) => e.status !== "not_eligible").slice(0, 5).map((e: any, i: number) => <SchemeResult key={e.id} e={e} open={i === 0} />)}
+          </div>
+          <Link href="/eligibility/" className="mt-2 block text-sm text-[var(--brand-ink)] underline">{t("plan_all_schemes", { n: data.scholarships.length })} →</Link>
+        </Card>
+        <CentresCard centres={r.centres} />
+        <CoursesCard courses={courses} />
+        <ParentNote r={r} />
+      </div>
+      </div>
 
       <Card>
         <h2 className="mb-2 font-bold">{t("compare")}</h2>
@@ -73,7 +75,7 @@ function PlanView() {
 export default function PlanPage() {
   const { t } = useApp();
   return (
-    <Shell title={t("see_plan")} back="/careers/">
+    <Shell title={t("see_plan")} back="/careers/" wide>
       <Suspense><PlanView /></Suspense>
     </Shell>
   );

@@ -40,7 +40,7 @@ function CompareView() {
   const pick = (which: "a" | "b", v: string) => router.replace(`/compare/?a=${which === "a" ? v : a}&b=${which === "b" ? v : b}`);
   const maxCost = Math.max(netX, netY, 1);
   return (
-    <div className="xl:grid xl:grid-cols-[1fr_1fr] xl:items-start xl:gap-4">
+    <div className="xl:grid xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] xl:items-start xl:gap-4">
       <Card className="space-y-2 xl:col-span-2">
         <div className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">{t("cmp_suggests")}</div>
         <p className="text-sm font-semibold">{why}</p>
