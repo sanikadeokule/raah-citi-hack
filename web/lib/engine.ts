@@ -422,12 +422,20 @@ export function rankCareers(data: Data, profile: Profile, n = 5) {
   const cmp = (a: any, b: any) => TIER[a.fit] - TIER[b.fit] || b.raw - a.raw;
   ranked.sort(cmp);
   const top = ranked.slice(0, n);
+  // the career the student chose is always shown, and the diversity swap below never replaces it
+  const keep = (profile as any).roadmap_career;
+  if (keep && top.length && !top.some((s: any) => s.career.id === keep)) {
+    const mine = ranked.slice(n).find((s: any) => s.career.id === keep);
+    if (mine) { top[top.length - 1] = mine; top.sort(cmp); }
+  }
   // diversity: show at least one vocational, one non-STEM and one degree path / self-employment option, but only one that
   // links to the student's interests, or in place of another career that does not
   for (const flag of ["vocational", "non_stem", "degree"]) {
     if (top.length && !top.some((s: any) => s.career.flags[flag])) {
       const extra = ranked.slice(n).find((s: any) => s.career.flags[flag] && (s.fit !== "none" || !phrases.size));
-      if (extra) { extra.diversity = true; top[top.length - 1] = extra; top.sort(cmp); }
+      let slot = -1;
+      for (let i = top.length - 1; i >= 0; i--) if (top[i].career.id !== keep) { slot = i; break; }
+      if (extra && slot >= 0) { extra.diversity = true; top[slot] = extra; top.sort(cmp); }
     }
   }
   return top.map(({ raw, ...s }: any) => ({ ...s, why: whyLine(s) }));

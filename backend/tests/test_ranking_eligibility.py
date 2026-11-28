@@ -98,3 +98,13 @@ def test_hostel_choice_changes_result():
     yes = {e["id"]: e["status"] for e in engine.eligibility(d, priya, bsc, True)}
     no = {e["id"]: e["status"] for e in engine.eligibility(d, priya, bsc, False)}
     assert yes != no
+
+
+def test_the_chosen_career_is_always_in_the_top_five():
+    d = dataset.load()
+    interests = ["machines", "computers", "technology"]
+    ids = [c["id"] for c in d["careers"]]
+    for cid in ids:
+        top = engine.rank_careers(d, {**BASE, "interests": interests, "roadmap_career": cid})
+        assert any(s["career"]["id"] == cid for s in top), cid
+        assert len(top) == 5

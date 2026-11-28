@@ -111,11 +111,12 @@ export default function CareersPage() {
         <ul className="mt-2 space-y-2 lg:grid lg:grid-cols-2 2xl:grid-cols-3 lg:items-start lg:gap-3 lg:space-y-0">
           {top.map((s: any, i: number) => {
             const r = s.plan_id ? quick(s.plan_id) : null;
+            const mine = profile?.roadmap_career ? s.career.id === profile.roadmap_career : i === 0;
             return (
               <li key={s.career.id} {...cardProps(s.career.id)}
-                className={`cursor-pointer rounded-xl p-3 ring-1 transition hover:ring-[var(--brand)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)] active:scale-[0.99] ${i === 0 ? "bg-[var(--brand-soft)] ring-2 ring-[var(--brand)]" : "bg-[var(--bg)] ring-transparent"}`}>
+                className={`cursor-pointer rounded-xl p-3 ring-1 transition hover:ring-[var(--brand)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)] active:scale-[0.99] ${mine ? "bg-[var(--brand-soft)] ring-2 ring-[var(--brand)]" : "bg-[var(--bg)] ring-transparent"}`}>
                 <div className="flex items-start justify-between gap-2">
-                  <div>{i === 0 && <span className="mb-0.5 block text-[10px] font-bold uppercase tracking-wider text-[var(--brand-ink)]">{t("your_career")}</span>}<span className="mr-1 text-[var(--muted)]">{i + 1}.</span><b>{s.career.name}</b></div>
+                  <div>{mine && <span className="mb-0.5 block text-[10px] font-bold uppercase tracking-wider text-[var(--brand-ink)]">{t("your_career")}</span>}<span className="mr-1 text-[var(--muted)]">{i + 1}.</span><b>{s.career.name}</b></div>
                   <Ring value={s.score} color={MODULE_COLOR.careers} size={38} />
                 </div>
                 <div className="mt-1 flex flex-wrap gap-1">
