@@ -3,6 +3,7 @@
 // Discover: the ikigai conversation. The student tells Raah two circles (what they love, what they are good at) by
 // tapping, typing or speaking. Raah checks the other two (what pays, what is needed near them) from the dataset, shows
 // the careers where the circles overlap, and checks "can you get there". The student confirms every tag: AI never decides alone.
+import { TypeTag } from "@/components/typetag";
 import Link from "next/link";
 import { postAi, aiAvailable } from "@/lib/ai";
 import { useRouter } from "next/navigation";
@@ -361,7 +362,7 @@ export default function Discover() {
           {ranked.slice(0, 5).map((s, i) => (
             <button key={s.career.id} onClick={() => setSel(i)} aria-pressed={sel === i} className={`rounded-2xl bg-[var(--card)] p-4 text-left ${sel === i ? "ring-[3px] ring-[var(--brand)]" : "ring-2 ring-black/10"}`}>
               <span className="flex items-baseline justify-between gap-2">
-                <span className="text-lg font-extrabold leading-snug">{s.career.name}</span>
+                <span className="text-lg font-extrabold leading-snug">{s.career.name} <TypeTag c={s.career} t={t} /></span>
                 <span className="shrink-0 text-right">
                   <span className="block text-2xl font-extrabold leading-none text-[var(--brand-ink)]">{matchPct.get(s.career.id) ?? 0}%</span>
                   {i === 0 && <span className="mt-1 inline-block rounded-full border-2 border-[var(--brand)] px-2 py-0.5 text-[11px] font-bold uppercase text-[var(--brand-ink)]">{t("ik_best")}</span>}

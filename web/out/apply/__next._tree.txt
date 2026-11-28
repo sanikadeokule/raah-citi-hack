@@ -1,5 +1,5 @@
-:HL["/_next/static/chunks/3avvl44g05ipw.css","style"]
+:HL["/_next/static/chunks/3y_1gwxf2_brs.css","style"]
 :HL["https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;600;700&family=Noto+Sans+Devanagari:wght@400;600;700&display=swap","style"]
 2:[["children",{"s":"__PAGE__","h":160}]]
 1:[["children",{"s":"apply","h":96,"c":"$Q2"}]]
-0:{"b":"aOuUO9M67ROOnwJcZpHQl","t":{"t":{"s":"","h":80,"c":"$Q1"}}}
+0:{"b":"nS4syFh-OmeZx-10Ld1Jj","t":{"t":{"s":"","h":80,"c":"$Q1"}}}
