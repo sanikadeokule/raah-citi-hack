@@ -1,12 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export function coursesFor(data: any, career: any, plan?: any) {
-  const words = String(career.name).toLowerCase().replace(/[()/]/g, " ").split(/\s+/).filter((w) => w.length > 3);
-  const extra = career.flags?.health ? ["health", "nursing", "anm"] : [];
-  return data.courses.filter((c: any) => {
-    if (plan?.linked_course === c.id) return true;
-    const txt = String(c.career_text).toLowerCase();
-    return [...words, ...extra].some((w) => txt.includes(w));
-  }).slice(0, 4);
+  // a course is for a career when the Courses sheet lists that career's ID ("Career IDs"), or when it is the course
+  // linked in the career's plan; the sheet is the only source, no guessing from words in the name
+  return data.courses.filter((c: any) => plan?.linked_course === c.id || (c.career_ids ?? []).includes(career.id)).slice(0, 4);
 }
 
 
