@@ -1570,5 +1570,12 @@
  "act_see_full": "See full log",
  "see_all_alerts": "See all alerts",
  "no_notifs": "No alerts yet.",
- "ik_how_built": "How this match is built"
+ "ik_how_built": "How this match is built",
+ "doc_disability_certificate": "Disability certificate",
+ "doc_ews_certificate": "EWS certificate",
+ "doc_ex_serviceman_certificate": "Ex-serviceman certificate (parent)",
+ "doc_occupation_certificate": "Parent's hazardous/unclean occupation certificate",
+ "doc_mahabocw_registration": "Construction worker registration (parent)",
+ "doc_school_bonafide": "School bonafide certificate",
+ "doc_hostel_proof": "Hostel proof"
 }

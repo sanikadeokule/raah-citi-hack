@@ -1576,5 +1576,12 @@
  "act_see_full": "पूरा लॉग देखें",
  "see_all_alerts": "सभी अलर्ट देखें",
  "no_notifs": "अभी कोई अलर्ट नहीं।",
- "ik_how_built": "यह मैच कैसे बनता है"
+ "ik_how_built": "यह मैच कैसे बनता है",
+ "doc_disability_certificate": "दिव्यांगता प्रमाणपत्र",
+ "doc_ews_certificate": "EWS प्रमाणपत्र",
+ "doc_ex_serviceman_certificate": "भूतपूर्व सैनिक प्रमाणपत्र (माता-पिता)",
+ "doc_occupation_certificate": "माता-पिता के खतरनाक/अस्वच्छ व्यवसाय का प्रमाणपत्र",
+ "doc_mahabocw_registration": "निर्माण श्रमिक पंजीकरण (माता-पिता)",
+ "doc_school_bonafide": "स्कूल बोनाफाइड प्रमाणपत्र",
+ "doc_hostel_proof": "छात्रावास प्रमाण"
 }

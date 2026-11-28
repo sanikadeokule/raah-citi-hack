@@ -1576,5 +1576,12 @@
  "act_see_full": "संपूर्ण लॉग पहा",
  "see_all_alerts": "सर्व अलर्ट पहा",
  "no_notifs": "अजून कोणतेही अलर्ट नाहीत.",
- "ik_how_built": "हा मॅच कसा तयार होतो"
+ "ik_how_built": "हा मॅच कसा तयार होतो",
+ "doc_disability_certificate": "दिव्यांगत्व प्रमाणपत्र",
+ "doc_ews_certificate": "EWS प्रमाणपत्र",
+ "doc_ex_serviceman_certificate": "माजी सैनिक प्रमाणपत्र (पालक)",
+ "doc_occupation_certificate": "पालकांच्या धोकादायक/अस्वच्छ व्यवसायाचे प्रमाणपत्र",
+ "doc_mahabocw_registration": "बांधकाम कामगार नोंदणी (पालक)",
+ "doc_school_bonafide": "शाळा बोनाफाईड प्रमाणपत्र",
+ "doc_hostel_proof": "वसतिगृह पुरावा"
 }
