@@ -1583,5 +1583,18 @@
  "doc_occupation_certificate": "Parent's hazardous/unclean occupation certificate",
  "doc_mahabocw_registration": "Construction worker registration (parent)",
  "doc_school_bonafide": "School bonafide certificate",
- "doc_hostel_proof": "Hostel proof"
+ "doc_hostel_proof": "Hostel proof",
+ "menu_reading_settings": "Read aloud and text size",
+ "a11y_title": "Reading and listening",
+ "a11y_read_aloud": "Read answers aloud",
+ "a11y_read_aloud_hint": "When this is on, Raah reads each screen's title out loud as soon as it opens.",
+ "a11y_text_size": "Text size",
+ "a11y_size_normal": "Normal",
+ "a11y_size_large": "Large",
+ "a11y_size_xlarge": "Extra large",
+ "a11y_sample_text": "This is how text will look across Raah.",
+ "a11y_screen_reader_title": "Screen reader",
+ "a11y_screen_reader_desc": "Raah's screens are labelled for TalkBack and VoiceOver: every button, image and form field has a name your screen reader can announce, and the reading order follows the order on screen.",
+ "a11y_high_contrast": "High contrast",
+ "a11y_high_contrast_hint": "Makes text and borders darker and easier to see."
 }

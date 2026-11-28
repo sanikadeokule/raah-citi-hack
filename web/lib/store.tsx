@@ -18,6 +18,7 @@ import or from "@/locales/or.json";
 import as from "@/locales/as.json";
 import { normalizeLanguage, SELECTABLE_LANGUAGES } from "./languages";
 import { db, enqueue, getKV, setKV } from "./db";
+import { applySavedA11y } from "./a11y";
 
 export const API = process.env.NEXT_PUBLIC_API_BASE || "";
 const LOCALES: Record<string, Record<string, string>> = { en, mr, hi, ta, bn, te, gu, kn, ml, pa, or, as };
@@ -194,6 +195,7 @@ export function Provider({ children }: { children: React.ReactNode }) {
     setKV("lang", code);
   }, []);
   useEffect(() => { document.title = t("app_title"); }, [t]);
+  useEffect(() => { applySavedA11y(); }, []);
   const queueAction = useCallback(async (kind: string, payload: unknown) => {
     await enqueue(kind, payload);
     await flushQueue(false);

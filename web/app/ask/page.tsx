@@ -126,7 +126,8 @@ export default function AskPage() {
   const lastMine = [...msgs].reverse().find((m) => m.from === "me");
   const lastRaah = [...msgs].reverse().find((m) => m.from === "raah");
   return (
-    <Shell title={t("home_ask")} aside={<AskAside lastQ={lastMine?.text} lastA={lastRaah} t={t} />}>
+    <Shell title={t("home_ask")} fit aside={<AskAside lastQ={lastMine?.text} lastA={lastRaah} t={t} />}>
+      <div className="flex-1 overflow-y-auto">
       {msgs.length === 0 && (
         <Card>
           <p className="text-sm">{t("ask_intro")}</p>
@@ -174,7 +175,8 @@ export default function AskPage() {
         )}
         <div ref={end} />
       </div>
-      <Card className="sticky bottom-2">
+      </div>
+      <Card className="mt-2 shrink-0">
         {!online && <p className="mb-2 text-xs text-amber-700">{t("ask_offline")}</p>}
         <div className="flex items-end gap-2">
           <MicButton onText={(s, detectedLang) => ask(s, detectedLang || lang)} />

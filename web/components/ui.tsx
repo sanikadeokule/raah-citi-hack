@@ -9,6 +9,7 @@ import { Icon } from "@/components/icon";
 import { SideInfo } from "@/components/sideinfo";
 import { ROADMAP_HREF } from "@/lib/roadmap";
 import { cachedAudio, fetchAudio, micErrorKind, micProblem, pickVoice, startRecording, transcribe, voiceStatus, type Recording, type VoiceProblem } from "@/lib/audio";
+import { readReadAloud } from "@/lib/a11y";
 
 // the student's main places, shown as a side menu on a big screen (laptop, projector)
 const DESK_NAV = [
@@ -48,6 +49,23 @@ export function Shell({ title, back = "/", role = "any", publicPage = false, fit
   const isStudent = auth?.user.role === "student";
   const withAside = isStudent && !onHome && !!ready;
   const onRoadmap = (path.endsWith("/") ? path : `${path}/`) === ROADMAP_HREF;
+  // "Read answers aloud" (components/profilemenu.tsx -> /accessibility/): Raah speaks each screen's title as it opens.
+  useEffect(() => {
+    if (!ready || !readReadAloud()) return;
+    const ss = typeof window !== "undefined" ? window.speechSynthesis : undefined;
+    if (!ss || typeof SpeechSynthesisUtterance === "undefined") return;
+    let cancelled = false;
+    pickVoice(speechLang(lang)).then((pick) => {
+      if (cancelled || !pick) return;
+      const u = new SpeechSynthesisUtterance(title ?? t("app_name"));
+      u.lang = pick.voice?.lang ?? speechLang(lang);
+      if (pick.voice) u.voice = pick.voice;
+      u.rate = 0.95;
+      ss.cancel();
+      ss.speak(u);
+    });
+    return () => { cancelled = true; ss.cancel(); };
+  }, [ready, path, title, lang, t]);
   return (
     <div className={`mx-auto max-w-md bg-(--bg) lg:max-w-none ${fit ? "flex min-h-dvh flex-col" : "min-h-screen pb-24"}`}>
       <div className="sticky top-0 z-20 shadow">
