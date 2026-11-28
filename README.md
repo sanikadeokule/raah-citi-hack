@@ -50,10 +50,10 @@ For the Citi Ada Lovelace finals the app is being rebuilt around three hero mome
 | 1 | Line icons and no emojis, brighter blue, six-tile home, first-minutes flow (`/start`), tailoring rule on Exams, Courses and Jobs | **Done** |
 | 2 | Discover as the ikigai conversation, student profile MCP tools | **Done** |
 | 3 | Agent core: Today's step decided by the agent, "What Raah did for you" activity page, Ask Raah reads the shared profile, sign-in fixes | **Done** |
-| 4 | Scholarship application chain (eligibility, document checklist, pre-filled application, tracking, parent approval), Compare and decide, Parent mode | **Planned, not built** |
-| 5 | Follow-up check-ins, mentor match, voice read-aloud and screen-reader pass, demo-proofing | **Planned, not built** |
+| 4 | Scholarship application flow (eligibility, document checklist, prefilled details, student review, parent approval for minors, tracking), Compare and decide, Parent mode | **Implemented** |
+| 5 | Follow-up check-ins, mentor requests with consent, multilingual voice input/read-aloud and accessibility preferences | **In progress** (final accessibility review and demo polish remain) |
 
-Tailoring rule on every list: your career is the saved one, otherwise the best match, with a "Because..." reason on each item and an All view.
+Personalization uses the saved career goal, or the best career match when none is saved. For exams, "For you" requires both current-class eligibility and a connection to that career path. Direct exam links from a career plan take priority; when a plan has no links, career tags and the exam's stated destination provide the fallback. Unrelated exams remain under "All". Recommendations show a reason, and uncertain profile requirements are not presented as confirmed eligibility.
 
 ## Features
 
@@ -65,7 +65,7 @@ Tailoring rule on every list: your career is the saved one, otherwise the best m
 | **Home** | Marathi, Hindi, English. **Today's step** (one thing to do now, why, and what Raah looked at), your career, and six tiles: Careers, Colleges, Scholarships, Exams, Learn, Jobs. Alerts and the roadmap sit in the top bar and profile menu. |
 | **Today's step** | Decided by the agent each day from the student's profile, unread alerts, scholarships and exams, read through the same MCP tools Ask Raah uses. A plain rule over what the tools return, not a model guess, so it is the same for the same facts. |
 | **What Raah did for you** | `/activity` lists what Raah did for the signed-in student: the step it chose, answers it gave, what Discover learned, the path chosen. Stored as a text key plus values, so it shows in the student's language. A student sees only their own. |
-| **Tailoring** | Exams, free courses and Jobs follow the student's career (saved, else best match), each with a reason and an All tab (`web/lib/tailor.ts`). |
+| **Tailoring** | Exams, free courses and Jobs use the saved career, or the best match if none is saved. Exams in "For you" must also fit the student's current class and lead toward that career; unrelated exams remain in "All". Recommendations include a reason (`web/lib/tailor.ts`). |
 | **Discover (ikigai)** | A two-turn chat per stage: what you love, then what you are good at. The student types, speaks or taps reply chips, and Raah keeps whatever they say (a model maps it to dataset topics when reachable, keywords otherwise; words with no topic are kept as the student's own). Raah then checks the other two circles from the dataset: what pays and what is needed near you. Result: the top 5 careers with a match percentage (love 25%, good at 25%, pays 30%, needed 20%), then "can you get there" (cost, family share, scholarships, nearest centre, steps). The old profile questions live at `/discover/basics/`. |
 | **Why this career** | Each shortlisted career gets a one or two sentence reason. The model writes it from the score breakdown and dataset rows; if its text contains a number that is not in those rows, the template sentence is shown instead. |
 | **Parental consent** | Students under 18 tick that a parent or guardian agrees before the account is saved. A consent record with purpose and timestamp is stored (DPDP Act 2023). |
@@ -78,7 +78,11 @@ Tailoring rule on every list: your career is the saved one, otherwise the best m
 | **Parent voice note** | A short message for parents in the chosen language with the plan's numbers, played aloud and shareable on WhatsApp as text or as an audio file. With BHASHINI keys the file is generated speech (WAV); without them the student records the message in their own voice. On phones the file goes to the share sheet (WhatsApp, Bluetooth, Files); elsewhere it downloads. |
 | **Audio lessons + quiz** | "What is an ITI?", "What is an apprenticeship?", "How do scholarships work?" plus a 5-question quiz. Facts inside lessons and quiz (stipend rates, income limits, ITI count) come from the dataset. With BHASHINI keys, "Save lesson audio for offline" stores each lesson as an audio file on the phone; the file is tied to the exact lesson text, so after a dataset edit the new figures are spoken rather than an old recording. Without keys the phone's own voice reads them, which also works offline. |
 | **Apprenticeships** | 31 live NAPS listings in Pune district and 17 Central Railway seat lines, searchable, with stipend and apply link. |
-| **Exams** | Every entrance test or admission round a path needs shows as a step on the plan screen, and the Exams screen lists them all with who can apply, how selection works, the fee for open and reserved categories, when to apply and the official site. All of it comes from the `Exams` sheet. |
+| **Exams** | The Exams page has "For you" and "All" views. Recommendations match the current class and saved/best-match career path; direct plan links are preferred, with exam destinations and career tags used when no link exists. Exam details, dates and sources come from the `Exams` sheet. |
+| **Scholarship applications** | `/apply` starts a tracked application from a scholarship, checks profile eligibility, builds a document checklist and prefills known details. The student reviews and approves before submission; applications for minors require parent agreement. Reminders and progress are recorded. The parent message is a recorded in-app handoff; automatic SMS or submission to scholarship portals is not connected. |
+| **Parent mode** | `/parent` provides a family view using a PIN set by the student. Parents can see the shared plan and applications and record their agreement when required. |
+| **Follow-up check-ins** | `/tracker` shows follow-up steps and application status. Check-ins can be refreshed from the student's current roadmap and opportunities. |
+| **Accessibility preferences** | `/accessibility` offers adjustable text size, high contrast and read-aloud settings across the app. A full assistive-technology audit is still in progress. |
 | **Mentors** | Mentors from the `Mentors` sheet, filtered by the student's top careers (or any career) and a distance slider. A mentor's phone number never leaves the server until the student agrees to share their first name, class and taluka with that mentor; the teacher sees who connected with whom. |
 | **Teacher modules** | Short lessons made by teachers, read aloud in the module's language, with a quiz. Free, per-module or monthly subscription; paid enrolments use Razorpay Checkout when credentials are configured. |
 | **Student progress** | Signed-in students can see completed teacher modules, quiz scores and the published income estimate for their selected career. |
@@ -325,7 +329,7 @@ Ask Raah now reasons in steps instead of answering in one shot. Everything Raah 
 
 **Data still decides.** The student's profile and account id are filled in by the server, never by the model, so it cannot read another student's notifications. Every number in the answer must appear in some tool result, the question or the profile; if not, the one-shot RAG answer (`/api/ask`) is shown instead. Fallbacks keep it working: a model without function calling (Sarvam) plans in JSON (`{"tool": ..., "args": ...}`); with no model at all, a fixed tool chain picked from the question's words runs and the matching dataset rows are shown; if streaming fails, the page calls `/api/ask`. Every run is saved in `agent_runs` (`GET /api/agent/runs`), and `GET /api/mcp/status` shows the server, transport and tools.
 
-**The agent core.** Today's step and the activity page sit on the same tools. `backend/raah/today.py` reads the student through the tools above, picks one step, and writes every action to `agent_activity` (`GET /api/activity`). For a signed-in student Ask Raah also merges the stored profile (including ikigai and the saved career) with what the page sends. Day 4 and 5 features (scholarship chain, Compare, Parent mode, follow-ups, mentor match) are planned on this core and are not built yet.
+**The agent core.** Today's step and the activity page use the same MCP tools. `backend/raah/today.py` reads the student through those tools, picks one step, and writes actions to `agent_activity` (`GET /api/activity`). Signed-in Ask Raah merges the stored profile (including interests and saved career) with the question. Scholarship applications pause for student and parent decisions; the agent does not approve or submit an application on a person's behalf. Compare, Parent mode, follow-ups and mentor requests are implemented as separate student-controlled flows.
 
 The same server works with any MCP client. For Claude Desktop, add to its config:
 
@@ -337,39 +341,29 @@ The same server works with any MCP client. For Claude Desktop, add to its config
 
 ## Architecture
 
-```
- Phone (low-end Android, Chrome)
- ┌────────────────────────────────────────────┐
- │ Next.js PWA (static export, React, Tailwind)│
- │  · service worker: app shell + dataset      │
- │  · IndexedDB (Dexie): data, profile,        │
- │    consent, quiz answers, sync queue        │
- │  · lib/engine.ts: payback, what-if,         │
- │    eligibility, ranking (offline)           │
- │  · Web Speech API voice fallback            │
- └──────────────────┬─────────────────────────┘
-                    │ HTTPS
- ┌──────────────────▼─────────────────────────┐
- │ FastAPI                                     │
- │  /api/data /api/version  parsed spreadsheet │
- │  /api/plan /api/eligibility /api/careers    │
- │  /api/centres            raah/engine.py     │
- │  /api/voice       BHASHINI / Sarvam ASR+TTS │
- │  /api/teacher            class, flags, bulk │
- │  /api/money              AA, pain.001, VC   │
- │  /api/partners           OAuth2 + OpenAPI   │
- └──────────────────┬─────────────────────────┘
-                    │
-             raah-dataset.xlsx
+```mermaid
+flowchart TD
+  Browser[Student / Parent / Teacher browser] --> PWA[Next.js static PWA<br/>web/out]
+  PWA --> Local[IndexedDB<br/>profile, cached dataset, offline queue]
+  PWA --> API[FastAPI<br/>backend/raah/main.py]
+  API --> Sheet[raah-dataset.xlsx<br/>careers, plans, scholarships, exams]
+  API --> Engine[Python rules engine<br/>eligibility, costs, ranking]
+  API --> DB[(PostgreSQL<br/>accounts, profiles, applications, activity)]
+  API --> MCP[MCP data tools]
+  MCP --> Agent[Ask Raah agent<br/>today's step, activity]
+  API --> RAG[RAG search<br/>spreadsheet + knowledge files]
+  API -. optional .-> Voice[BHASHINI / Sarvam<br/>speech-to-text and text-to-speech]
+  API -. optional .-> Pay[Razorpay<br/>paid module checkout]
+  API --> Jobs[Exam-date refresh job]
 ```
 
-The same logic exists in Python (`backend/raah/engine.py`, used by the API) and TypeScript (`web/lib/engine.ts`, used offline in the browser). A parity test runs both on 105 scenarios and requires identical results.
+The browser also has a TypeScript copy of the core calculations so career, cost and eligibility views can keep working offline. FastAPI serves the static export and handles signed-in features. Optional AI, speech and payment providers are configured with server-side environment variables; their secrets do not go into the web bundle.
 
 **Stack:** Next.js 16, React 19, Tailwind CSS 4, Recharts, Dexie · FastAPI, Pydantic, openpyxl, scikit-learn, NumPy, lxml, PyJWT, httpx · BHASHINI (ULCA) and Sarvam AI for Indian-language speech.
 
 ## Run it locally
 
-Requirements: Python 3.10+. Node 20+ only if you want to change the web app.
+Requirements: Python 3.10+, PostgreSQL 16, and Node.js 20+ only when rebuilding or developing the web app. A prebuilt static frontend is included in `web/out`.
 
 ```bash
 git clone https://github.com/sanikadeokule/raah-citi-hack.git
@@ -385,6 +379,17 @@ The setup script creates the role `raah` and database `raah` on `localhost:5432`
 **Windows laptops with Application Control (Smart App Control) on.** Some managed or new Windows 11 laptops refuse to load unsigned compiled Python extensions ("DLL load failed ... An Application Control policy has blocked this file"). The backend avoids the ones that hit this: it uses the pure-Python PostgreSQL driver `pg8000` (plain `postgresql://` URLs are rewritten to `postgresql+pg8000://`), pins SQLAlchemy below 2.1 and sets `DISABLE_SQLALCHEMY_CEXT_RUNTIME=1` so SQLAlchemy runs without its compiled helpers. scikit-learn and lxml are optional at runtime (NumPy and structural fallbacks). If you upgraded from an older checkout, run `pip uninstall -y psycopg psycopg-binary` and `pip install -r backend\requirements.txt` once.
 
 Open <http://localhost:8000>. On a phone connected to the same Wi-Fi, open `http://<laptop-ip>:8000` and use "Add to Home screen" to install it.
+
+On Windows, after setting up PostgreSQL and creating `backend/.env`, the backend can also be started directly from PowerShell:
+
+```powershell
+py -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r backend\requirements.txt
+$env:DISABLE_SQLALCHEMY_CEXT_RUNTIME = "1"
+Set-Location backend
+python -m uvicorn raah.main:app --host 0.0.0.0 --port 8000
+```
 
 ### Phones: use HTTPS for the microphone
 
@@ -475,6 +480,10 @@ Interactive OpenAPI docs: <http://localhost:8000/docs>
 | `POST /api/modules`, `GET /api/modules/mine`, `GET /api/modules/earnings`, `GET /api/modules/payouts`, `POST /api/modules/earnings/payout` | Teacher module builder, earnings and payout history |
 | `GET /api/modules`, `GET /api/modules/progress`, `POST /api/modules/{id}/enrol`, `POST /api/modules/{id}/payment/verify`, `POST /api/modules/{id}/complete` | Student progress, Razorpay checkout and quiz completion |
 | `POST /api/modules/razorpay/webhook` | Captured payment webhook (signature verified) |
+| `GET`, `POST /api/scholarship-applications` | List tracked applications or start one from a scholarship |
+| `PATCH /api/scholarship-applications/{id}`, `POST /api/scholarship-applications/{id}/approve`, `/ask-parent`, `/remind` | Update checklist/review, record student approval, parent handoff and reminder |
+| `POST /api/parent/token`, `GET /api/parent/summary`, `POST /api/parent/applications/{id}/agree` | Parent PIN access, family summary and recorded agreement |
+| `GET /api/checkins`, `POST /api/checkins/refresh` | Student follow-up steps |
 | `POST /api/auth/register` · `POST /api/auth/login` | Register (name, mobile, PIN, role), then sign in with mobile + PIN to get a JWT |
 | `POST /api/auth/reset-pin` | Teacher clears a student's forgotten PIN so they can register again |
 | `GET /api/auth/notifications` · `POST /api/auth/notifications/{id}/read` | Recommendations sent to the signed-in student |
@@ -497,6 +506,10 @@ backend/
     engine.py       eligibility, cost & payback, centres, career ranking
     main.py         FastAPI app, core routes, serves web/out
     auth.py         register and sign in with mobile + PIN, JWT roles, profiles
+    application_chain.py scholarship application checklist, approval and tracking
+    parent.py       family PIN access, dashboard and application agreement
+    checkins.py     student follow-up steps and refresh
+    mentors.py      consent-based mentor connection requests
     db.py           PostgreSQL schema and connection (DATABASE_URL)
     rag.py          Ask Raah: row chunks, hybrid BM25 + vector search, cited answers
     agent.py        Ask Raah agent: tool-calling loop (6 steps), SSE steps, grounding, run log
