@@ -123,14 +123,11 @@ export function examsForStudent(data: any, profile: any): Reasoned<any, { key: s
     // an exam the dataset lists for this career (Exams sheet "Career IDs") or for everyone, or one the wording of the career points to
     const listed = mc ? (item.career_ids ?? []).includes(mc.career.id) || (item.career_ids ?? []).includes("ALL") : false;
     const explicit = (item.career_ids ?? []).length > 0;
-    // no career chosen yet: fall back to what fits the student's class and marks
-    const careerMatch = !mc ? true : explicit ? listed : matchesCareerPath(item, mc);
+    // no career chosen yet: nothing is "for you" until they pick a career roadmap (the Exams page says so)
+    const careerMatch = !mc ? false : explicit ? listed : matchesCareerPath(item, mc);
     return {
       item, mine: eligibility.fits && careerMatch,
-      reason: eligibility.fits && careerMatch
-        ? (mc ? { key: "because_career", vars: { career: mc.career.name } }
-          : { key: eligibility.marksKnown ? "because_class_marks" : "because_class", vars: { class: profile.class } })
-        : null,
+      reason: eligibility.fits && careerMatch && mc ? { key: "because_career", vars: { career: mc.career.name } } : null,
       nextWindow: nextExamWindow(item),
     };
   });
