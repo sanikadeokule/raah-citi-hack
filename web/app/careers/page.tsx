@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Icon } from "@/components/icon";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Badge, Card, Shell } from "@/components/ui";
 import { computePlan, inr, rankCareers } from "@/lib/engine";
@@ -44,7 +44,7 @@ function flagBadges(c: any, t: (k: string) => string) {
 }
 
 export default function CareersPage() {
-  const { data, profile, t, lang } = useApp();
+  const { data, profile, t, lang, setProfile, queueAction } = useApp();
   const [q, setQ] = useState("");
   const [tab, setTab] = useState<"top" | "all">("top");
   const router = useRouter();
@@ -57,6 +57,23 @@ export default function CareersPage() {
   });
   // no interests yet: the list would be ordered by cost and openings alone, so show a prompt to Discover instead of a fake top 5
   const hasInterests = (profile?.interests || []).some((i: string) => String(i).trim());
+  // the match uses the AI meaning scores too (same as Discover); fetch and save them when they are missing or for other interests
+  const interestKey = (profile?.interests || []).map((i: string) => String(i).trim().toLowerCase()).filter(Boolean).sort().join("|");
+  const asked = useRef("");
+  useEffect(() => {
+    if (!profile || !interestKey || asked.current === interestKey) return;
+    const m = profile.interest_meaning;
+    const have = m?.for ? (m.for as string[]).map((i) => String(i).trim().toLowerCase()).filter(Boolean).sort().join("|") : "";
+    if (have === interestKey && m?.scores) return;
+    asked.current = interestKey;
+    (async () => {
+      const r = await postAi("/api/interests/careers", { text: (profile.interests as string[]).join(", ") });
+      if (!r?.scores || !Object.keys(r.scores).length) return;
+      const prof = { ...profile, interest_meaning: { for: profile.interests, scores: r.scores } };
+      setProfile(prof);
+      await queueAction("profile", prof);
+    })();
+  }, [profile, interestKey, setProfile, queueAction]);
   const top = useMemo(() => (data && profile && hasInterests ? rankCareers(data, profile, 5) : []), [data, profile, hasInterests]);
   const plans = useMemo(() => Object.fromEntries((data?.plans || []).map((p: any) => [p.career_id, p])), [data]);
   const quick = (planId: string) => computePlan(data, profile, planId);
