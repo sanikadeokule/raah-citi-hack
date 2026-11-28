@@ -16,7 +16,7 @@ import { getKV, setKV } from "@/lib/db";
 import { useApp } from "@/lib/store";
 import { placeLabel } from "@/lib/questions";
 import { BUILD_ROADMAP_HREF } from "@/lib/roadmap";
-import { eligibility, inr, rankCareers } from "@/lib/engine";
+import { eligibility, rankCareers } from "@/lib/engine";
 import { tradeMatches } from "@/lib/listings";
 import { notifTitle, notifLink } from "@/lib/notiflabel";
 
@@ -179,11 +179,10 @@ export default function Home() {
     setStepRun((n) => n + 1);
   };
   const details = profile ? [profile.class && t("class_n", { n: profile.class }), placeLabel(t, profile.taluka), categoryLabel(profile.category, t)].filter(Boolean).join(" · ") : "";
-  // the three small "for you today" cards: next exam, a free course for the gap, a job near you
+  // tile subtitles: next exam for you, how many free courses close the gap, jobs near you
   const examRows = useMemo(() => (data && profile ? examsForStudent(data, profile) : []), [data, profile]);
   const nextExam = examRows.find((r) => r.mine) ?? examRows[0] ?? null;
   const courseRows = useMemo(() => (data && profile ? coursesForStudent(data, profile) : []), [data, profile]);
-  const gapCourse = courseRows.find((r) => r.mine) ?? courseRows[0] ?? null;
   const gapCount = courseRows.filter((r) => r.mine).length;
   const schCount = useMemo(() => (data && profile ? eligibility(data, profile).filter((e: any) => e.status !== "not_eligible").length : 0), [data, profile]);
   const topCount = useMemo(() => (data && profile ? rankCareers(data, profile, 5).length : 0), [data, profile]);
@@ -191,7 +190,6 @@ export default function Home() {
     const naps: any[] = data?.naps ?? [];
     return mine ? naps.filter((n) => tradeMatches(n, mine.career)) : [];
   }, [data, mine]);
-  const jobNear = (jobsForMine.length ? jobsForMine : (data?.naps ?? []))[0] ?? null;
   const jobNearCount = jobsForMine.length || (data?.naps?.length ?? 0);
   const tileSub: Record<string, string> = {
     home_careers: t("home_tile_careers_sub", { n: topCount || 5 }),
@@ -265,11 +263,12 @@ export default function Home() {
         <TeacherInbox />
 
         {/* one step chosen for the student today, with the reason and the source; "How Raah decided" sits beside it on a big screen */}
-        <section aria-labelledby="step-h" className="rounded-2xl border-2 border-(--brand) bg-(--card) p-4 shadow-sm xl:grid xl:grid-cols-[1fr_14rem] xl:items-start xl:gap-4">
-          <div className="flex gap-3">
+        <section aria-labelledby="step-h" className="rounded-2xl border-2 border-(--brand) bg-(--card) p-4 shadow-sm xl:grid xl:grid-cols-[1fr_14rem] xl:items-stretch xl:gap-4">
+          <div className="flex h-full gap-3">
           {/* Maina presents the step: thinking while Raah picks it, a clipboard for a follow-up question, a wave otherwise */}
           <Mascot pose={stepLoading && !agentStep ? "think" : checkin ? "clipboard" : "wave"} size={56} className="-ml-1 shrink-0 self-start" />
-          <div className="min-w-0 flex-1">
+          <div className="flex h-full min-w-0 flex-1 flex-col justify-between">
+          <div>
           <h2 id="step-h" className="text-[11px] font-bold uppercase tracking-wider text-(--muted)">{t("step_title")}</h2>
           <div className="mt-1 flex items-start gap-2">
             <p className="min-w-0 flex-1 text-base font-bold leading-snug">{t(step.key, step.vars)}</p>
@@ -277,6 +276,7 @@ export default function Home() {
           </div>
           <p className="mt-1 text-xs text-(--muted)">{t(`${step.key}_why`, step.vars)}</p>
           {step.source && <p className="mt-1 truncate text-[11px] text-(--muted)">{t("source")}: <a href={step.source.split(" ; ")[0]} target="_blank" rel="noreferrer" className="underline">{step.source.split(" ; ")[0].replace(/^https?:\/\/(www\.)?/, "")}</a></p>}
+          </div>
           {checkin ? (
             <div className="mt-3 flex flex-wrap items-center gap-2" role="group" aria-label={t(step.key, step.vars)}>
               <button onClick={() => answerCheckin("yes")} disabled={answering} className="rounded-xl bg-(--brand) px-4 py-2.5 text-sm font-bold text-white active:scale-95 disabled:opacity-50">{t("ci_yes")}</button>
@@ -292,7 +292,7 @@ export default function Home() {
           </div>
           </div>
           {(agentStep?.looked?.length || agentStep?.agent?.reason || agentStep?.agent?.trace?.length) ? (
-            <div className="mt-3 border-t border-black/10 pt-3 xl:mt-0 xl:border-l xl:border-t-0 xl:pl-4 xl:pt-0">
+            <div className="mt-3 flex h-full flex-col border-t border-black/10 pt-3 xl:mt-0 xl:border-l xl:border-t-0 xl:pl-4 xl:pt-0">
               <h3 className="text-[11px] font-bold uppercase tracking-wider text-(--muted)">{t("step_trace")}</h3>
               <ul className="mt-2 space-y-1.5 text-xs text-(--muted)">
                 {agentStep?.looked?.length ? <li className="rounded-lg bg-(--bg) px-2 py-1.5">{t("step_looked", { tools: agentStep.looked.map((x) => x.label).join(", ") })}</li> : null}
@@ -310,8 +310,8 @@ export default function Home() {
           </div>
         )}
 
-        {/* six small tiles in one row, each with a short line of "what's in it for you" */}
-        <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+        {/* six small tiles (two rows of three), then the three Pro features as a third row, all one consistent grid */}
+        <div className="grid grid-cols-3 gap-2">
           {STUDENT_TILES.map((x) => (
             <Link key={x.href} href={x.href} className="flex flex-col items-center rounded-2xl border-b-4 bg-(--card) px-1.5 py-2.5 text-center text-(--brand-ink) shadow-sm ring-1 ring-black/10 active:scale-95"
               style={{ borderBottomColor: x.color }}>
@@ -324,33 +324,7 @@ export default function Home() {
           ))}
         </div>
 
-        {/* next exam / a free course for the gap / a job near you: one tap deeper into each module */}
-        <div className="grid gap-2 sm:grid-cols-3">
-          {nextExam && (
-            <Card className="!p-3">
-              <div className="text-[11px] font-bold uppercase tracking-wider text-(--muted)">{t("home_next_exam")}</div>
-              <div className="mt-1 text-sm font-semibold leading-snug">{nextExam.item.name}</div>
-              <div className="text-xs text-(--muted)">{nextExam.item.dates || nextExam.item.timing}</div>
-              <Link href="/exams/" className="mt-2 inline-block rounded-xl bg-(--brand-soft) px-3 py-1.5 text-xs font-semibold text-(--brand-ink)">{t("watch_off")}</Link>
-            </Card>
-          )}
-          {gapCourse && (
-            <Card className="!p-3">
-              <div className="text-[11px] font-bold uppercase tracking-wider text-(--muted)">{t("home_free_course")}</div>
-              <div className="mt-1 text-sm font-semibold leading-snug">{gapCourse.item.title}</div>
-              <div className="text-xs text-(--muted)">{gapCourse.item.language}{gapCourse.item.duration ? ` · ${gapCourse.item.duration}` : ""}</div>
-              <Link href="/learn/" className="mt-2 inline-block rounded-xl bg-(--brand-soft) px-3 py-1.5 text-xs font-semibold text-(--brand-ink)">{t("continue")}</Link>
-            </Card>
-          )}
-          {jobNear && (
-            <Card className="!p-3">
-              <div className="text-[11px] font-bold uppercase tracking-wider text-(--muted)">{t("home_job_near")}</div>
-              <div className="mt-1 text-sm font-semibold leading-snug">{jobNear.trade}</div>
-              <div className="text-xs text-(--muted)">{jobNear.location}{jobNear.stipend ? ` · ${inr(jobNear.stipend.low ?? jobNear.stipend)}${t("per_month")}` : ""}</div>
-              <Link href="/opportunity/" className="mt-2 inline-block rounded-xl bg-(--brand-soft) px-3 py-1.5 text-xs font-semibold text-(--brand-ink)">{t("see_job")}</Link>
-            </Card>
-          )}
-        </div>
+        <ProShelf />
 
         <Link href="/ask/" className="flex items-center gap-3 rounded-2xl bg-(--brand) px-4 py-3 text-white shadow-sm active:scale-95">
           <Icon name="chat" size={24} />
