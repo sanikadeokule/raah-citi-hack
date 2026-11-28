@@ -42,6 +42,7 @@ function RoadmapView() {
   const profileClass = Math.min(13, Math.max(9, Math.trunc(Number(profile?.class) || 10)));
   const [cls, setCls] = useState<number | null>(null);
   const [tab, setTab] = useState<"road" | "other" | "start">("road");
+  const [selStage, setSelStage] = useState(0);
   // Maina cheers for a moment when the student makes this road theirs
   const [cheer, setCheer] = useState(false);
   const cheerTimer = useRef<number | undefined>(undefined);
@@ -49,6 +50,7 @@ function RoadmapView() {
   const startClass = cls ?? profileClass;
   const r = useMemo(() => (data && profile && careerId ? buildRoadmap(data, profile, careerId, startClass) : null),
     [data, profile, careerId, startClass]);
+  useEffect(() => { setSelStage(Math.max(0, (r?.stages ?? []).findIndex((s: any) => s.now))); }, [r]);
   const plan = r?.plan_id ? data?.plans.find((p: any) => p.id === r.plan_id) : null;
   const planResult = useMemo(() => (data && profile && plan ? computePlan(data, profile, plan.id) : null), [data, profile, plan]);
   if (!careerId || !r) return <Card>{t("rm_not_added")}</Card>;
@@ -148,7 +150,7 @@ function RoadmapView() {
           })}
         </ul>
       ) : !r.available ? <Card>{t("rm_not_added")}</Card> : (<>
-        <div className="space-y-4 lg:grid lg:grid-cols-12 lg:items-start lg:gap-6 lg:space-y-0">
+        <div className="space-y-4 lg:grid lg:grid-cols-12 lg:items-stretch lg:gap-6 lg:space-y-0">
         <div className="space-y-4 lg:sticky lg:top-32 lg:col-span-5">
         {/* the whole journey as one bar, each stage as wide as it is long */}
         {journey.length > 0 && (
@@ -199,76 +201,101 @@ function RoadmapView() {
 
         <MakeMine className="hidden lg:block" />
         </div>
-        {/* the road itself */}
-        <Card className="lg:col-span-7">
-          <ol className="relative">
-            {r.stages.map((s: any, i: number) => {
-              const k = KIND[s.kind] || KIND.course;
-              const last = i === r.stages.length - 1;
-              const y1 = year0 + Math.floor(s.start_month / 12);
-              const y2 = year0 + Math.floor((s.start_month + Math.max(s.months, 1) - 1) / 12);
-              return (
-                <li key={i} className="relative flex gap-3 pb-5 last:pb-0">
-                  {!last && <span aria-hidden className="absolute left-[19px] top-10 bottom-0 w-1 rounded-full" style={{ background: `linear-gradient(${k.color}, ${KIND[r.stages[i + 1].kind]?.color})` }} />}
-                  {s.now ? (
-                    // Maina stands on the road where the student is now
-                    <span className="relative z-10 h-10 w-10 shrink-0">
-                      <span aria-hidden className="absolute inset-x-1 bottom-0 h-2 rounded-full bg-amber-300/70" />
-                      <Mascot pose="wave" size={60} className="absolute -left-2.5 -top-5" />
-                    </span>
-                  ) : (
-                    <span className="relative z-10 grid h-10 w-10 shrink-0 place-items-center rounded-full text-lg shadow" style={{ background: k.color }}><Icon name={k.icon} size={20} className="text-white" /></span>
-                  )}
-                  <div className="min-w-0 flex-1 rounded-xl bg-[var(--bg)] p-3">
-                    <div className="flex flex-wrap items-center gap-1.5 text-xs text-[var(--muted)]">
-                      {s.now && <span className="rounded-full bg-amber-300 px-2 py-0.5 font-bold text-black">{t("rm_you_are_here")}</span>}
-                      <span>{t("rm_step", { n: i + 1 })}</span>
-                      {s.kind !== "job" && <span>· {y1 === y2 ? y1 : `${y1}–${y2}`}</span>}
-                      {s.months > 0 && <span>· {duration(t, s.months)}</span>}
-                    </div>
-                    <h3 className="mt-0.5 font-bold leading-snug">{stageName(s, lang)}</h3>
-
-                    <div className="mt-1.5 flex flex-wrap gap-1.5 text-xs">
-                      {s.kind !== "job" && s.kind !== "earn" && (
-                        <span className="rounded-full bg-[var(--card)] px-2 py-0.5 font-semibold ring-1 ring-black/10">
-                           {s.fee_high ? range(s.fee_low, s.fee_high) : t("rm_free")}
+        {/* the road itself: stage circles across the top, the one picked shown below */}
+        <Card className="flex flex-col lg:col-span-7">
+          <div className="overflow-x-auto pb-1">
+            <div className="flex min-w-max items-start">
+              {r.stages.map((s: any, i: number) => {
+                const k = KIND[s.kind] || KIND.course;
+                const last = i === r.stages.length - 1;
+                const on = i === selStage;
+                return (
+                  <div key={i} className="flex items-start">
+                    <button onClick={() => setSelStage(i)} aria-pressed={on} className="flex w-24 flex-col items-center gap-1 text-center sm:w-28">
+                      {s.now ? (
+                        <span className="relative mb-0.5 h-11 w-11 shrink-0">
+                          <span aria-hidden className="absolute inset-x-1.5 bottom-0 h-2 rounded-full bg-amber-300/70" />
+                          <Mascot pose="wave" size={58} className="absolute -left-2 -top-5" />
+                        </span>
+                      ) : (
+                        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full shadow" style={{ background: k.color, boxShadow: on ? "0 0 0 3px var(--brand)" : undefined }}>
+                          <Icon name={k.icon} size={20} className="text-white" />
                         </span>
                       )}
-                      {s.stipend_per_month > 0 && (
-                        <span className="rounded-full bg-emerald-100 px-2 py-0.5 font-semibold text-emerald-900">+{inr(s.stipend_per_month)}/{t("rm_month")} {t("rm_stipend_short")}</span>
-                      )}
-                      {s.scholarship && (
-                        <span className="rounded-full bg-sky-100 px-2 py-0.5 font-semibold text-sky-900">{t("rm_scholarship_upto", { v: inr(s.scholarship.value) })}</span>
-                      )}
-                      {s.estimate && s.kind !== "job" && <Badge tone="amber">{t("estimate")}</Badge>}
-                    </div>
-
-                    {s.kind === "job" && r.income && (
-                      <div className="mt-2 rounded-lg bg-emerald-50 p-2 text-sm text-emerald-900 dark:bg-emerald-950 dark:text-emerald-100">
-                         <b>{inr(r.income.median)}</b>/{t("rm_month")} {r.income.low !== r.income.high && <span className="text-xs">({range(r.income.low, r.income.high)})</span>}
-                        <div className="text-xs opacity-80">{r.career.income_text}</div>
-                      </div>
-                    )}
-
-                    <p className="mt-2 text-sm">{s.what}</p>
-                    {s.scholarship && <p className="mt-1 text-xs text-[var(--muted)]">{s.scholarship.names.join(", ")}</p>}
-                    {s.exams.map((e: any) => (
-                      <p key={e.id} className="mt-1 text-xs text-[var(--muted)]">{e.name}: {e.timing}{e.fee !== null ? ` · ${t("rm_fee")} ${inr(e.fee)}` : ""}
-                        {e.site && <> · <a className="underline" href={e.site} target="_blank" rel="noreferrer">{t("rm_apply")}</a></>}</p>
-                    ))}
-                    {s.stipend_text && <p className="mt-1 text-xs text-[var(--muted)]">{s.stipend_text}</p>}
-                    {s.plan_id && <Link href={`/plan/?id=${s.plan_id}`} className="mt-1 inline-block text-xs font-semibold text-[var(--brand-ink)] underline">{t("rm_full_plan")} ›</Link>}
-                    <div className="mt-1 text-[11px] text-[var(--muted)]">
-                      {s.estimate && s.kind !== "job" ? <span>{t("rm_fee_status")}: {s.status}</span> : <Source url={s.kind === "job" ? r.career.sources?.[0] : s.stipend_source || s.source}
-                        label={s.kind === "job" ? undefined : s.stipend_source || s.source ? undefined : s.fee_from} />}
-                    </div>
+                      <span className="text-[10px] font-bold uppercase tracking-wide text-[var(--muted)]">{t("rm_step", { n: i + 1 })}</span>
+                      <span className={`text-xs font-semibold leading-tight ${on ? "text-[var(--brand-ink)]" : ""}`}>{stageName(s, lang)}</span>
+                    </button>
+                    {!last && <span aria-hidden className="mt-5 h-1 w-8 shrink-0 rounded-full sm:w-12" style={{ background: `linear-gradient(90deg, ${k.color}, ${KIND[r.stages[i + 1].kind]?.color})` }} />}
                   </div>
-                </li>
-              );
-            })}
-          </ol>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* the selected stage's detail */}
+          {r.stages[selStage] && (() => {
+            const s = r.stages[selStage];
+            const y1 = year0 + Math.floor(s.start_month / 12);
+            const y2 = year0 + Math.floor((s.start_month + Math.max(s.months, 1) - 1) / 12);
+            return (
+              <div className="mt-3 flex-1 rounded-xl bg-[var(--bg)] p-3">
+                <div className="flex flex-wrap items-center gap-1.5 text-xs text-[var(--muted)]">
+                  {s.now && <span className="rounded-full bg-amber-300 px-2 py-0.5 font-bold text-black">{t("rm_you_are_here")}</span>}
+                  <span>{t("rm_step", { n: selStage + 1 })}</span>
+                  {s.kind !== "job" && <span>· {y1 === y2 ? y1 : `${y1}–${y2}`}</span>}
+                  {s.months > 0 && <span>· {duration(t, s.months)}</span>}
+                </div>
+                <h3 className="mt-0.5 font-bold leading-snug">{stageName(s, lang)}</h3>
+
+                <div className="mt-1.5 flex flex-wrap gap-1.5 text-xs">
+                  {s.kind !== "job" && s.kind !== "earn" && (
+                    <span className="rounded-full bg-[var(--card)] px-2 py-0.5 font-semibold ring-1 ring-black/10">
+                       {s.fee_high ? range(s.fee_low, s.fee_high) : t("rm_free")}
+                    </span>
+                  )}
+                  {s.stipend_per_month > 0 && (
+                    <span className="rounded-full bg-emerald-100 px-2 py-0.5 font-semibold text-emerald-900">+{inr(s.stipend_per_month)}/{t("rm_month")} {t("rm_stipend_short")}</span>
+                  )}
+                  {s.scholarship && (
+                    <span className="rounded-full bg-sky-100 px-2 py-0.5 font-semibold text-sky-900">{t("rm_scholarship_upto", { v: inr(s.scholarship.value) })}</span>
+                  )}
+                  {s.estimate && s.kind !== "job" && <Badge tone="amber">{t("estimate")}</Badge>}
+                </div>
+
+                {s.kind === "job" && r.income && (
+                  <div className="mt-2 rounded-lg bg-emerald-50 p-2 text-sm text-emerald-900 dark:bg-emerald-950 dark:text-emerald-100">
+                     <b>{inr(r.income.median)}</b>/{t("rm_month")} {r.income.low !== r.income.high && <span className="text-xs">({range(r.income.low, r.income.high)})</span>}
+                    <div className="text-xs opacity-80">{r.career.income_text}</div>
+                  </div>
+                )}
+
+                <p className="mt-2 text-sm">{s.what}</p>
+                {s.scholarship && <p className="mt-1 text-xs text-[var(--muted)]">{s.scholarship.names.join(", ")}</p>}
+                {s.exams.map((e: any) => (
+                  <p key={e.id} className="mt-1 text-xs text-[var(--muted)]">{e.name}: {e.timing}{e.fee !== null ? ` · ${t("rm_fee")} ${inr(e.fee)}` : ""}
+                    {e.site && <> · <a className="underline" href={e.site} target="_blank" rel="noreferrer">{t("rm_apply")}</a></>}</p>
+                ))}
+                {s.stipend_text && <p className="mt-1 text-xs text-[var(--muted)]">{s.stipend_text}</p>}
+                {s.plan_id && <Link href={`/plan/?id=${s.plan_id}`} className="mt-1 inline-block text-xs font-semibold text-[var(--brand-ink)] underline">{t("rm_full_plan")} ›</Link>}
+                <div className="mt-1 text-[11px] text-[var(--muted)]">
+                  {s.estimate && s.kind !== "job" ? <span>{t("rm_fee_status")}: {s.status}</span> : <Source url={s.kind === "job" ? r.career.sources?.[0] : s.stipend_source || s.source}
+                    label={s.kind === "job" ? undefined : s.stipend_source || s.source ? undefined : s.fee_from} />}
+                </div>
+              </div>
+            );
+          })()}
+          <div className="mt-2 flex items-center justify-between gap-2">
+            <button onClick={() => setSelStage((i) => Math.max(0, i - 1))} disabled={selStage === 0} className="truncate rounded-lg px-2 py-1.5 text-sm font-semibold text-[var(--brand-ink)] underline disabled:opacity-30">
+              {selStage > 0 ? `‹ ${stageName(r.stages[selStage - 1], lang)}` : ""}
+            </button>
+            {selStage < r.stages.length - 1 && (
+              <button onClick={() => setSelStage((i) => Math.min(r.stages.length - 1, i + 1))} className="truncate rounded-lg px-2 py-1.5 text-sm font-semibold text-[var(--brand-ink)] underline">
+                {stageName(r.stages[selStage + 1], lang)} ›
+              </button>
+            )}
+          </div>
           {/* the end of the road: Maina plants her flag */}
-          <Mascot pose="flag" size={68} className="mt-3">
+          <Mascot pose="flag" size={56} className="mt-2">
             <p className="text-sm font-semibold text-[var(--brand-ink)]">{t("rm_finish", { y: year0 + Math.ceil(tot.months_to_job / 12) })}</p>
           </Mascot>
         </Card>
