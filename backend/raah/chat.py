@@ -187,9 +187,15 @@ class Turn(BaseModel):
     profile: dict = {}
 
 
+def _state_talukas(d: dict, profile: dict) -> list[str]:
+    """Taluka names of the student's state (Maharashtra until they say otherwise): the full India list is far too long for a prompt."""
+    st = (profile or {}).get("state") or "Maharashtra"
+    return [t["name"] for t in d["talukas"] if (t.get("state") or "Maharashtra") == st]
+
+
 def _system_turn(d: dict, lang: str, profile: dict) -> str:
     tags = sorted({t for c in d["careers"] for t in c["tags"]})
-    talukas = [t["name"] for t in d["talukas"]]
+    talukas = _state_talukas(d, profile)
     missing = missing_fields(profile)
     nxt = missing[0] if missing else None
     name = profile.get("name")
@@ -305,7 +311,7 @@ def turn(body: Turn):
     except (llm.LLMUnavailable, ValueError, json.JSONDecodeError) as e:
         return {"fallback": True, "reason": str(e)}
     tags = sorted({t for c in d["careers"] for t in c["tags"]})
-    clean, rejected = validate_profile(out.get("profile") or {}, [t["name"] for t in d["talukas"]], tags)
+    clean, rejected = validate_profile(out.get("profile") or {}, _state_talukas(d, body.profile), tags)
     merged = {**body.profile, **clean}
     if "taluka" in clean:
         tk = next((t for t in d["talukas"] if t["name"] == clean["taluka"]), None)

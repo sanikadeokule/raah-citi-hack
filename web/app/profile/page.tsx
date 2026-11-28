@@ -55,11 +55,19 @@ export default function ProfilePage() {
             )}
           </label>
         ))}
+        <label className="block text-sm"><span className="text-[var(--muted)]">{t("field_state")}</span>
+          <select value={p.state ?? "Maharashtra"} className="mt-1 w-full rounded-lg bg-[var(--bg)] p-2" onChange={(e) => setP({ ...p, state: e.target.value, taluka: "" })}>
+            {[...new Set<string>(data.talukas.map((x: any) => x.state || "Maharashtra"))].sort().map((s) => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </label>
         <label className="block text-sm"><span className="text-[var(--muted)]">{t("field_taluka")}</span>
           <select value={p.taluka ?? ""} className="mt-1 w-full rounded-lg bg-[var(--bg)] p-2" onChange={(e) => {
-            const tk = data.talukas.find((x: any) => x.name === e.target.value);
+            const tk = data.talukas.find((x: any) => x.name === e.target.value && (x.state || "Maharashtra") === (p.state ?? "Maharashtra"));
             setP({ ...p, taluka: e.target.value, lat: tk?.lat ?? p.lat, lon: tk?.lon ?? p.lon });
-          }}>{data.talukas.map((x: any) => <option key={x.name} value={x.name}>{placeLabel(t, x.name)}</option>)}</select>
+          }}>
+            <option value="" />
+            {data.talukas.filter((x: any) => (x.state || "Maharashtra") === (p.state ?? "Maharashtra")).map((x: any) => <option key={`${x.district}-${x.name}`} value={x.name}>{placeLabel(t, x.name)}{x.district ? ` (${x.district})` : ""}</option>)}
+          </select>
         </label>
         </div>
         <button onClick={() => { setProfile(p); queueAction("profile", p); showToast(t("saved")); }} className="mt-4 w-full rounded-xl bg-[var(--brand)] py-3 font-semibold text-white">{t("save")}</button>
