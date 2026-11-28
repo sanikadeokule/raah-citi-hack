@@ -18,6 +18,16 @@ import { useApp } from "@/lib/store";
 type Screen = "intro" | "love" | "good" | "confirm" | "checking" | "sweet" | "reach";
 type Msg = { from: "raah" | "me"; text: string };
 const CIRCLES: Circle[] = ["love", "good", "pays", "needed"];
+// one step back through the conversation, not the browser's whole history (this is one page, many screens)
+const BACK: Partial<Record<Screen, Screen>> = { love: "intro", good: "love", confirm: "good", checking: "confirm", sweet: "confirm", reach: "sweet" };
+
+function BackButton({ onClick, t }: { onClick: () => void; t: (k: string) => string }) {
+  return (
+    <button onClick={onClick} aria-label={t("back")} className="grid h-9 w-9 shrink-0 place-items-center self-start rounded-full bg-[var(--card)] ring-1 ring-black/10">
+      <Icon name="arrowright" size={18} className="rotate-180" />
+    </button>
+  );
+}
 
 function Pills({ screen, t }: { screen: Screen; t: (k: string) => string }) {
   const at = screen === "love" ? 0 : screen === "good" ? 1 : 2;
@@ -144,6 +154,7 @@ export default function Discover() {
 
   const toggle = (tag: string) => setList((l) => (l.includes(tag) ? l.filter((x) => x !== tag) : [...l, tag]));
   const say = (m: Msg) => setMsgs((x) => [...x, m]);
+  const goBack = () => { const b = BACK[screen]; if (b) { setMsgs([]); setTurn(0); setScreen(b); } };
 
   // Whatever the student says is kept. Raah maps it to topics it can check (the model when reachable, keywords otherwise);
   // words that map to no topic stay as the student's own phrases and are shown back and saved.
@@ -238,7 +249,7 @@ export default function Discover() {
 
       {(screen === "love" || screen === "good") && (
         <div className="flex flex-1 flex-col gap-3">
-          <Pills screen={screen} t={t} />
+          <div className="flex items-center gap-2"><BackButton onClick={goBack} t={t} /><Pills screen={screen} t={t} /></div>
           {screen === "good" && (love.length > 0 || loveWords.length > 0) && (
             <div>
               <p className="mb-1 text-xs text-[var(--muted)]">{t("ik_heard_love")}</p>
@@ -280,7 +291,10 @@ export default function Discover() {
 
       {screen === "confirm" && (
         <div className="flex flex-1 flex-col gap-4">
-          <div><h2 className="text-2xl font-extrabold text-[var(--brand-ink)]">{t("ik_confirm_title")}</h2><p className="mt-1 text-sm text-[var(--muted)]">{t("ik_confirm_hint")}</p></div>
+          <div className="flex items-start gap-2">
+            <BackButton onClick={goBack} t={t} />
+            <div><h2 className="text-2xl font-extrabold text-[var(--brand-ink)]">{t("ik_confirm_title")}</h2><p className="mt-1 text-sm text-[var(--muted)]">{t("ik_confirm_hint")}</p></div>
+          </div>
           <div className="space-y-4 xl:grid xl:grid-cols-2 xl:gap-4 xl:space-y-0">
           {([["love", "ik_love_h", love, setLove, loveWords, setLoveWords], ["good", "ik_good_h", good, setGood, goodWords, setGoodWords]] as const).map(([k, h, items, set, ws, setWs]) => (
             <section key={k} className="rounded-2xl bg-[var(--card)] p-4 ring-2 ring-black/10">
@@ -318,7 +332,7 @@ export default function Discover() {
 
       {screen === "checking" && (
         <div className="space-y-4">
-          <Pills screen="checking" t={t} />
+          <div className="flex items-center gap-2"><BackButton onClick={goBack} t={t} /><Pills screen="checking" t={t} /></div>
           <h2 className="text-2xl font-extrabold text-[var(--brand-ink)]">{t("ik_checking_title")}</h2>
           <Guide><p>{t("ik_checking_say")}</p></Guide>
           <ul className="space-y-2" aria-live="polite">
@@ -337,7 +351,7 @@ export default function Discover() {
 
       {screen === "sweet" && (
         <div className="flex flex-1 flex-col gap-3">
-          <p className="text-sm text-[var(--muted)]">{t("ik_sweet_sub")}</p>
+          <div className="flex items-center gap-2"><BackButton onClick={goBack} t={t} /><p className="text-sm text-[var(--muted)]">{t("ik_sweet_sub")}</p></div>
           <details className="rounded-2xl bg-[var(--card)] p-3 ring-1 ring-black/10">
             <summary className="cursor-pointer text-xs font-bold uppercase tracking-wider text-[var(--muted)]">{t("ik_how_built")}</summary>
             <IkigaiVenn t={t} className="mx-auto mt-2 w-full max-w-[220px]" />
@@ -364,7 +378,7 @@ export default function Discover() {
 
       {screen === "reach" && pick && (
         <div className="flex flex-1 flex-col gap-3">
-          <h2 className="text-2xl font-extrabold text-[var(--brand-ink)]">{t("ik_reach_title")}</h2>
+          <div className="flex items-center gap-2"><BackButton onClick={goBack} t={t} /><h2 className="text-2xl font-extrabold text-[var(--brand-ink)]">{t("ik_reach_title")}</h2></div>
           <p className="text-lg font-bold leading-snug">{pick.career.name}</p>
           <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--muted)]">{t("ik_cost_way")}</h3>
           {!reach && <p className="rounded-2xl bg-[var(--card)] p-4 text-sm ring-1 ring-black/10">{t("ik_no_plan")}</p>}
