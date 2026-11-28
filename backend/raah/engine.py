@@ -458,6 +458,13 @@ def rank_careers(data: dict, profile: dict, n: int = 5) -> list[dict]:
     key = lambda s: (tier[s["fit"]], -s["raw"])
     scored.sort(key=key)
     top = scored[:n]
+    # the career the student chose is always shown, and the diversity swap below never replaces it
+    keep = profile.get("roadmap_career")
+    if keep and top and not any(s["career"]["id"] == keep for s in top):
+        mine = next((s for s in scored[n:] if s["career"]["id"] == keep), None)
+        if mine:
+            top[-1] = mine
+            top.sort(key=key)
     # diversity: show at least one vocational, one non-STEM and one degree path / self-employment option, but only one that
     # links to the student's interests, or in place of another career that does not
     for flag in ("vocational", "non_stem", "degree"):
@@ -465,8 +472,11 @@ def rank_careers(data: dict, profile: dict, n: int = 5) -> list[dict]:
             extra = next((s for s in scored[n:] if s["career"]["flags"].get(flag)
                           and (s["fit"] != "none" or not phrases)), None)
             if extra:
+                slot = next((i for i in range(len(top) - 1, -1, -1) if top[i]["career"]["id"] != keep), None)
+                if slot is None:
+                    continue
                 extra["diversity"] = True
-                top[-1] = extra
+                top[slot] = extra
                 top.sort(key=key)
     for s in top:
         s["why"] = why_line(s)
