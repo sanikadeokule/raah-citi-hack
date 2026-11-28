@@ -36,6 +36,7 @@ from .voice import router as voice_router
 from .parent import router as parent_router
 from .tracker import router as tracker_router
 from .watcher import router as watcher_router
+from .exam_refresh import router as exam_refresh_router
 
 app = FastAPI(
     title="Raah API",
@@ -54,6 +55,8 @@ def _connect_database() -> None:
     seed_test_demo_module()
     from . import watcher
     watcher.start_background()
+    from . import exam_refresh
+    exam_refresh.start_background()
     from . import guardian
     guardian.start_background()
     from . import checkins
@@ -196,6 +199,7 @@ app.include_router(rag_router)
 app.include_router(parent_router)
 app.include_router(tracker_router)
 app.include_router(watcher_router)
+app.include_router(exam_refresh_router)
 
 if os.environ.get("RAG_WARM", "1") == "1":
     rag_warm()  # build and embed the Ask Raah index in the background
