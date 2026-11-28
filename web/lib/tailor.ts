@@ -45,7 +45,9 @@ function fitsCurrentEligibility(exam: any, profile: any): { fits: boolean; marks
   const exactClass = eligibility.match(/\bClass\s+(\d+)\s+student\b/i);
   if (exactClass && cls !== Number(exactClass[1])) return { fits: false, marksKnown: false };
   const requiredClasses = [...eligibility.matchAll(/\bClass\s+(\d+)\b/gi)].map((m) => Number(m[1]));
-  if (!exactClass && requiredClasses.length && cls < Math.max(...requiredClasses)) return { fits: false, marksKnown: false };
+  // an exam with several routes (Class 10 posts and Class 12 posts) is open to the lowest class
+  const needClass = requiredClasses.length ? Math.min(...requiredClasses) : 0;
+  if (!exactClass && requiredClasses.length && cls < needClass) return { fits: false, marksKnown: false };
 
   if (/\bITI certificate\b/i.test(eligibility)) {
     const hasIti = profile.iti_completed || /\bITI\b/i.test(String(profile.qualification || "")) ||
@@ -121,12 +123,13 @@ export function examsForStudent(data: any, profile: any): Reasoned<any, { key: s
     // an exam the dataset lists for this career (Exams sheet "Career IDs") or for everyone, or one the wording of the career points to
     const listed = mc ? (item.career_ids ?? []).includes(mc.career.id) || (item.career_ids ?? []).includes("ALL") : false;
     const explicit = (item.career_ids ?? []).length > 0;
-    const careerMatch = explicit ? listed : matchesCareerPath(item, mc);
+    // no career chosen yet: fall back to what fits the student's class and marks
+    const careerMatch = !mc ? true : explicit ? listed : matchesCareerPath(item, mc);
     return {
       item, mine: eligibility.fits && careerMatch,
-      reason: eligibility.fits && careerMatch ? (pathMatch && mc
-        ? { key: "because_career", vars: { career: mc.career.name } }
-        : { key: "because_career", vars: { career: mc!.career.name } })
+      reason: eligibility.fits && careerMatch
+        ? (mc ? { key: "because_career", vars: { career: mc.career.name } }
+          : { key: eligibility.marksKnown ? "because_class_marks" : "because_class", vars: { class: profile.class } })
         : null,
       nextWindow: nextExamWindow(item),
     };
