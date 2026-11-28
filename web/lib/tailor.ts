@@ -90,10 +90,12 @@ export function examsForStudent(data: any, profile: any): Reasoned<any, { key: s
   const onPath = new Set<string>(mc?.plan?.exams ?? []);
   const rows = exams.map((item) => {
     const eligibility = fitsCurrentEligibility(item, profile);
-    const pathMatch = onPath.has(item.id);
+    const pathMatch = onPath.has(item.id) || (mc ? (item.career_ids ?? []).includes(mc.career.id) : false);
+    // with a career chosen, "for you" means an exam that leads to that career (or one open to everyone) and that the student's class fits
+    const forCareer = !mc || pathMatch || (item.career_ids ?? []).includes("ALL");
     return {
-      item, mine: eligibility.fits,
-      reason: eligibility.fits ? pathMatch && mc
+      item, mine: eligibility.fits && forCareer,
+      reason: eligibility.fits && forCareer ? pathMatch && mc
         ? { key: "because_career", vars: { career: mc.career.name } }
         : { key: eligibility.marksKnown ? "because_class_marks" : "because_class", vars: { class: profile.class } }
         : null,

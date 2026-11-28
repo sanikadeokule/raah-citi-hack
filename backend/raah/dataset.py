@@ -397,7 +397,8 @@ def load(path: Path = DATASET_PATH) -> dict:
                       "fee_open": first_money(fee_open) if fee_open not in (None, "") else None,
                       "fee_reserved": first_money(fee_res) if fee_res not in (None, "") else None,
                       "fee_note": r.get("Fee note"), "dates": r.get("Last cycle dates"), "timing": r.get("Usual timing"),
-                      "site": r.get("Official site"), "source": r.get("Source"), "last_checked": str(r.get("Last checked") or "")})
+                      "site": r.get("Official site"), "source": r.get("Source"), "last_checked": str(r.get("Last checked") or ""),
+                      "career_ids": split_list(r.get("Career IDs (use ;)"))})
     exam_ids = {e["id"] for e in exams}
 
     # plans
