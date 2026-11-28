@@ -2,8 +2,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Icon, Mark } from "@/components/icon";
 import { useEffect, useMemo, useState } from "react";
-import { Card, MicButton, Shell, SpeakButton } from "@/components/ui";
-import { ChatInput } from "@/components/chatinput";
+import { Card, Shell, SpeakButton } from "@/components/ui";
 import { FOR_YOU, forYouRanked, lessonTopics, lessons, quiz } from "@/lib/lessons";
 import { becauseText } from "@/lib/gaps";
 import { tagLabel } from "@/lib/questions";
@@ -15,14 +14,13 @@ import { Pager, usePaged } from "@/components/pager";
 import { getKV, setKV } from "@/lib/db";
 import { cachedAudio, fetchAudio, voiceAvailable } from "@/lib/audio";
 import Link from "next/link";
-import { postAi } from "@/lib/ai";
 import { HeroBar, MODULE_COLOR, ModuleHero } from "@/components/modulehero";
 
 const LESSONS_PAGE = 10;
 const QUIZ_PAGE = 5;
 
 export default function Learn() {
-  const { data, profile, lang, setLang, t, queueAction } = useApp();
+  const { data, profile, lang, t, queueAction } = useApp();
   const all = useMemo(() => (data ? lessons(data, lang) : []), [data, lang]);
   const topics = useMemo(() => (data ? lessonTopics(data, lang, all) : []), [data, lang, all]);
   const [done, setDone] = useState<string[]>([]);
@@ -36,9 +34,6 @@ export default function Learn() {
   const qs = useMemo(() => quiz(ls), [ls]);
   const [ans, setAns] = useState<Record<number, number>>({});
   const [checked, setChecked] = useState(false);
-  const [learnQuestion, setLearnQuestion] = useState("");
-  const [learnTurns, setLearnTurns] = useState<any[]>([]);
-  const [asking, setAsking] = useState(false);
   const pickTopic = (id: string) => { setPicked(id); setAns({}); setChecked(false); };
   const [tab, setTab] = useState<"lessons" | "modules" | "courses" | "quiz">("lessons");
   useEffect(() => { getKV<string[]>("lessons_done").then((v) => v && setDone(v)); }, []);
@@ -69,22 +64,6 @@ export default function Learn() {
     setChecked(true);
     const rec = { quiz: `topic_${topic}`, score, total: qs.length, at: new Date().toISOString() };
     await setKV(`quiz_topic_${topic}`, rec); await queueAction("quiz", rec);
-  };
-  const askLearn = async (question: string, responseLang = lang) => {
-    question = question.trim();
-    if (!question || asking) return;
-    if (responseLang !== lang) setLang(responseLang);
-    setLearnQuestion("");
-    setAsking(true);
-    const history = learnTurns.slice(-2).flatMap((turn) => [
-      { role: "user", content: turn.question }, { role: "assistant", content: turn.answer },
-    ]);
-    const result = await postAi("/api/ask", { question, lang: responseLang, history, profile });
-    setLearnTurns((turns) => [...turns, {
-      question, answer: result?.answer || t("learn_ask_error"), lang: responseLang,
-      citations: result?.citations || [],
-    }]);
-    setAsking(false);
   };
   const doneCount = all.filter((l) => done.includes(l.id)).length;
   return (
@@ -175,28 +154,6 @@ export default function Learn() {
         <p className="mt-2 text-xs text-[var(--muted)]">{t("learn_sync_note")}</p>
         <Link href="/progress/" className="mt-3 inline-block text-sm font-semibold text-[var(--brand-ink)] underline">{t("progress_view_dashboard")}</Link>
       </Card>}
-
-      <Card>
-        <h2 className="font-bold">{t("learn_ask_title")}</h2>
-        <p className="mt-1 text-xs text-[var(--muted)]">{t("learn_ask_hint")}</p>
-        {learnTurns.map((turn, i) => (
-          <div key={`${i}-${turn.question}`} className="mt-3 space-y-2 text-sm">
-            <p className="rounded-xl bg-[var(--bg)] p-2">{turn.question}</p>
-            <div className="rounded-xl bg-[var(--brand-soft)] p-2">
-              <p className="whitespace-pre-line">{turn.answer}</p>
-              <SpeakButton text={turn.answer} label="" lang={turn.lang} />
-            </div>
-          </div>
-        ))}
-        {asking && <p className="mt-2 text-sm text-[var(--muted)]">{t("thinking")}</p>}
-        <div className="mt-3 flex items-end gap-2">
-          <MicButton onText={(spoken, detectedLang) => askLearn(spoken, detectedLang || lang)} />
-          <ChatInput value={learnQuestion} onChange={setLearnQuestion}
-            onSend={() => askLearn(learnQuestion)} placeholder={t("learn_ask_placeholder")} maxLength={500} />
-          <button onClick={() => askLearn(learnQuestion)} disabled={asking || !learnQuestion.trim()}
-            className="rounded-full bg-[var(--brand)] px-4 py-3 text-white disabled:opacity-40">{t("send")}</button>
-        </div>
-      </Card>
     </Shell>
   );
 }

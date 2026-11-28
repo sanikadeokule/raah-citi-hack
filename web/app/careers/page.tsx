@@ -29,7 +29,7 @@ function WhyLine({ s, profile, lang }: { s: any; profile: any; lang: string }) {
     });
     return () => { live = false; };
   }, [s.career.id, profile, lang]);
-  return <p className="mt-1 text-sm">{ai ? <> {ai}</> : s.why}</p>;
+  return <p className="mt-1 line-clamp-2 text-sm">{ai ? <> {ai}</> : s.why}</p>;
 }
 
 function flagBadges(c: any, t: (k: string) => string) {
@@ -76,7 +76,7 @@ export default function CareersPage() {
         {tabBtn("top", `${t("shortlist")}`)}
         {tabBtn("all", t("all_careers", { n: data?.careers?.length ?? 0 }))}
       </div>
-      {tab === "top" && <Card>
+      {tab === "top" && <Card className="lg:!p-3">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-bold">{t("shortlist")}</h2>
           <Link href="/profile/" className="text-sm underline">{t("edit_profile")}</Link>
@@ -127,14 +127,10 @@ export default function CareersPage() {
       </Card>}
       {/* the Government of India's own career portal, for careers beyond this list */}
       <a href={NCS_URL} target="_blank" rel="noreferrer"
-        className="flex items-center gap-3 rounded-xl bg-[var(--card)] p-3 text-sm ring-1 ring-black/5 active:scale-[.98]">
-        <Icon name="building" size={24} className="text-[var(--brand)]" />
-        <span className="min-w-0 flex-1">
-          <span className="block font-semibold">{t("careers_gov_title")}</span>
-          <span className="block text-xs text-[var(--muted)]">{t("careers_gov_sub")}</span>
-          <span className="block truncate text-xs font-semibold text-[var(--brand-ink)] underline">ncs.gov.in</span>
-        </span>
-        <span aria-hidden className="text-lg text-[var(--muted)]"></span>
+        className="flex items-center gap-3 rounded-xl bg-[var(--card)] px-3 py-2 text-sm ring-1 ring-black/5 active:scale-[.98]">
+        <Icon name="building" size={20} className="text-[var(--brand)]" />
+        <span className="min-w-0 flex-1 truncate"><b>{t("careers_gov_title")}</b> <span className="text-xs text-[var(--muted)]">{t("careers_gov_sub")}</span></span>
+        <span className="shrink-0 text-xs font-semibold text-[var(--brand-ink)] underline">ncs.gov.in</span>
       </a>
       {tab === "all" && <Card>
         <h2 className="text-lg font-bold">{t("all_careers", { n: all.length })}</h2>

@@ -20,6 +20,12 @@ export function FreeCourses() {
   const platforms: string[] = useMemo(() => [...new Set<string>((data?.courses ?? []).map((c: any) => c.platform))], [data]);
   // her language first among equally good fits
   const picks = useMemo(() => rankFor<any>(data?.courses ?? [], g, (c) => (String(c.language).toLowerCase() === languageName(lang).toLowerCase() ? 0.5 : 0)), [data, g, lang]);
+  // the "for you" shortlist takes the best fit from each platform first, so Skill India and SWAYAM show beside DIKSHA
+  const shortlist = useMemo(() => {
+    const seen = new Set<string>(), first: typeof picks = [], rest: typeof picks = [];
+    for (const p of picks) (seen.has(p.item.platform) ? rest : first).push(p), seen.add(p.item.platform);
+    return [...first, ...rest].slice(0, SHOWN);
+  }, [picks]);
   const reasonOf = new Map<string, any>(picks.map((p) => [p.item.id, p.reason]));
   const showAll = all || picks.length === 0;
   const list = useMemo(() => {
@@ -44,7 +50,7 @@ export function FreeCourses() {
     return (
       <>
         <p className="text-xs text-[var(--muted)]">{t("fc_for_you_note", { career: g.careerName || t("your_profile") })}</p>
-        <ul className="space-y-2">{picks.slice(0, SHOWN).map((p) => card(p.item))}</ul>
+        <ul className="space-y-2 lg:grid lg:grid-cols-3 lg:gap-2 lg:space-y-0">{shortlist.map((p) => card(p.item))}</ul>
         <button onClick={() => setAll(true)} className="w-full rounded-xl py-2 text-sm font-semibold text-[var(--brand-ink)] underline">{t("fc_see_all", { n: data?.courses?.length ?? 0 })}</button>
       </>
     );

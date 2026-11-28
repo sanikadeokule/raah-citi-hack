@@ -38,7 +38,7 @@ export default function ProfilePage() {
   return (
     <Shell title={t("your_profile")} back="/careers/">
       <Card>
-        <div className="gap-x-6 gap-y-3 space-y-3 lg:grid lg:grid-cols-2 lg:space-y-0">
+        <div className="gap-x-6 gap-y-3 space-y-3 lg:grid lg:grid-cols-2 lg:space-y-0 xl:grid-cols-3">
         {FIELDS.map((f) => (
           <label key={f.k} className="block text-sm">
             <span className="text-[var(--muted)]">{t(f.labelKey)}</span>

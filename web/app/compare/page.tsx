@@ -40,8 +40,8 @@ function CompareView() {
   const pick = (which: "a" | "b", v: string) => router.replace(`/compare/?a=${which === "a" ? v : a}&b=${which === "b" ? v : b}`);
   const maxCost = Math.max(netX, netY, 1);
   return (
-    <div className="xl:grid xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] xl:items-start xl:gap-4">
-      <Card className="space-y-2 xl:col-span-2">
+    <div className="xl:grid xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)] xl:items-start xl:gap-4">
+      <Card className="space-y-1 xl:col-span-3 xl:!p-3">
         <div className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">{t("cmp_suggests")}</div>
         <p className="text-sm font-semibold">{why}</p>
         <p className="text-xs text-[var(--muted)]">{t("cmp_choice")}</p>
@@ -53,7 +53,7 @@ function CompareView() {
         const isBest = r === best;
         const net = Math.max(0, r.net_cost);
         return (
-          <Card key={w} className={`mt-3 xl:mt-4 space-y-3 ${isBest ? "ring-2 ring-[var(--brand)]" : ""}`}>
+          <Card key={w} className={`mt-3 xl:mt-4 space-y-2 ${isBest ? "ring-2 ring-[var(--brand)]" : ""}`}>
             <div className="flex items-center justify-between gap-2">
               <select value={r.plan.id} onChange={(e) => pick(w, e.target.value)}
                 className={`min-w-0 flex-1 rounded-xl p-2 text-sm font-semibold text-white ${i === 0 ? "bg-[var(--brand)]" : "bg-[var(--accent)]"}`}>
@@ -80,13 +80,14 @@ function CompareView() {
           </Card>
         );
       })}
-      <Card className="mt-3 xl:col-span-2 xl:mt-4">
+      <div className="mt-3 space-y-3 xl:mt-4">
+      <Card>
         <h2 className="mb-1 font-bold">{t("cumulative")}</h2>
-        <CashChart results={rs} height={280} />
+        <CashChart results={rs} height={190} />
       </Card>
-      <Card className="mt-3 xl:col-span-2 xl:mt-4">
+      <Card>
         <h2 className="mb-2 font-bold">{t("what_if")}</h2>
-        <div className="xl:grid xl:grid-cols-3 xl:gap-3">
+        <div className="space-y-1">
           <label className="flex items-center justify-between rounded-lg px-1 py-1 xl:bg-[var(--bg)] xl:px-3 xl:py-2"><span>{t("scholarship_toggle")}</span>
             <input type="checkbox" className="h-6 w-6" checked={opts.scholarships === undefined || opts.scholarships === null}
               onChange={(e) => setOpts({ ...opts, scholarships: e.target.checked ? null : [] })} /></label>
@@ -96,6 +97,7 @@ function CompareView() {
             <input type="range" min={0} max={60} className="w-full" value={opts.commute_km ?? 0} onChange={(e) => setOpts({ ...opts, commute_km: Number(e.target.value) })} /></label>
         </div>
       </Card>
+      </div>
     </div>
   );
 }

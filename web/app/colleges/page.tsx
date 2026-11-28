@@ -16,7 +16,7 @@ import { MODULE_COLOR, ModuleHero } from "@/components/modulehero";
 import { chanceFor } from "@/lib/chance";
 import { centreTypeLabel } from "@/lib/labels";
 
-const PAGE_SIZE = 5;
+const PAGE_SIZE = 3;
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 
 function typeColor(type: string | undefined) {
@@ -165,7 +165,7 @@ export default function CollegesPage() {
   const [result, setResult] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [centrePage, setCentrePage] = useState(0);
-  const [tab, setTab] = useState<"colleges" | "exams">("colleges");
+  const [tab, setTab] = useState<"colleges" | "exams" | "online">("colleges");
   const [chanceFilter, setChanceFilter] = useState<"all" | "safe" | "good" | "reach">("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
@@ -201,14 +201,40 @@ export default function CollegesPage() {
   const pagedCentres = centres.slice(centrePage * PAGE_SIZE, (centrePage + 1) * PAGE_SIZE);
   const selected = pagedCentres.find((c: any) => c.id === selectedId) ?? pagedCentres[0] ?? null;
 
+  const onlineCard = (
+            <Card>
+              <h2 className="mb-3 font-bold">{t("colleges_online")}</h2>
+              {loading && courses.length === 0 && (
+                <p className="text-sm text-[var(--muted)] animate-pulse">{t("loading")}</p>
+              )}
+              <ul className="space-y-3 lg:grid lg:grid-cols-2 lg:items-start lg:gap-3 lg:space-y-0">
+                {courses.map((c: any) => (
+                  <li key={c.id} className="rounded-xl bg-[var(--bg)] p-3 ring-1 ring-black/5">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-semibold leading-snug">{c.title}</p>
+                        <p className="text-xs text-[var(--muted)]">{c.platform}{c.provider ? ` · ${c.provider}` : ""}</p>
+                        {c.duration && <p className="text-xs text-[var(--muted)]">{c.duration}</p>}
+                      </div>
+                      <Badge tone={!c.fee || c.fee === 0 ? "green" : undefined}>
+                        {!c.fee || c.fee === 0 ? t("colleges_free") : c.fee_text}
+                      </Badge>
+                    </div>
+                    {c.source && <Source url={c.source} date={c.last_checked} />}
+                  </li>
+                ))}
+              </ul>
+            </Card>
+  );
+
   return (
     <Shell title={t("colleges_title")} wide>
       {/* Maina in her graduation cap; she thinks while the colleges load */}
       <ModuleHero color={MODULE_COLOR.colleges} item="cap" pose={loading ? "think" : "wave"}
         line={careerName ? t("hero_colleges", { career: careerName }) : t("hero_colleges_none")}
         stats={centres.length ? [{ icon: "building", value: centres.length, label: t("hero_stat_centres") }, ...(courses.length ? [{ icon: "book", value: courses.length, label: t("hero_stat_courses") }] : [])] : []} />
-      <Tabs value={tab} onChange={setTab} tabs={[{ key: "exams", label: `${t("home_exams")}` }, { key: "colleges", label: `${t("adm_tab_colleges")}` }]} />
-      {tab === "exams" ? <ExamsList /> : noRoadmap ? (
+      <Tabs value={tab} onChange={setTab} tabs={[{ key: "exams", label: `${t("home_exams")}` }, { key: "colleges", label: `${t("adm_tab_colleges")}` }, ...(courses.length > 0 ? [{ key: "online" as const, label: `${t("colleges_online")}`, count: courses.length }] : [])]} />
+      {tab === "exams" ? <ExamsList /> : tab === "online" ? onlineCard : noRoadmap ? (
         <Card className="text-center space-y-3">
           <Icon name="graduation" size={40} className="text-[var(--brand)]" />
           <p className="text-sm text-[var(--muted)]">{t("colleges_no_roadmap")}</p>
@@ -219,10 +245,9 @@ export default function CollegesPage() {
         </Card>
       ) : (
         <>
-          <Card className="space-y-1">
-            <p className="text-xs font-semibold text-[var(--muted)] uppercase tracking-wide">{t("home_careers")}</p>
-            <p className="text-lg font-bold text-[var(--brand-ink)]">{careerName ?? careerId}</p>
-            {summary && <p className="mt-2 text-sm leading-relaxed">{summary}</p>}
+          <Card className="!p-3">
+            <p className="text-xs font-semibold text-[var(--muted)] uppercase tracking-wide">{t("home_careers")}: <span className="text-base font-bold normal-case tracking-normal text-[var(--brand-ink)]">{careerName ?? careerId}</span></p>
+            {summary && <p className="mt-1 line-clamp-2 text-sm leading-snug">{summary}</p>}
           </Card>
 
           <Card>
@@ -250,7 +275,7 @@ export default function CollegesPage() {
             </ul>
             {!loading && pagedCentres.some((c: any) => c.lat != null) && (
               <div className="mt-3 flex flex-col lg:mt-0 lg:h-full">
-                <CentreMap className="h-full min-h-[18rem]" centres={pagedCentres.filter((c: any) => c.lat != null).map((c: any) => ({ ...c, approximate: c.approximate ?? c.coord_source !== "exact", highlighted: c.id === selected?.id }))}
+                <CentreMap className="h-full min-h-[14rem]" centres={pagedCentres.filter((c: any) => c.lat != null).map((c: any) => ({ ...c, approximate: c.approximate ?? c.coord_source !== "exact", highlighted: c.id === selected?.id }))}
                   home={{ lat: profile?.lat, lon: profile?.lon, label: placeLabel(t, profile?.taluka) || t("your_profile") }} />
               </div>
             )}
@@ -283,31 +308,6 @@ export default function CollegesPage() {
             )}
           </Card>
 
-          {(courses.length > 0 || loading) && (
-            <Card>
-              <h2 className="mb-3 font-bold">{t("colleges_online")}</h2>
-              {loading && courses.length === 0 && (
-                <p className="text-sm text-[var(--muted)] animate-pulse">{t("loading")}</p>
-              )}
-              <ul className="space-y-3 lg:grid lg:grid-cols-2 lg:items-start lg:gap-3 lg:space-y-0">
-                {courses.map((c: any) => (
-                  <li key={c.id} className="rounded-xl bg-[var(--bg)] p-3 ring-1 ring-black/5">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0 flex-1">
-                        <p className="font-semibold leading-snug">{c.title}</p>
-                        <p className="text-xs text-[var(--muted)]">{c.platform}{c.provider ? ` · ${c.provider}` : ""}</p>
-                        {c.duration && <p className="text-xs text-[var(--muted)]">{c.duration}</p>}
-                      </div>
-                      <Badge tone={!c.fee || c.fee === 0 ? "green" : undefined}>
-                        {!c.fee || c.fee === 0 ? t("colleges_free") : c.fee_text}
-                      </Badge>
-                    </div>
-                    {c.source && <Source url={c.source} date={c.last_checked} />}
-                  </li>
-                ))}
-              </ul>
-            </Card>
-          )}
         </>
       )}
     </Shell>
