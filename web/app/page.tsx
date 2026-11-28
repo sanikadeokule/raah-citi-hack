@@ -258,12 +258,12 @@ export default function Home() {
       ) : (
         // the whole screen fits without scrolling on a laptop: main column on the left, Alerts + the activity
         // log beside it on the right (xl and up); a phone keeps one stacked column in the same order
-        <div className="flex flex-1 flex-col gap-3 xl:grid xl:grid-cols-[1fr_300px] xl:items-start xl:gap-4">
+        <div className="flex flex-1 flex-col gap-3 xl:grid xl:grid-cols-[1fr_300px] xl:items-stretch xl:gap-4">
         <div className="flex min-w-0 flex-col gap-3">
         <TeacherInbox />
 
         {/* one step chosen for the student today, with the reason and the source; "How Raah decided" sits beside it on a big screen */}
-        <section aria-labelledby="step-h" className="rounded-2xl border-2 border-(--brand) bg-(--card) p-4 shadow-sm xl:grid xl:grid-cols-[1fr_14rem] xl:items-stretch xl:gap-4">
+        <section aria-labelledby="step-h" className="rounded-2xl border-2 border-(--brand) bg-(--card) p-4 shadow-sm xl:grid xl:grid-cols-[1fr_24rem] xl:items-stretch xl:gap-4">
           <div className="flex h-full gap-3">
           {/* Maina presents the step: thinking while Raah picks it, a clipboard for a follow-up question, a wave otherwise */}
           <Mascot pose={stepLoading && !agentStep ? "think" : checkin ? "clipboard" : "wave"} size={56} className="-ml-1 shrink-0 self-start" />
@@ -311,22 +311,22 @@ export default function Home() {
         )}
 
         {/* six small tiles (two rows of three), then the three Pro features as a third row, all one consistent grid */}
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-3 gap-2 xl:min-h-0 xl:flex-[1.6] xl:grid-rows-2">
           {STUDENT_TILES.map((x) => (
-            <Link key={x.href} href={x.href} className="flex flex-col items-center rounded-2xl border-b-4 bg-(--card) px-1.5 py-2 text-center text-(--brand-ink) shadow-sm ring-1 ring-black/10 active:scale-95"
+            <Link key={x.href} href={x.href} className="flex flex-col items-center justify-center rounded-2xl border-b-4 bg-(--card) px-1.5 py-2 text-center xl:min-h-[5.5rem] text-(--brand-ink) shadow-sm ring-1 ring-black/10 active:scale-95"
               style={{ borderBottomColor: x.color }}>
-              <span className="tile-icon grid h-9 w-9 place-items-center rounded-xl" style={{ background: `color-mix(in srgb, ${x.color} 16%, transparent)`, color: x.color }}>
+              <span className="tile-icon grid h-9 w-9 place-items-center rounded-xl xl:h-10 xl:w-10" style={{ background: `color-mix(in srgb, ${x.color} 16%, transparent)`, color: x.color }}>
                 <Icon name={x.icon} size={20} />
               </span>
-              <span className="mt-1.5 text-xs font-semibold leading-tight">{t(x.key)}</span>
-              <span className="mt-0.5 hidden text-[10px] leading-tight text-(--muted) sm:line-clamp-2">{tileSub[x.key]}</span>
+              <span className="mt-1.5 text-xs font-semibold leading-tight xl:text-sm">{t(x.key)}</span>
+              <span className="mt-0.5 hidden text-[10px] leading-tight text-(--muted) sm:line-clamp-2 xl:line-clamp-1 xl:text-xs">{tileSub[x.key]}</span>
             </Link>
           ))}
         </div>
 
-        <ProShelf />
+        <ProShelf grow />
 
-        <Link href="/ask/" className="flex items-center gap-3 rounded-2xl bg-(--brand) px-4 py-3 text-white shadow-sm active:scale-95">
+        <Link href="/ask/" className="mt-auto flex items-center gap-3 rounded-2xl bg-(--brand) px-4 py-3 text-white shadow-sm active:scale-95">
           <Icon name="chat" size={24} />
           <span className="min-w-0 flex-1">
             <span className="block text-sm font-semibold">{t("home_ask")}</span>
