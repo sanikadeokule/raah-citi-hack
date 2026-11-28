@@ -230,7 +230,7 @@ def compute_plan(data: dict, profile: dict, plan_id: str, opts: dict | None = No
     months = plan["course_months"]
     years = months / 12
 
-    centres = nearest_centres(data, profile, plan.get("centre_type"), 3) if plan.get("centre_type") else []
+    centres = nearest_centres(data, profile, plan.get("centre_type"), 3, plan.get("career_id")) if plan.get("centre_type") else []
     if opts.get("commute_km") is not None:
         km = float(opts["commute_km"])
     elif centres and centres[0]["distance_km"] is not None:
@@ -329,11 +329,16 @@ def haversine(lat1, lon1, lat2, lon2) -> float:
     return 2 * r * math.asin(math.sqrt(a))
 
 
-def nearest_centres(data: dict, profile: dict, centre_type: str | None, n: int = 3) -> list[dict]:
+def nearest_centres(data: dict, profile: dict, centre_type: str | None, n: int = 3, career_id: str | None = None) -> list[dict]:
     lat, lon = profile.get("lat"), profile.get("lon")
     out = []
+    # the Training_Centres "Career IDs" column decides when it lists this career; the centre type is the fallback
+    listed = bool(career_id) and any(career_id in (c.get("career_ids") or []) for c in data["centres"])
     for c in data["centres"]:
-        if centre_type and centre_type.lower() not in str(c["type"]).lower():
+        if listed:
+            if career_id not in (c.get("career_ids") or []):
+                continue
+        elif centre_type and centre_type.lower() not in str(c["type"]).lower():
             continue
         d = None
         if lat is not None and lon is not None and c["lat"] is not None:
