@@ -63,16 +63,16 @@ export function ProGate({ children }: { children: React.ReactNode }) {
 }
 
 /** The home screen's row of Pro features (nothing is shown until at least one is built). */
-export function ProShelf() {
+export function ProShelf({ grow = false }: { grow?: boolean } = {}) {
   const { t } = useApp();
   if (!PRO_FEATURES.length) return null;
   return (
-    <div className="space-y-1">
+    <div className={grow ? "flex flex-col gap-1 xl:flex-[0.5]" : "space-y-1"}>
       <div className="flex items-center gap-2 px-1 text-xs font-semibold text-(--muted)">{t("pro_gate_shelf")} <ProBadge /></div>
-      <div className={`grid gap-2 ${PRO_FEATURES.length >= 3 ? "grid-cols-3" : "grid-cols-2"}`}>
+      <div className={`grid gap-2 ${grow ? "xl:flex-1" : ""} ${PRO_FEATURES.length >= 3 ? "grid-cols-3" : "grid-cols-2"}`}>
         {PRO_FEATURES.map((f) => (
           <Link key={f.href} href={f.href}
-            className="flex flex-col items-center rounded-2xl bg-linear-to-b from-amber-50 to-(--card) px-1 py-2 text-center ring-1 ring-amber-300 active:scale-95 dark:from-amber-900/20">
+            className="flex flex-col items-center justify-center rounded-2xl bg-linear-to-b from-amber-50 to-(--card) px-1 py-2 text-center ring-1 ring-amber-300 active:scale-95 dark:from-amber-900/20">
             <Icon name={f.icon} size={24} className="text-(--brand)" />
             <span className="mt-1 text-xs font-semibold leading-tight text-(--brand-ink)">{t(f.titleKey)}</span>
             <span className="text-[10px] leading-tight text-(--muted)">{t(f.subKey)}</span>
