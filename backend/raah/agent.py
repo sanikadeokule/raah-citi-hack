@@ -26,12 +26,12 @@ from fastapi.security import HTTPAuthorizationCredentials
 
 from . import db, llm, mcp_client, rag
 from .auth import SIGNING_KEY, bearer, current_user
+from .languages import language_name, normalize_language
 
 router = APIRouter(tags=["ai"])
 
 MAX_STEPS = 6
 RESULT_CHARS = 6000  # a tool result longer than this is cut before it goes back to the model
-LANG_NAME = {"mr": "Marathi", "hi": "Hindi", "en": "English"}
 PROFILE_FIELDS = ("name", "class", "age", "gender", "category", "family_income_annual", "taluka", "lat", "lon", "marks_pct",
                   "interests", "strengths", "ikigai", "roadmap_career", "can_stay_hostel", "max_commute_km", "documents", "exams_passed", "disability_pct")
 # filled in by the server, never by the model: the student's own profile and account
@@ -65,7 +65,7 @@ def tool_specs(signed_in: bool) -> list[dict]:
 
 def system_prompt(lang: str, profile: dict, signed_in: bool) -> str:
     return (f"You are Raah, a career guide for rural students, parents and teachers in Maharashtra. Answer entirely in "
-            f"{LANG_NAME.get(lang, 'English')} in short, simple sentences a Class 9 student understands. Do not switch languages mid-answer.\n"
+            f"{language_name(lang)} in short, simple sentences a Class 9 student understands. Do not switch languages mid-answer.\n"
             + llm.off_topic_rule(lang) +
             "Translate descriptive tool data and field names into the requested language. Preserve only proper names, official scheme names, acronyms, codes, and exact figures in their original form. Never repeat raw database labels or internal tool formatting.\n"
             "In Hindi or Marathi always write the app name as राह, never as Raah.\n"
@@ -184,7 +184,7 @@ def _planner_messages(msgs: list[dict], specs: list[dict]) -> list[dict]:
 def run(body: AskBody, user_id: int | None = None) -> Iterator[dict]:
     """The agent loop as a stream of events: start, step, step_done ..., answer."""
     t0 = time.time()
-    lang = body.lang if body.lang in LANG_NAME else "en"
+    lang = normalize_language(body.lang)
     profile = _clean_profile(body.profile)
     signed_in = bool(user_id)
     if signed_in:  # the shared student profile: what Discover and the profile page saved is known here too

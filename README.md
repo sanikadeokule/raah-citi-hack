@@ -513,7 +513,7 @@ run.sh
 
 ## Adding a language, a scheme or a career
 
-- **Language:** copy `web/locales/en.json` to `web/locales/<code>.json`, translate the values, and add the code to `LANGS` in `web/lib/store.tsx`.
+- **Language:** `languages.json` is the shared frontend/backend registry. Only `en`, `hi`, and `mr` are selectable; the other registered languages are planned, not released. To enable one: add and review `web/locales/<code>.json` against the English keys and `{placeholders}`; cover screen-local copy, scripted AI replies, dataset fields and teacher modules; verify ASR and TTS separately for the configured providers; add regression tests; then set `selectable` to `true` and add its static catalog import. Unknown or unreleased language preferences fall back to English. The registry is bundled into the static web export at build time and read from the repository root by the Python service, so deploy both from the same revision.
 - **Scholarship:** add a row to `Scholarships`, then its rules to `Eligibility_Rules` (use `@income` for the income limit). No code change.
   Freeship schemes that are only for families above a limit use operator `>` with `@income`. Course tags used by rules include `post_matric`, `ug`, `pg`, `iti_govt`, `iti_ppp` (ITI seat taken under PPP), `technical_professional`, `top_institute`. The Profile screen also asks religion and whether a parent is a registered construction worker or an ex-serviceman, because some schemes depend on them; a rule on a field the student has not filled shows as unknown rather than no.
 - **Career path with a cost plan:** add the career to `Careers_Income` and `Career_Profile`, and a row to `Plan_Inputs`.

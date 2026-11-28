@@ -223,7 +223,7 @@ export default function Discover() {
   };
 
   return (
-    <Shell title={t("home_discover")}>
+    <Shell title={t("home_discover")} aside={false}>
       {mode !== "checking" && !finished && (
         <div className="flex items-center justify-between text-xs text-[var(--muted)]">
           <span>{mode === "ai" ? `${t("ai_chat_mode")}` : `${t("quick_mode")}`}</span>

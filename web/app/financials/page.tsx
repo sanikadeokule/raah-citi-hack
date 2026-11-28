@@ -11,95 +11,6 @@ import { inr } from "@/lib/engine";
 import { LOAN_RULES, LOAN_SOURCES, computeAid, defaultsFor, matchingScholarships, type AidInput } from "@/lib/finance";
 import { useApp } from "@/lib/store";
 
-const T: Record<string, Record<string, string>> = {
-  en: {
-    tab_inputs: "Numbers", tab_cost: "Cost", tab_loan: "Loan", tab_emi: "EMI", tab_payback: "Payback", next: "Next",
-    title: "Financial aid calculator", hero: "What will this course really cost?",
-    hero_sub: "Scholarships, an education loan and your first salary, worked out together.",
-    inputs: "Your numbers", fee: "Course fee per year", years: "Course length", years_n: "{n} years", year_1: "1 year",
-    income: "Family income per year", career: "Job after the course", rate: "Bank interest rate", tenure: "Repay over",
-    sch: "Scholarships you qualify for", sch_none: "No scholarship in our list matches this income. Try a lower income or check your profile.",
-    sch_other: "Other scholarship you already get (₹ per year)", sch_best: "Only the biggest one counts: schemes usually cannot be combined.",
-    cost: "Course cost", minus_sch: "Scholarships", net: "Your cost", covered: "Scholarships cover the whole course. No loan needed!",
-    loan_title: "Education loan", loan_amount: "Loan you would need", margin: "You pay upfront (margin)",
-    sec_none: "No guarantor, no property needed", sec_guarantee: "Parent signs as co-borrower; no property needed (government guarantee)",
-    sec_collateral: "Bank will ask for property as security",
-    csis: "Government pays all interest while you study and for 1 year after (CSIS, family income up to ₹4.5 lakh)",
-    vidyalaxmi: "3% interest help while you study (PM-Vidyalaxmi, family income up to ₹8 lakh, at top-ranked colleges)",
-    no_sub: "No interest subsidy at this family income",
-    emi_title: "Monthly EMI", emi_for: "for {n} years, starting {m} months from now",
-    study_interest: "Interest while studying", saved: "Paid by the government", added: "Added to your loan",
-    total_interest: "Total interest", salary: "Starting pay", of_salary: "of starting pay",
-    comfortable: "Comfortable", tight: "Tight", heavy: "Heavy", unknown: "Pick a job to compare",
-    afford_comfortable: "The EMI is under 20% of your starting pay: easy to manage.",
-    afford_tight: "The EMI is 20 to 35% of your starting pay: manageable with a budget.",
-    afford_heavy: "The EMI is more than 35% of your starting pay. Choose a longer loan, a cheaper college or more scholarships.",
-    timeline: "Payback timeline", study: "Study", grace: "Grace year", repay: "Repay", free: "Loan-free by {y}",
-    fast: "Put 30% of your pay towards the loan and you are debt-free in {m} months of work.",
-    fast_none: "At 30% of pay the loan would take more than 15 years.",
-    owed: "Still owed", months_after: "months after repayment starts",
-    apply: "Apply for the loan and subsidy on PM-Vidyalaxmi", rules: "Loan rules", estimate: "estimate",
-    note: "Rates and rules change; your bank gives the final figure. Scholarships and pay come from the Raah dataset.",
-  },
-  hi: {
-    tab_inputs: "आँकड़े", tab_cost: "खर्च", tab_loan: "ऋण", tab_emi: "EMI", tab_payback: "चुकौती", next: "आगे",
-    title: "आर्थिक मदद कैलकुलेटर", hero: "यह कोर्स असल में कितने का पड़ेगा?",
-    hero_sub: "छात्रवृत्ति, शिक्षा ऋण और आपकी पहली तनख्वाह, सब एक साथ।",
-    inputs: "आपकी जानकारी", fee: "हर साल की फीस", years: "कोर्स की अवधि", years_n: "{n} साल", year_1: "1 साल",
-    income: "परिवार की सालाना आय", career: "कोर्स के बाद नौकरी", rate: "बैंक ब्याज दर", tenure: "चुकाने का समय",
-    sch: "आपको मिल सकने वाली छात्रवृत्तियाँ", sch_none: "इस आय पर हमारी सूची की कोई छात्रवृत्ति नहीं मिलती।",
-    sch_other: "कोई और छात्रवृत्ति जो पहले से मिलती है (₹ प्रति वर्ष)", sch_best: "सिर्फ़ सबसे बड़ी गिनी जाती है: योजनाएँ आमतौर पर जुड़ती नहीं।",
-    cost: "कोर्स का खर्च", minus_sch: "छात्रवृत्ति", net: "आपका खर्च", covered: "छात्रवृत्ति पूरा खर्च उठा लेती है। ऋण की ज़रूरत नहीं!",
-    loan_title: "शिक्षा ऋण", loan_amount: "ज़रूरी ऋण", margin: "आप पहले देंगे (मार्जिन)",
-    sec_none: "न गारंटर, न संपत्ति", sec_guarantee: "माता-पिता सह-उधारकर्ता; संपत्ति नहीं चाहिए (सरकारी गारंटी)",
-    sec_collateral: "बैंक संपत्ति गिरवी माँगेगा",
-    csis: "पढ़ाई के दौरान और 1 साल बाद तक पूरा ब्याज सरकार देगी (CSIS, आय ₹4.5 लाख तक)",
-    vidyalaxmi: "पढ़ाई के दौरान 3% ब्याज मदद (पीएम-विद्यालक्ष्मी, आय ₹8 लाख तक, शीर्ष कॉलेज)",
-    no_sub: "इस आय पर ब्याज सब्सिडी नहीं",
-    emi_title: "मासिक EMI", emi_for: "{n} साल के लिए, {m} महीने बाद से",
-    study_interest: "पढ़ाई के दौरान ब्याज", saved: "सरकार देगी", added: "ऋण में जुड़ेगा",
-    total_interest: "कुल ब्याज", salary: "शुरुआती तनख्वाह", of_salary: "शुरुआती तनख्वाह का",
-    comfortable: "आसान", tight: "थोड़ा कड़ा", heavy: "भारी", unknown: "तुलना के लिए नौकरी चुनें",
-    afford_comfortable: "EMI शुरुआती तनख्वाह के 20% से कम है: आसानी से चलेगा।",
-    afford_tight: "EMI तनख्वाह का 20 से 35% है: बजट से संभल जाएगा।",
-    afford_heavy: "EMI तनख्वाह के 35% से ज़्यादा है। लंबा ऋण, सस्ता कॉलेज या और छात्रवृत्ति देखें।",
-    timeline: "चुकाने की समय-रेखा", study: "पढ़ाई", grace: "छूट का साल", repay: "चुकाना", free: "{y} तक ऋण-मुक्त",
-    fast: "तनख्वाह का 30% ऋण में दें तो {m} महीने की नौकरी में ऋण खत्म।",
-    fast_none: "30% तनख्वाह से ऋण 15 साल से ज़्यादा लेगा।",
-    owed: "बाकी ऋण", months_after: "चुकाना शुरू होने के बाद महीने",
-    apply: "पीएम-विद्यालक्ष्मी पर ऋण और सब्सिडी के लिए आवेदन करें", rules: "ऋण नियम", estimate: "अनुमान",
-    note: "दरें और नियम बदलते हैं; अंतिम आँकड़ा आपका बैंक देगा। छात्रवृत्ति और तनख्वाह राह डेटासेट से हैं।",
-  },
-  mr: {
-    tab_inputs: "आकडे", tab_cost: "खर्च", tab_loan: "कर्ज", tab_emi: "EMI", tab_payback: "परतफेड", next: "पुढे",
-    title: "आर्थिक मदत कॅल्क्युलेटर", hero: "हा कोर्स खरंच किती पडेल?",
-    hero_sub: "शिष्यवृत्ती, शैक्षणिक कर्ज आणि तुमचा पहिला पगार, सगळं एकत्र.",
-    inputs: "तुमची माहिती", fee: "दरवर्षीची फी", years: "कोर्सचा कालावधी", years_n: "{n} वर्षे", year_1: "1 वर्ष",
-    income: "कुटुंबाचे वार्षिक उत्पन्न", career: "कोर्सनंतरची नोकरी", rate: "बँक व्याजदर", tenure: "फेडण्याचा कालावधी",
-    sch: "तुम्हाला मिळू शकणाऱ्या शिष्यवृत्ती", sch_none: "या उत्पन्नावर आमच्या यादीतील कोणतीही शिष्यवृत्ती जुळत नाही.",
-    sch_other: "आधीच मिळणारी इतर शिष्यवृत्ती (₹ दरवर्षी)", sch_best: "फक्त सर्वात मोठी मोजली जाते: योजना सहसा एकत्र मिळत नाहीत.",
-    cost: "कोर्सचा खर्च", minus_sch: "शिष्यवृत्ती", net: "तुमचा खर्च", covered: "शिष्यवृत्ती पूर्ण खर्च भागवते. कर्जाची गरज नाही!",
-    loan_title: "शैक्षणिक कर्ज", loan_amount: "लागणारे कर्ज", margin: "तुम्ही आधी भराल (मार्जिन)",
-    sec_none: "जामीनदार किंवा मालमत्ता नको", sec_guarantee: "पालक सह-कर्जदार; मालमत्ता नको (सरकारी हमी)",
-    sec_collateral: "बँक मालमत्ता तारण मागेल",
-    csis: "शिक्षणादरम्यान आणि नंतर 1 वर्ष संपूर्ण व्याज सरकार भरेल (CSIS, उत्पन्न ₹4.5 लाखांपर्यंत)",
-    vidyalaxmi: "शिक्षणादरम्यान 3% व्याज मदत (पीएम-विद्यालक्ष्मी, उत्पन्न ₹8 लाखांपर्यंत, नामांकित कॉलेज)",
-    no_sub: "या उत्पन्नावर व्याज सवलत नाही",
-    emi_title: "मासिक EMI", emi_for: "{n} वर्षांसाठी, {m} महिन्यांनंतर सुरू",
-    study_interest: "शिक्षणादरम्यानचे व्याज", saved: "सरकार भरेल", added: "कर्जात जोडले जाईल",
-    total_interest: "एकूण व्याज", salary: "सुरुवातीचा पगार", of_salary: "सुरुवातीच्या पगाराचा",
-    comfortable: "सोपे", tight: "थोडे ताणलेले", heavy: "जड", unknown: "तुलनेसाठी नोकरी निवडा",
-    afford_comfortable: "EMI सुरुवातीच्या पगाराच्या 20% पेक्षा कमी: सहज जमेल.",
-    afford_tight: "EMI पगाराच्या 20 ते 35%: बजेट केल्यास जमेल.",
-    afford_heavy: "EMI पगाराच्या 35% पेक्षा जास्त. जास्त कालावधी, स्वस्त कॉलेज किंवा अधिक शिष्यवृत्ती पाहा.",
-    timeline: "फेडीची वेळरेषा", study: "शिक्षण", grace: "सवलतीचे वर्ष", repay: "फेड", free: "{y} पर्यंत कर्जमुक्त",
-    fast: "पगाराचा 30% कर्जासाठी दिल्यास {m} महिन्यांच्या नोकरीत कर्जमुक्त.",
-    fast_none: "30% पगारातून कर्ज फेडायला 15 वर्षांपेक्षा जास्त लागेल.",
-    owed: "बाकी कर्ज", months_after: "फेड सुरू झाल्यानंतरचे महिने",
-    apply: "पीएम-विद्यालक्ष्मीवर कर्ज व सवलतीसाठी अर्ज करा", rules: "कर्जाचे नियम", estimate: "अंदाज",
-    note: "दर आणि नियम बदलतात; अंतिम आकडा तुमची बँक देईल. शिष्यवृत्ती आणि पगार राह डेटासेटमधून.",
-  },
-};
 
 type Tab = "inputs" | "cost" | "loan" | "emi" | "payback";
 const TAB_ICON: Record<Tab, string> = { inputs: "pencil", cost: "receipt", loan: "bank", emi: "calendar", payback: "hourglass" };
@@ -121,7 +32,7 @@ function Slider({ label, value, display, min, max, step, onChange }: {
 
 function Calculator() {
   const { data, profile, lang } = useApp();
-  const t = useText(T);
+  const t = useText("fin_");
   const careers = useMemo(() => [...(data?.careers || [])].sort((a: any, b: any) => String(a.name).localeCompare(String(b.name))), [data]);
   const startCareer: string | null = profile?.roadmap_career || careers[0]?.id || null;
   const d0 = useMemo(() => defaultsFor(data, profile, startCareer), [data, profile, startCareer]);
@@ -173,7 +84,7 @@ function Calculator() {
           {[
             { k: t("net"), v: lakh(aid.net_cost) },
             { k: t("emi_title"), v: L.needed ? inr(L.emi) : "₹0" },
-            { k: t("repay"), v: L.needed ? (aid.fast_payback_months !== null ? `${aid.fast_payback_months} mo` : "15+ yrs") : "—" },
+            { k: t("repay"), v: L.needed ? (aid.fast_payback_months !== null ? `${aid.fast_payback_months} ${t("month_short")}` : t("over_15_years")) : "—" },
           ].map((x) => (
             <div key={x.k} className="rounded-xl bg-white/10 px-1 py-2">
               <div className="text-lg font-bold leading-tight">{x.v}</div>
@@ -275,7 +186,7 @@ function Calculator() {
           <h3 className="font-bold">{t("emi_title")}</h3>
           <div className="mt-1 flex items-end gap-2">
             <span className="text-3xl font-extrabold text-[var(--brand-ink)]">{inr(L.emi)}</span>
-            <span className="pb-1 text-xs text-[var(--muted)]">/ month</span>
+            <span className="pb-1 text-xs text-[var(--muted)]">{t("per_month")}</span>
           </div>
           <p className="text-xs text-[var(--muted)]">{t("emi_for", { n: inp.tenure_years, m: L.moratorium_months })}</p>
           <div className="mt-3 flex gap-1.5">
@@ -292,7 +203,7 @@ function Calculator() {
             <div className="rounded-xl bg-[var(--bg)] p-2.5"><div className="text-xs text-[var(--muted)]">{t("added")}</div><div className="font-bold">{inr(L.moratorium_interest)}</div></div>
             <div className="rounded-xl bg-[var(--bg)] p-2.5"><div className="text-xs text-[var(--muted)]">{t("total_interest")}</div><div className="font-bold">{inr(L.total_interest)}</div></div>
             <div className="rounded-xl bg-[var(--bg)] p-2.5"><div className="text-xs text-[var(--muted)]">{t("salary")}{aid.job?.estimate ? ` (${t("estimate")})` : ""}</div>
-              <div className="font-bold">{aid.job?.salary ? `${inr(aid.job.salary)}/mo` : "—"}</div></div>
+              <div className="font-bold">{aid.job?.salary ? `${inr(aid.job.salary)}/${t("month_short")}` : "—"}</div></div>
           </div>
 
           <div className="mt-3">
@@ -328,7 +239,7 @@ function Calculator() {
                 {seg.map((s) => <div key={s.k} className={`${s.cls} grid place-items-center`} style={{ width: `${(s.m / total) * 100}%` }}>{s.m >= 10 ? `${s.m}m` : ""}</div>)}
               </div>
               <div className="mt-1 flex flex-wrap gap-3 text-xs">
-                {seg.map((s) => <span key={s.k} className="flex items-center gap-1"><span className={`h-2 w-2 rounded-full ${s.cls}`} />{s.k} · {s.m} mo</span>)}
+                {seg.map((s) => <span key={s.k} className="flex items-center gap-1"><span className={`h-2 w-2 rounded-full ${s.cls}`} />{s.k} · {s.m} {t("month_short")}</span>)}
               </div>
               <p className="mt-2 rounded-xl bg-[var(--brand-soft)] p-2.5 text-center text-sm font-semibold text-[var(--brand-ink)]">{t("free", { y: year0 + Math.ceil(total / 12) })}</p>
             </>);
@@ -361,7 +272,7 @@ function Calculator() {
 }
 
 export default function FinancialsPage() {
-  const t = useText(T);
+  const t = useText("fin_");
   return (
     <Shell title={t("title")}>
       <ProGate><Calculator /></ProGate>

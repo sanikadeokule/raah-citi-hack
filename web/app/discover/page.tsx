@@ -39,6 +39,27 @@ function Chip({ on, onClick, children }: { on?: boolean; onClick: () => void; ch
   );
 }
 
+// the four circles: solid = the student tells Raah, dashed = Raah checks from data. Reused small (no caption) as
+// the "how this match is built" explainer on the results screen.
+function IkigaiVenn({ t, className = "mx-auto w-full max-w-xs" }: { t: (k: string) => string; className?: string }) {
+  return (
+    <svg viewBox="0 0 300 290" role="img" aria-label={`${t("ik_you_tell")}: ${t("ik_circle_love")}, ${t("ik_circle_good")}. ${t("ik_raah_checks")}: ${t("ik_circle_pays")}, ${t("ik_circle_needed")}.`} className={className}>
+      {[[150, 78, "love", false], [88, 152, "good", false], [212, 152, "needed", true], [150, 214, "pays", true]].map(([cx, cy, k, dashed]) => (
+        <circle key={k as string} cx={cx as number} cy={cy as number} r="64" fill={dashed ? "none" : "var(--brand)"} fillOpacity={dashed ? 0 : 0.14} stroke="var(--brand)" strokeWidth="2.5" strokeDasharray={dashed ? "7 6" : undefined} />
+      ))}
+      <g fontSize="9.5" fontWeight="700" fill="var(--ink)" textAnchor="middle">
+        {([[150, 46, "ik_circle_love"], [52, 142, "ik_circle_good"], [252, 142, "ik_circle_needed"], [150, 246, "ik_circle_pays"]] as const).map(([x, y, k]) => {
+          const w = t(k).split(" "); const lines: string[] = [];
+          for (let i = 0; i < w.length; i += 2) lines.push(w.slice(i, i + 2).join(" "));
+          return <text key={k} x={x} y={y}>{lines.map((l, i) => <tspan key={i} x={x} dy={i ? 11 : 0}>{l}</tspan>)}</text>;
+        })}
+      </g>
+      <rect x="96" y="132" width="108" height="26" rx="13" fill="var(--card)" stroke="var(--brand)" strokeWidth="2" />
+      <text x="150" y="149" textAnchor="middle" fontSize="11" fontWeight="800" fill="var(--ink)">{t("ik_sweet_title")}</text>
+    </svg>
+  );
+}
+
 function Guide({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex items-start gap-3">
@@ -190,39 +211,25 @@ export default function Discover() {
   const moreTags = tags.filter((x) => !chips.includes(x));
 
   return (
-    <Shell fit title={screen === "sweet" ? t("ik_sweet_title") : t("home_discover")} back={screen === "intro" ? "/" : null}>
+    <Shell fit title={screen === "sweet" ? t("ik_sweet_title") : t("home_discover")} back={screen === "intro" ? "/" : null} aside={false}>
       {screen === "intro" && (
-        <div className="flex flex-1 flex-col gap-4">
+        <div className="mx-auto flex w-full max-w-md flex-1 flex-col items-center gap-4 text-center">
           <div>
             <h2 className="text-2xl font-extrabold leading-tight text-[var(--brand-ink)]">{t("ik_intro_title")}</h2>
             <p className="mt-1 text-sm text-[var(--muted)]">{t("ik_intro_body")}</p>
           </div>
-          {/* the four circles: solid = the student tells Raah, dashed = Raah checks from data */}
-          <svg viewBox="0 0 300 290" role="img" aria-label={`${t("ik_you_tell")}: ${t("ik_circle_love")}, ${t("ik_circle_good")}. ${t("ik_raah_checks")}: ${t("ik_circle_pays")}, ${t("ik_circle_needed")}.`} className="mx-auto w-full max-w-xs">
-            {[[150, 78, "love", false], [88, 152, "good", false], [212, 152, "needed", true], [150, 214, "pays", true]].map(([cx, cy, k, dashed]) => (
-              <circle key={k as string} cx={cx as number} cy={cy as number} r="64" fill={dashed ? "none" : "var(--brand)"} fillOpacity={dashed ? 0 : 0.14} stroke="var(--brand)" strokeWidth="2.5" strokeDasharray={dashed ? "7 6" : undefined} />
-            ))}
-            <g fontSize="9.5" fontWeight="700" fill="var(--ink)" textAnchor="middle">
-              {([[150, 46, "ik_circle_love"], [52, 142, "ik_circle_good"], [252, 142, "ik_circle_needed"], [150, 246, "ik_circle_pays"]] as const).map(([x, y, k]) => {
-                const w = t(k).split(" "); const lines: string[] = [];
-                for (let i = 0; i < w.length; i += 2) lines.push(w.slice(i, i + 2).join(" "));
-                return <text key={k} x={x} y={y}>{lines.map((l, i) => <tspan key={i} x={x} dy={i ? 11 : 0}>{l}</tspan>)}</text>;
-              })}
-            </g>
-            <rect x="96" y="132" width="108" height="26" rx="13" fill="var(--card)" stroke="var(--brand)" strokeWidth="2" />
-            <text x="150" y="149" textAnchor="middle" fontSize="11" fontWeight="800" fill="var(--ink)">{t("ik_sweet_title")}</text>
-          </svg>
+          <IkigaiVenn t={t} className="mx-auto w-full max-w-xs sm:max-w-sm xl:max-w-md" />
           <ul className="flex justify-center gap-5 text-sm">
             <li className="flex items-center gap-2"><span className="h-4 w-4 rounded-full border-2 border-[var(--brand)] bg-[var(--brand)]/15" aria-hidden />{t("ik_you_tell")}</li>
             <li className="flex items-center gap-2"><span className="h-4 w-4 rounded-full border-2 border-dashed border-[var(--brand)]" aria-hidden />{t("ik_i_check")}</li>
           </ul>
           {missing && (
-            <div className="rounded-xl border-2 border-amber-400 bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-900/20 dark:text-amber-100">
+            <div className="w-full rounded-xl border-2 border-amber-400 bg-amber-50 p-3 text-left text-sm text-amber-900 dark:bg-amber-900/20 dark:text-amber-100">
               <p>{t("ik_basics_missing")}</p>
               <Link href="/discover/basics/" className="mt-2 inline-block font-bold underline">{t("ik_basics_go")}</Link>
             </div>
           )}
-          <div className="mt-auto space-y-2">
+          <div className="mt-auto w-full space-y-2">
             <button onClick={() => { setMsgs([]); setTurn(0); setVoice(false); setScreen("love"); }} className="w-full rounded-2xl bg-[var(--brand)] py-4 text-base font-bold text-white active:scale-[.98]">{t("ik_start")}</button>
             <button onClick={() => { setMsgs([]); setTurn(0); setVoice(true); setScreen("love"); }} className="flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-black/15 py-3.5 text-base font-bold active:scale-[.98]"><Icon name="mic" size={18} />{t("ik_voice_instead")}</button>
           </div>
@@ -331,6 +338,10 @@ export default function Discover() {
       {screen === "sweet" && (
         <div className="flex flex-1 flex-col gap-3">
           <p className="text-sm text-[var(--muted)]">{t("ik_sweet_sub")}</p>
+          <details className="rounded-2xl bg-[var(--card)] p-3 ring-1 ring-black/10">
+            <summary className="cursor-pointer text-xs font-bold uppercase tracking-wider text-[var(--muted)]">{t("ik_how_built")}</summary>
+            <IkigaiVenn t={t} className="mx-auto mt-2 w-full max-w-[220px]" />
+          </details>
           {ranked.length === 0 && <p className="rounded-2xl bg-[var(--card)] p-4 text-sm ring-1 ring-black/10">{t("ik_none_found")}</p>}
           <div className="flex flex-col gap-3 xl:grid xl:grid-cols-2">
           {ranked.slice(0, 5).map((s, i) => (

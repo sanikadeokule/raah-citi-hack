@@ -2,7 +2,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Badge, Card, Shell } from "@/components/ui";
-import { useApp } from "@/lib/store";
+import { LANGS, translateForLanguage, useApp } from "@/lib/store";
+import { languageLocale } from "@/lib/languages";
 import { eligibility } from "@/lib/engine";
 
 const FIELDS = ["name", "age", "gender", "class", "taluka", "marks_pct", "category", "family_income_annual", "school_type", "domicile", "documents", "religion", "parent_construction_worker", "parent_ex_serviceman"];
@@ -19,12 +20,6 @@ const empty = (v: any) => v === undefined || v === null || v === "" || (Array.is
 const nice = (d: string) => { const x = d.replace(/_/g, " "); return x.charAt(0).toUpperCase() + x.slice(1); };
 const minor = (a: AppRecord) => Number(a.prefill.age) < 18;
 
-function parentDraft(lang: string, name: string, scholarship: string, amount: string) {
-  if (lang === "mr") return `आई-बाबा, मी ${name || ""}. ${scholarship} साठी मी पात्र आहे असे Raah च्या तपासणीत दिसते. लाभाची माहिती: ${amount}. अर्जाची माहिती आणि कागदपत्रे तपासत आहे. मी अर्ज करू का?`;
-  if (lang === "hi") return `माँ-पापा, ${scholarship} के लिए Raah की जाँच में मैं पात्र दिख रहा/रही हूँ। लाभ की जानकारी: ${amount}। मैं आवेदन और दस्तावेज़ देख रहा/रही हूँ। क्या मैं आवेदन करूँ?`;
-  return `Hi, Raah's eligibility check says I may qualify for ${scholarship}. The listed benefit is ${amount}. I'm reviewing the application and documents. May I apply?`;
-}
-
 export default function ApplyPage() {
   const { data, profile, auth, authReady, authFetch, lang, t: tt } = useApp();
   const t = (k: string, v?: Record<string, string | number>) => tt(`ap_${k}`, v);
@@ -39,7 +34,7 @@ export default function ApplyPage() {
   const [notice, setNotice] = useState("");
   const [deepLinked, setDeepLinked] = useState(false);
   const eligibilityRows = useMemo(() => data && profile ? eligibility(data, profile) : [], [data, profile]);
-  const date = (ts: number) => new Date(ts * 1000).toLocaleDateString(lang === "en" ? "en-IN" : lang, { day: "numeric", month: "short" });
+  const date = (ts: number) => new Date(ts * 1000).toLocaleDateString(languageLocale(lang), { day: "numeric", month: "short" });
   const scheme = (id: string) => data?.scholarships?.find((s: any) => s.id === id);
 
   const load = useCallback(async () => {
@@ -54,7 +49,11 @@ export default function ApplyPage() {
   const fail = async (r: Response) => {
     const j = await r.json().catch(() => ({}));
     const d = j.detail;
-    setErr(d === "Set a family PIN in Parent mode before sharing a message" ? t("set_pin") : typeof d === "string" ? d : t("save_error"));
+    const key = d === "Set a family PIN in Parent mode before sharing a message" ? "set_pin"
+      : d === "A parent must agree before this is submitted" ? "need_parent"
+      : d === "Review and approve the application first" || d === "Approve the application before asking a parent" ? "need_approve"
+      : d && typeof d === "object" && "missing" in d ? "fill_in" : "save_error";
+    setErr(t(key));
   };
 
   async function start(id: string) {
@@ -104,7 +103,9 @@ export default function ApplyPage() {
 
   function openParent(a: AppRecord, l = lang) {
     setMsgLang(l);
-    setMessage(a.parent_message && l === lang ? a.parent_message : parentDraft(l, a.prefill.name || auth?.user?.name || "", a.title, scheme(a.scheme_id)?.amount_text || ""));
+    setMessage(a.parent_message && l === lang ? a.parent_message : translateForLanguage(l, "ap_parent_draft", {
+      name: a.prefill.name || auth?.user?.name || "", scholarship: a.title, amount: scheme(a.scheme_id)?.amount_text || "",
+    }));
   }
 
   async function approve() {
@@ -240,9 +241,9 @@ export default function ApplyPage() {
           <h2 className="px-1 text-lg font-bold">{t("parent_title")}</h2>
           <Card className="space-y-3">
             <div><p className="mb-1 text-xs text-[var(--muted)]">{t("msg_lang")}</p>
-              <div className="flex gap-2">{(["mr", "hi", "en"] as const).map((l) => (
-                <button key={l} aria-pressed={msgLang === l} onClick={() => openParent(active, l)}
-                  className={`rounded-full px-3 py-1 text-sm ${msgLang === l ? "bg-[var(--brand)] text-white" : "bg-[var(--bg)]"}`}>{tt(`langname_${{ mr: "Marathi", hi: "Hindi", en: "English" }[l]}`)}</button>))}</div></div>
+              <div className="flex flex-wrap gap-2">{LANGS.map((language) => (
+                <button key={language.code} aria-pressed={msgLang === language.code} onClick={() => openParent(active, language.code)}
+                  className={`rounded-full px-3 py-1 text-sm ${msgLang === language.code ? "bg-[var(--brand)] text-white" : "bg-[var(--bg)]"}`}>{language.label}</button>))}</div></div>
             <p className="text-xs text-[var(--muted)]">{t("preview")}</p>
             {editing ? <textarea value={message} onChange={(e) => setMessage(e.target.value)} rows={5} maxLength={1000} aria-label={t("message")} className="w-full rounded-lg bg-[var(--bg)] p-3 text-sm" />
               : <p className="whitespace-pre-wrap rounded-lg bg-[var(--bg)] p-3 text-sm leading-relaxed">{message}</p>}

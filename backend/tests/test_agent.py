@@ -176,3 +176,14 @@ def test_a_figure_from_no_tool_gets_one_retry_then_a_grounded_answer(monkeypatch
     assert ans["mode"].startswith("agent") and "99,99,999" not in ans["answer"]
     assert any("no tool returned" in a for a in asked)
     assert any("asking again" in t for t in ans["graph"]["trace"]) and ans["graph"]["framework"] == "langgraph"
+
+
+def test_langgraph_ask_uses_selected_language(monkeypatch):
+    fake, seen = scripted(["Here is the answer in Tamil."])
+    monkeypatch.setattr(llm, "chat_tools", fake)
+    r = c.post("/api/agent/ask", json={"question": "What can I study?", "lang": "ta", "profile": PROFILE})
+    assert r.status_code == 200
+    ev = events(r)
+    assert not [e for e in ev if e["type"] == "error"], ev
+    assert "Answer entirely in Tamil" in seen[0]["messages"][0]["content"]
+    assert next(e for e in ev if e["type"] == "answer")["answer"] == "Here is the answer in Tamil."

@@ -1,6 +1,6 @@
 // Raah service worker: app shell + dataset cached for offline use.
 // bump the version whenever PAGES changes, so phones drop the old cache and fetch the new list
-const CACHE = "raah-v5";
+const CACHE = "raah-v6";
 const PAGES = ["/", "/start/", "/discover/", "/discover/basics/", "/careers/", "/plan/", "/roadmap/", "/compare/", "/eligibility/",
   "/learn/", "/opportunity/", "/colleges/", "/exams/", "/ask/", "/activity/", "/notifications/", "/tracker/", "/progress/",
   "/financials/", "/parent/", "/profile/", "/teacher/", "/money/", "/data/", "/login/"];

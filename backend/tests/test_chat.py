@@ -41,6 +41,23 @@ def test_turn_falls_back_when_no_model(monkeypatch):
     assert r["fallback"] is True
 
 
+def test_new_languages_reach_chat_prompt_and_keep_model_reply(monkeypatch):
+    from raah.languages import language_name
+
+    seen = []
+
+    def spy(messages, **kwargs):
+        seen.append(messages[0]["content"])
+        return json.dumps({"reply": "ঠিক আছে", "profile": {}, "done": False}), "test"
+
+    monkeypatch.setattr(llm, "chat", spy)
+    for code in ("bn", "ta", "te", "gu", "kn", "ml", "pa", "or", "as"):
+        response = c.post("/api/chat/turn", json={"messages": [], "lang": code})
+        assert response.status_code == 200
+        assert response.json()["reply"] == "ঠিক আছে"
+        assert f"Speak {language_name(code)}" in seen[-1]
+
+
 def test_turn_handles_json_wrapped_in_prose(monkeypatch):
     monkeypatch.setattr(llm, "chat", fake('Sure! ```json\n{"reply": "How old are you?", "profile": {"name": "Rohan"}, "done": false}\n```'))
     r = c.post("/api/chat/turn", json={"messages": [{"role": "user", "content": "I am Rohan"}]}).json()

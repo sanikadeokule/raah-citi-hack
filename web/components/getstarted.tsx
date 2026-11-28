@@ -16,9 +16,9 @@ export function CentresCard({ centres }: { centres: any[] }) {
       <ul className="space-y-2">
         {centres.map((c: any, i: number) => (
           <li key={c.id} className="rounded-xl bg-[var(--bg)] p-3 text-sm">
-            <div className="flex justify-between gap-2"><b><span className="mr-1 inline-grid h-5 w-5 place-items-center rounded-full bg-[var(--brand)] text-xs text-white">{i + 1}</span>{c.name}</b><span className="whitespace-nowrap">{c.distance_km ?? "—"} km</span></div>
+            <div className="flex justify-between gap-2"><b><span className="mr-1 inline-grid h-5 w-5 place-items-center rounded-full bg-[var(--brand)] text-xs text-white">{i + 1}</span>{c.name}</b><span className="whitespace-nowrap">{c.distance_km ?? "—"} {t("distance_unit")}</span></div>
             <div className="text-xs text-[var(--muted)]">{c.address} · {c.type}{c.approximate && <> · <Badge tone="amber">{t("approx_distance")}</Badge></>}</div>
-            <div className="text-xs text-[var(--muted)]">Fees: {c.fees_text}</div>
+            <div className="text-xs text-[var(--muted)]">{t("fees_label")} {c.fees_text}</div>
             <Source url={c.source} date={c.last_checked} />
           </li>
         ))}

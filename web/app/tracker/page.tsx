@@ -10,41 +10,6 @@ import { Badge, Card, Shell } from "@/components/ui";
 import { ProBadge, ProGate, useText } from "@/components/pro";
 import { API, useApp } from "@/lib/store";
 
-const T: Record<string, Record<string, string>> = {
-  en: {
-    how: "How it works", how1: "A card is one application you are tracking: a college or a scholarship.", how2: "Tap \"Seed from roadmap\" to add the scholarships you qualify for and colleges near you, or \"+ Add card\" to add your own.", how3: "Move a card with the buttons as you go (Researching, Applied, Docs Submitted, Waiting, Result), or drag it to another section. Tap the pencil to add notes and a deadline: Raah will remind you before the date.",
-    title: "Application tracker", intro: "Track your college and scholarship applications.",
-    researching: "Researching", applied: "Applied", docs_submitted: "Docs Submitted", waiting: "Waiting", result: "Result",
-    add: "Add card", add_title: "Title", add_kind: "Type", college: "College", scholarship: "Scholarship",
-    save: "Save", cancel: "Cancel", notes: "Notes", deadline: "Deadline", move: "Move →",
-    move_back: "← Back", delete: "Delete", empty: "No cards. Add one above, or tap seed to add from your roadmap.",
-    seed: "Seed from roadmap", seeding: "Seeding…", seeded: "{n} cards added from your roadmap.", seed_none: "Nothing to add yet: no scholarship matches your profile and we have no location saved for colleges. Complete My details, or add a card yourself.",
-    loading: "Loading…", error: "Could not load cards.",
-    no_roadmap: "Set a career goal in the app first so we can seed your tracker.",
-  },
-  hi: {
-    how: "कैसे इस्तेमाल करें", how1: "एक कार्ड = एक आवेदन जिसे आप ट्रैक कर रहे हैं: कोई कॉलेज या छात्रवृत्ति।", how2: "\"रोडमैप से सीड करें\" दबाएँ तो आपकी पात्र छात्रवृत्तियाँ और पास के कॉलेज जुड़ जाएँगे, या \"+ कार्ड जोड़ें\" से अपना जोड़ें।", how3: "आगे बढ़ने पर बटन से कार्ड को अगले चरण में ले जाएँ (रिसर्च, आवेदन किया, डॉक्स जमा, प्रतीक्षा, परिणाम), या खींचकर दूसरे हिस्से में डालें। पेंसिल दबाकर नोट्स और अंतिम तारीख जोड़ें: तारीख से पहले राह याद दिलाएगा।",
-    title: "आवेदन ट्रैकर", intro: "कॉलेज और छात्रवृत्ति आवेदनों को ट्रैक करें।",
-    researching: "रिसर्च", applied: "आवेदन किया", docs_submitted: "डॉक्स जमा", waiting: "प्रतीक्षा", result: "परिणाम",
-    add: "कार्ड जोड़ें", add_title: "शीर्षक", add_kind: "प्रकार", college: "कॉलेज", scholarship: "छात्रवृत्ति",
-    save: "सेव", cancel: "रद्द करें", notes: "नोट्स", deadline: "अंतिम तिथि", move: "आगे →",
-    move_back: "← पीछे", delete: "हटाएँ", empty: "कोई कार्ड नहीं। ऊपर से जोड़ें या रोडमैप से सीड करें।",
-    seed: "रोडमैप से सीड करें", seeding: "सीड हो रहा है…", seeded: "{n} कार्ड आपके रोडमैप से जोड़े गए।", seed_none: "अभी जोड़ने के लिए कुछ नहीं: कोई छात्रवृत्ति आपकी प्रोफ़ाइल से नहीं मिली और कॉलेज के लिए स्थान सेव नहीं है। मेरा विवरण पूरा करें या खुद कार्ड जोड़ें।",
-    loading: "लोड हो रहा है…", error: "कार्ड लोड नहीं हुए।",
-    no_roadmap: "पहले ऐप में करियर लक्ष्य चुनें ताकि ट्रैकर सीड हो सके।",
-  },
-  mr: {
-    how: "कसे वापरायचे", how1: "एक कार्ड = तुम्ही ट्रॅक करत असलेला एक अर्ज: एखादे कॉलेज किंवा शिष्यवृत्ती.", how2: "\"रोडमॅपमधून सीड करा\" दाबा म्हणजे तुम्हाला पात्र शिष्यवृत्त्या आणि जवळची कॉलेजे जोडली जातील, किंवा \"+ कार्ड जोडा\" ने स्वतःचे जोडा.", how3: "पुढे जाताना बटणाने कार्ड पुढच्या टप्प्यात न्या (संशोधन, अर्ज केला, कागदपत्रे जमा, प्रतीक्षा, निकाल), किंवा ओढून दुसऱ्या भागात टाका. पेन्सिल दाबून नोट्स आणि अंतिम तारीख जोडा: तारखेआधी राह आठवण करून देईल.",
-    title: "अर्ज ट्रॅकर", intro: "कॉलेज आणि शिष्यवृत्ती अर्जांचा मागोवा ठेवा.",
-    researching: "संशोधन", applied: "अर्ज केला", docs_submitted: "कागदपत्रे जमा", waiting: "प्रतीक्षा", result: "निकाल",
-    add: "कार्ड जोडा", add_title: "शीर्षक", add_kind: "प्रकार", college: "कॉलेज", scholarship: "शिष्यवृत्ती",
-    save: "सेव करा", cancel: "रद्द करा", notes: "नोट्स", deadline: "अंतिम तारीख", move: "पुढे →",
-    move_back: "← मागे", delete: "काढा", empty: "कोणतेही कार्ड नाही. वरून जोडा किंवा रोडमॅपमधून सीड करा.",
-    seed: "रोडमॅपमधून सीड करा", seeding: "सीड होत आहे…", seeded: "{n} कार्डे तुमच्या रोडमॅपमधून जोडली.", seed_none: "जोडण्यासाठी अजून काही नाही: कोणतीही शिष्यवृत्ती तुमच्या प्रोफाइलशी जुळली नाही आणि महाविद्यालयांसाठी ठिकाण सेव्ह नाही. माझा तपशील पूर्ण करा किंवा स्वतः कार्ड जोडा.",
-    loading: "लोड होत आहे…", error: "कार्डे लोड होऊ शकली नाहीत.",
-    no_roadmap: "प्रथम ॲपमध्ये करिअर ध्येय निवडा म्हणजे ट्रॅकर सीड होईल.",
-  },
-};
 
 type Col = "researching" | "applied" | "docs_submitted" | "waiting" | "result";
 const COLS: Col[] = ["researching", "applied", "docs_submitted", "waiting", "result"];
@@ -55,7 +20,8 @@ interface AppCard {
 }
 
 function KindBadge({ kind }: { kind: string }) {
-  return <Badge tone={kind === "college" ? "blue" : "green"}>{kind === "college" ? "" : ""} {kind}</Badge>;
+  const t = useText("tracker_");
+  return <Badge tone={kind === "college" ? "blue" : "green"}> {kind === "college" || kind === "scholarship" ? t(`kind_${kind}`) : kind}</Badge>;
 }
 
 function CardItem({ card, colIndex, totalCols, onMove, onEdit }: {
@@ -63,7 +29,7 @@ function CardItem({ card, colIndex, totalCols, onMove, onEdit }: {
   onMove: (id: number, dir: 1 | -1) => void;
   onEdit: (card: AppCard) => void;
 }) {
-  const t = useText(T);
+  const t = useText("tracker_");
   return (
     <div draggable onDragStart={(e) => e.dataTransfer.setData("card_id", String(card.id))}
       className="rounded-xl bg-[var(--card)] p-3 shadow-sm ring-1 ring-[var(--border)] cursor-grab active:cursor-grabbing active:opacity-70">
@@ -78,7 +44,7 @@ function CardItem({ card, colIndex, totalCols, onMove, onEdit }: {
           className="rounded-lg bg-[var(--bg)] px-2 py-1 text-[11px]">{t("move_back")}</button>}
         {colIndex < totalCols - 1 && <button onClick={() => onMove(card.id, 1)}
           className="rounded-lg bg-[var(--brand)] px-2 py-1 text-[11px] text-white">{t("move")}</button>}
-        <button onClick={() => onEdit(card)} aria-label="Edit" className="ml-auto rounded-lg bg-[var(--bg)] px-2 py-1 text-[11px]"><Icon name="pencil" size={14} /></button>
+        <button onClick={() => onEdit(card)} aria-label={t("edit")} className="ml-auto rounded-lg bg-[var(--bg)] px-2 py-1 text-[11px]"><Icon name="pencil" size={14} /></button>
       </div>
     </div>
   );
@@ -87,7 +53,7 @@ function CardItem({ card, colIndex, totalCols, onMove, onEdit }: {
 function EditModal({ card, onClose, onSave, onDelete }: {
   card: AppCard; onClose: () => void; onSave: (patch: Partial<AppCard>) => void; onDelete: () => void;
 }) {
-  const t = useText(T);
+  const t = useText("tracker_");
   const [notes, setNotes] = useState(card.notes);
   const [deadline, setDeadline] = useState(card.deadline ?? "");
   return (
@@ -117,7 +83,7 @@ function EditModal({ card, onClose, onSave, onDelete }: {
 }
 
 function AddForm({ onAdd }: { onAdd: (kind: string, title: string) => void }) {
-  const t = useText(T);
+  const t = useText("tracker_");
   const [open, setOpen] = useState(false);
   const [kind, setKind] = useState("scholarship");
   const [title, setTitle] = useState("");
@@ -143,7 +109,7 @@ function AddForm({ onAdd }: { onAdd: (kind: string, title: string) => void }) {
 
 function Board() {
   const { authFetch } = useApp();
-  const t = useText(T);
+  const t = useText("tracker_");
   const [cards, setCards] = useState<AppCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
@@ -264,7 +230,7 @@ function Board() {
 }
 
 export default function TrackerPage() {
-  const t = useText(T);
+  const t = useText("tracker_");
   return (
     <Shell title={t("title")}>
       <ProGate><Board /></ProGate>

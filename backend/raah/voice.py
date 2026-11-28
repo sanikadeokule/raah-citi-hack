@@ -1,4 +1,4 @@
-"""Voice: server-side text-to-speech and speech-to-text for Marathi, Hindi and English.
+"""Voice: provider-aware speech for the selectable languages.
 
 Providers are tried in the order given by VOICE_PROVIDERS (default "bhashini,sarvam");
 a provider without keys is skipped, and one that fails is skipped for a short while so
@@ -27,13 +27,22 @@ import httpx
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
+from .languages import REGISTERED_LANGUAGES, is_selectable_language
+
 router = APIRouter(prefix="/api/voice", tags=["voice"])
 
 CONFIG_URL = "https://meity-auth.ulcacontrib.org/ulca/apis/v0/model/getModelsPipeline"
 SARVAM_TTS_URL = "https://api.sarvam.ai/text-to-speech"
 SARVAM_ASR_URL = "https://api.sarvam.ai/speech-to-text"
 SARVAM_MAX_CHARS = 450  # Sarvam limits text per request, so long lessons are spoken in parts and joined
-LOCALE = {"mr": "mr-IN", "hi": "hi-IN", "en": "en-IN"}
+LOCALE = {code: item["locale"] for code, item in REGISTERED_LANGUAGES.items()}
+# Bulbul v3 accepts 11 languages, uses od-IN for Odia, and does not support Assamese.
+SARVAM_TTS_LOCALE = {code: ("od-IN" if code == "or" else locale)
+                     for code, locale in LOCALE.items() if code != "as"}
+SARVAM_SPEAKERS = {"bn": ("roopa", "rehan"), "ta": ("ishita", "ratan"),
+                   "te": ("neha", "ratan"), "gu": ("priya", "ratan"),
+                   "kn": ("neha", "ratan"), "ml": ("pooja", "shubh"),
+                   "pa": ("roopa", "mani"), "or": ("ritu", "shubh")}
 COOLDOWN_S = 120
 
 _cache: dict[str, tuple[float, dict]] = {}
@@ -69,6 +78,11 @@ def _try_order() -> list[str]:
     now = time.time()
     names = configured()
     return [p for p in names if now - _failed.get(p, 0) > COOLDOWN_S] + [p for p in names if now - _failed.get(p, 0) <= COOLDOWN_S]
+
+
+def _supports(name: str, task: str, lang: str) -> bool:
+    # BHASHINI availability is resolved by its configured pipeline for each language and task.
+    return lang in LOCALE if name == "bhashini" else (lang in SARVAM_TTS_LOCALE if task == "tts" else lang in LOCALE)
 
 
 # ------------------------------------------------------------------ BHASHINI (ULCA pipeline)
@@ -154,12 +168,13 @@ def _join_wavs(wavs: list[bytes]) -> bytes:
 
 
 def _sarvam_tts(text: str, lang: str, gender: str) -> bytes:
+    defaults = SARVAM_SPEAKERS.get(lang, ("anushka", "abhilash"))
     speaker = os.environ.get("SARVAM_TTS_SPEAKER" if gender != "male" else "SARVAM_TTS_SPEAKER_MALE",
-                             "anushka" if gender != "male" else "abhilash")
+                             defaults[0] if gender != "male" else defaults[1])
     wavs = []
     for part in _chunks(text):
         r = httpx.post(SARVAM_TTS_URL, timeout=30, headers=_sarvam_headers(), json={
-            "text": part, "target_language_code": LOCALE.get(lang, "en-IN"), "speaker": speaker,
+            "text": part, "target_language_code": SARVAM_TTS_LOCALE[lang], "speaker": speaker,
             "model": os.environ.get("SARVAM_TTS_MODEL", "bulbul:v3"), "pace": 0.95})
         if r.status_code != 200:
             raise VoiceError(f"Sarvam TTS returned {r.status_code}")
@@ -180,7 +195,7 @@ def _sarvam_asr(audio: bytes, lang: str, fmt: str, sample_rate: int) -> dict:
 
 def _run(task: str, *args):
     """Try each configured provider in turn; returns (result, provider name)."""
-    names = _try_order()
+    names = [name for name in _try_order() if _supports(name, task, args[1])]
     if not names:
         raise HTTPException(503, "No speech service configured (BHASHINI or Sarvam keys); use the phone's voice")
     errors = []
@@ -210,14 +225,19 @@ class ASRIn(BaseModel):
 
 
 @router.get("/status")
-def status():
+def status(lang: str | None = None):
     names = configured()
+    if lang is not None:
+        names = [name for name in names if _supports(name, "tts", lang) or _supports(name, "asr", lang)]
     return {"bhashini": _has_keys("bhashini"), "sarvam": _has_keys("sarvam"), "providers": names,
-            "tts": bool(names), "asr": bool(names)}
+            "tts": any(_supports(name, "tts", lang) for name in names) if lang else bool(names),
+            "asr": any(_supports(name, "asr", lang) for name in names) if lang else bool(names)}
 
 
 @router.post("/tts")
 def tts(body: TTSIn):
+    if not is_selectable_language(body.lang) or body.lang not in LOCALE:
+        raise HTTPException(422, "unsupported speech language")
     path = _tts_path(body.text, body.lang, body.gender)
     if path.exists():  # served even when keys are gone or the service is down
         return {"audio_b64": base64.b64encode(path.read_bytes()).decode(), "mime": "audio/wav", "cached": True}
@@ -229,6 +249,8 @@ def tts(body: TTSIn):
 
 @router.post("/asr")
 def asr(body: ASRIn):
+    if not is_selectable_language(body.lang) or body.lang not in LOCALE:
+        raise HTTPException(422, "unsupported speech language")
     try:
         audio = base64.b64decode(body.audio_b64, validate=True)
     except Exception:
@@ -242,9 +264,10 @@ def asr(body: ASRIn):
         confidence = result.get("language_probability")
     else:  # BHASHINI returns text only; keep its explicitly selected language.
         text = result
-        language_code = LOCALE.get(body.lang)
+        language_code = LOCALE[body.lang]
         confidence = None
-    detected_lang = next((short for short, code in (("mr", "mr-IN"), ("hi", "hi-IN"), ("en", "en-IN"))
-                          if language_code and language_code.lower().startswith(short)), body.lang)
+    detected_lang = next((short for short, code in LOCALE.items()
+                          if language_code and (language_code.lower() == code.lower()
+                                                or short == "or" and language_code.lower() == "od-in")), body.lang)
     return {"text": text.strip(), "provider": provider, "detected_lang": detected_lang,
             "language_code": language_code, "language_probability": confidence}

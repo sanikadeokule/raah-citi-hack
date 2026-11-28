@@ -13,7 +13,7 @@ import { BUILD_ROADMAP_HREF } from "@/lib/roadmap";
 import { ExamsList } from "@/components/exams";
 import { Tabs } from "@/components/tabs";
 import { MODULE_COLOR, ModuleHero } from "@/components/modulehero";
-import { CHANCE_TEXT, chanceFor } from "@/lib/chance";
+import { chanceFor } from "@/lib/chance";
 import { centreTypeLabel } from "@/lib/labels";
 
 const PAGE_SIZE = 5;
@@ -95,7 +95,6 @@ function CentreDetail({ c, t }: { c: any; t: (k: string) => string }) {
 function CentreCard({ c, t, profile, lang, selected, onSelect }: { c: any; t: (k: string) => string; profile: any; lang: string; selected?: boolean; onSelect?: () => void }) {
   const [open, setOpen] = useState(false);
   const chance = chanceFor(c, profile);
-  const ct = CHANCE_TEXT[lang] ?? CHANCE_TEXT.en;
   const color = typeColor(c.type);
   const fees = cleanFees(c.fees_text);
   const distLabel = c.distance_km != null
@@ -113,14 +112,14 @@ function CentreCard({ c, t, profile, lang, selected, onSelect }: { c: any; t: (k
         <div className="min-w-0 flex-1">
           <p className="font-bold text-sm leading-snug">{c.name}</p>
           <div className="mt-1 flex flex-wrap items-center gap-1.5">
-            <Badge tone={CHANCE_TONE[chance.level]}>{ct[chance.level]}</Badge>
-            {chance.farAway && <span className="text-[10px] text-[var(--muted)]">{ct.far}</span>}
-            {chance.needsMarks && <span className="text-[10px] text-[var(--muted)]">{ct.no_marks}</span>}
+            <Badge tone={CHANCE_TONE[chance.level]}>{t(`chance_${chance.level}`)}</Badge>
+            {chance.farAway && <span className="text-[10px] text-[var(--muted)]">{t("chance_far")}</span>}
+            {chance.needsMarks && <span className="text-[10px] text-[var(--muted)]">{t("chance_no_marks")}</span>}
           </div>
           <div className="mt-1 flex flex-wrap items-center gap-1.5">
             {c.type && (
               <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${color.bg} ${color.text}`}>
-                {centreTypeLabel(c.type, lang)}
+                {centreTypeLabel(c.type, t)}
               </span>
             )}
             {(c.taluka || c.district) && (
@@ -230,7 +229,7 @@ export default function CollegesPage() {
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h2 className="font-bold">{t("colleges_centres")}</h2>
               <div className="flex flex-wrap gap-1.5">
-                {([["all", t("colleges_filter_all"), allCentres.length], ["safe", CHANCE_TEXT[lang]?.safe ?? CHANCE_TEXT.en.safe, chanceCount("safe")], ["good", CHANCE_TEXT[lang]?.good ?? CHANCE_TEXT.en.good, chanceCount("good")], ["reach", CHANCE_TEXT[lang]?.reach ?? CHANCE_TEXT.en.reach, chanceCount("reach")]] as const).map(([key, label, n]) => (
+                {([["all", t("colleges_filter_all"), allCentres.length], ["safe", t("chance_safe"), chanceCount("safe")], ["good", t("chance_good"), chanceCount("good")], ["reach", t("chance_reach"), chanceCount("reach")]] as const).map(([key, label, n]) => (
                   <button key={key} onClick={() => { setChanceFilter(key); setCentrePage(0); setSelectedId(null); }}
                     className={`rounded-full px-3 py-1.5 text-xs font-semibold ring-1 ${chanceFilter === key ? "bg-[var(--brand)] text-white ring-[var(--brand)]" : "bg-[var(--bg)] text-[var(--muted)] ring-black/10"}`}>
                     {label}{key !== "all" ? ` (${n})` : ""}
@@ -238,7 +237,7 @@ export default function CollegesPage() {
                 ))}
               </div>
             </div>
-            {loading && <p className="mt-3 text-sm text-[var(--muted)] animate-pulse">Loading…</p>}
+            {loading && <p className="mt-3 text-sm text-[var(--muted)] animate-pulse">{t("loading")}</p>}
             {!loading && centres.length === 0 && (
               <p className="mt-3 text-sm text-[var(--muted)]">{t("colleges_no_centres")}</p>
             )}
@@ -256,7 +255,7 @@ export default function CollegesPage() {
             </ul>
             {selected && (
               <div className="hidden rounded-2xl bg-[var(--bg)] p-4 ring-1 ring-black/8 xl:block xl:sticky xl:top-32">
-                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">{centreTypeLabel(selected.type, lang) || t("colleges_centres")}</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">{centreTypeLabel(selected.type, t) || t("colleges_centres")}</p>
                 <p className="mt-0.5 text-lg font-bold leading-snug">{selected.name}</p>
                 <div className="mt-2"><CentreDetail c={selected} t={t} /></div>
               </div>
@@ -287,7 +286,7 @@ export default function CollegesPage() {
             <Card>
               <h2 className="mb-3 font-bold">{t("colleges_online")}</h2>
               {loading && courses.length === 0 && (
-                <p className="text-sm text-[var(--muted)] animate-pulse">Loading…</p>
+                <p className="text-sm text-[var(--muted)] animate-pulse">{t("loading")}</p>
               )}
               <ul className="space-y-3 lg:grid lg:grid-cols-2 lg:items-start lg:gap-3 lg:space-y-0">
                 {courses.map((c: any) => (

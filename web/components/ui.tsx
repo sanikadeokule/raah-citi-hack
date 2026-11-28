@@ -49,22 +49,22 @@ export function Shell({ title, back = "/", role = "any", publicPage = false, fit
   const withAside = isStudent && !onHome && !!ready;
   const onRoadmap = (path.endsWith("/") ? path : `${path}/`) === ROADMAP_HREF;
   return (
-    <div className={`mx-auto max-w-md bg-[var(--bg)] lg:max-w-none ${fit ? "flex min-h-[100dvh] flex-col" : "min-h-screen pb-24"}`}>
+    <div className={`mx-auto max-w-md bg-(--bg) lg:max-w-none ${fit ? "flex min-h-dvh flex-col" : "min-h-screen pb-24"}`}>
       <div className="sticky top-0 z-20 shadow">
-      <header className="bg-[var(--header-bg)] px-4 py-3 text-white">
+      <header className="bg-(--header-bg) px-4 py-3 text-white">
       <div className="mx-auto flex items-center gap-2 lg:max-w-none lg:px-4">
         {back !== null && (
           <Link href={back} aria-label={t("back")} className="rounded-full px-2 text-2xl leading-none">‹</Link>
         )}
         <h1 className="flex flex-1 items-center gap-2 truncate text-lg font-semibold">
-          <span aria-hidden className="h-2 w-2 shrink-0 rounded-full bg-[var(--saffron)]" />
+          <span aria-hidden className="h-2 w-2 shrink-0 rounded-full bg-(--saffron)" />
           <span className="truncate">{title ?? t("app_name")}</span>
         </h1>
         {/* a student's own roadmap, one tap from every screen once they have built it */}
         {auth?.user.role === "student" && profile?.roadmap_at && (
           <Link href={ROADMAP_HREF} title={t("my_roadmap")} aria-label={t("my_roadmap")}
             aria-current={onRoadmap ? "page" : undefined}
-            className={`grid h-8 w-8 place-items-center rounded-full text-lg active:scale-90 ${onRoadmap ? "bg-white/30 ring-2 ring-[var(--saffron)]" : "bg-white/15"}`}>
+            className={`grid h-8 w-8 place-items-center rounded-full text-lg active:scale-90 ${onRoadmap ? "bg-white/30 ring-2 ring-(--saffron)" : "bg-white/15"}`}>
             <Icon name="map" size={18} />
           </Link>
         )}
@@ -73,9 +73,9 @@ export function Shell({ title, back = "/", role = "any", publicPage = false, fit
           <Link href="/notifications/" title={t("alerts")} aria-label={t("alerts")}
             className="grid h-8 w-8 place-items-center rounded-full bg-white/15 active:scale-90"><Icon name="bell" size={18} /></Link>
         )}
-        <select aria-label="language" value={lang} onChange={(e) => setLang(e.target.value)}
-          className="h-8 rounded-full bg-white/15 px-2 text-sm font-semibold">
-          {LANGS.map((l) => <option key={l.code} value={l.code} title={l.label} className="text-black">{l.short}</option>)}
+        <select aria-label={t("language_select")} value={lang} onChange={(e) => setLang(e.target.value)}
+          className="h-8 max-w-24 rounded-full bg-white/15 px-2 text-sm font-semibold">
+          {LANGS.map((l) => <option key={l.code} value={l.code} title={l.label} className="text-black">{l.label}</option>)}
         </select>
         <ProfileMenu />
       </div>
@@ -85,19 +85,19 @@ export function Shell({ title, back = "/", role = "any", publicPage = false, fit
       <div className={`flex min-w-0 flex-1 flex-col ${isStudent ? "lg:flex-row" : ""}`}>
       {isStudent && (
         <nav aria-label={t("app_name")} style={{ width: railOpen ? "15rem" : "4.75rem" }}
-          className="sticky top-[59px] hidden h-[calc(100dvh-59px)] shrink-0 flex-col gap-1 self-start overflow-y-auto border-r border-black/10 bg-[var(--card)] p-3 transition-[width] lg:flex">
+          className="sticky top-[59px] hidden h-[calc(100dvh-59px)] shrink-0 flex-col gap-1 self-start overflow-y-auto border-r border-black/10 bg-(--card) p-3 transition-[width] lg:flex">
           {DESK_NAV.map((n) => {
             const here = n.href === "/" ? path === "/" : path.startsWith(n.href.replace(/\/$/, ""));
             return (
               <Link key={n.href} href={n.href} aria-current={here ? "page" : undefined} title={railOpen ? undefined : t(n.key)} aria-label={railOpen ? undefined : t(n.key)}
-                className={`flex items-center gap-3 rounded-xl py-2.5 text-base font-semibold ${railOpen ? "px-3" : "justify-center px-0"} ${here ? "bg-[var(--brand)] text-white" : "text-[var(--brand-ink)] hover:bg-[var(--brand-soft)]"}`}>
+                className={`flex items-center gap-3 rounded-xl py-2.5 text-base font-semibold ${railOpen ? "px-3" : "justify-center px-0"} ${here ? "bg-(--brand) text-white" : "text-(--brand-ink) hover:bg-(--brand-soft)"}`}>
                 <Icon name={n.icon} size={22} />{railOpen && <span className="truncate">{t(n.key)}</span>}
               </Link>
             );
           })}
           <div className="flex-1" />
           <button type="button" onClick={() => setRailOpen(!railOpen)} aria-expanded={railOpen} aria-label={t(railOpen ? "nav_collapse" : "nav_expand")} title={t(railOpen ? "nav_collapse" : "nav_expand")}
-            className="flex items-center justify-center gap-2 rounded-xl border border-black/15 py-2 text-sm font-semibold text-[var(--brand-ink)] hover:bg-[var(--brand-soft)]">
+            className="flex items-center justify-center gap-2 rounded-xl border border-black/15 py-2 text-sm font-semibold text-(--brand-ink) hover:bg-(--brand-soft)">
             <span aria-hidden className="text-lg leading-none">{railOpen ? "‹" : "›"}</span>{railOpen && t("nav_collapse")}
           </button>
         </nav>
@@ -110,7 +110,7 @@ export function Shell({ title, back = "/", role = "any", publicPage = false, fit
           <Card>
             <p><Icon name="lock" size={16} className="mr-1 align-[-3px]" />{t("teacher_only")}</p>
             <button onClick={async () => { await signOut(); router.replace(`/login/?next=${encodeURIComponent(path)}&role=teacher`); }}
-              className="mt-3 w-full rounded-xl bg-[var(--brand)] py-3 font-semibold text-white">{t("sign_in_teacher")}</button>
+              className="mt-3 w-full rounded-xl bg-(--brand) py-3 font-semibold text-white">{t("sign_in_teacher")}</button>
           </Card>
         ) : data || publicPage ? children : <Loading />}
       </main>
@@ -126,11 +126,11 @@ export function Shell({ title, back = "/", role = "any", publicPage = false, fit
 }
 
 function Loading() {
-  return <div className="py-20 text-center text-[var(--muted)]">…</div>;
+  return <div className="py-20 text-center text-(--muted)">…</div>;
 }
 
 export function Card({ children, className = "" }: { children: React.ReactNode; className?: string }) {
-  return <section className={`rounded-2xl bg-[var(--card)] p-4 shadow-sm ring-1 ring-black/5 ${className}`}>{children}</section>;
+  return <section className={`rounded-2xl bg-(--card) p-4 shadow-sm ring-1 ring-black/5 ${className}`}>{children}</section>;
 }
 
 export function Badge({ tone = "gray", children }: { tone?: "green" | "amber" | "red" | "gray" | "blue"; children: React.ReactNode }) {
@@ -148,7 +148,7 @@ export function Source({ url, label, date }: { url?: string | null; label?: stri
   let host = "";
   try { host = first ? new URL(first).hostname.replace("www.", "") : ""; } catch { host = first; }
   return (
-    <span className="text-xs text-[var(--muted)]">
+    <span className="text-xs text-(--muted)">
       {t("source")}:{" "}
       {first ? <a href={first} target="_blank" rel="noreferrer" className="underline">{label || host}</a> : label}
       {date ? ` · ${date}` : ""}
@@ -239,7 +239,7 @@ export function SpeakButton({ text, label, cache, lang: speechLanguage }: { text
   return (
     <button onClick={play} aria-live="polite" title={state === "error" ? t("voice_err_play") : undefined}
       aria-label={label === "" ? (state === "on" ? t("stop") : state === "error" ? t("voice_retry") : t("play")) : undefined}
-      className={`inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-medium ${state === "error" ? "bg-amber-100 text-amber-900" : "bg-[var(--brand-soft)] text-[var(--brand-ink)]"}`}>
+      className={`inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-medium ${state === "error" ? "bg-amber-100 text-amber-900" : "bg-(--brand-soft) text-(--brand-ink)"}`}>
       {icon} {text_}
     </button>
   );
@@ -283,7 +283,7 @@ export function MicButton({ onText }: { onText: (s: string, detectedLang?: strin
     const problem = micProblem();
     if (problem === "insecure") return tell("insecure");
     const SR: any = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    const status = await voiceStatus();
+    const status = await voiceStatus(lang);
     if (status.asr && !problem && typeof MediaRecorder !== "undefined") {
       try {
         rec.current = await startRecording();
@@ -318,7 +318,7 @@ export function MicButton({ onText }: { onText: (s: string, detectedLang?: strin
 
   return (
     <button onClick={click} aria-label={state === "listening" ? t("voice_listening") : t("mic")} aria-pressed={state === "listening"}
-      className={`h-12 w-12 shrink-0 rounded-full text-xl text-white shadow ${state === "listening" ? "animate-pulse bg-rose-500" : state === "working" ? "bg-[var(--muted)]" : "bg-[var(--brand)]"}`}>
+      className={`h-12 w-12 shrink-0 rounded-full text-xl text-white shadow ${state === "listening" ? "animate-pulse bg-rose-500" : state === "working" ? "bg-(--muted)" : "bg-(--brand)"}`}>
       {state === "working" ? "…" : <Icon name={state === "listening" ? "stop" : "mic"} size={22} />}
     </button>
   );
@@ -326,10 +326,10 @@ export function MicButton({ onText }: { onText: (s: string, detectedLang?: strin
 
 export function Stat({ label, value, sub, tone }: { label: string; value: string; sub?: React.ReactNode; tone?: string }) {
   return (
-    <div className="rounded-xl bg-[var(--bg)] p-3">
-      <div className="text-xs text-[var(--muted)]">{label}</div>
+    <div className="rounded-xl bg-(--bg) p-3">
+      <div className="text-xs text-(--muted)">{label}</div>
       <div className={`text-xl font-bold ${tone ?? ""}`}>{value}</div>
-      {sub && <div className="mt-0.5 text-xs text-[var(--muted)]">{sub}</div>}
+      {sub && <div className="mt-0.5 text-xs text-(--muted)">{sub}</div>}
     </div>
   );
 }

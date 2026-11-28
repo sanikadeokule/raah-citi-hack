@@ -6,10 +6,10 @@ import { Pager, usePaged } from "@/components/pager";
 import { useApp } from "@/lib/store";
 import { becauseText, rankFor, studentGaps } from "@/lib/gaps";
 import { tagLabel } from "@/lib/questions";
+import { languageName } from "@/lib/languages";
 
 // Free online courses (Skill India, SWAYAM, DIKSHA) from the dataset. "For you" shows the few that fix the student's gaps for her
 // career (lib/gaps.ts), each with a "Because..." reason; "See all free courses" keeps the whole list one tap away.
-const LANGUAGE: Record<string, string> = { en: "english", hi: "hindi", mr: "marathi" };
 const SHOWN = 3;
 
 export function FreeCourses() {
@@ -19,7 +19,7 @@ export function FreeCourses() {
   const g = useMemo(() => studentGaps(data, profile), [data, profile]);
   const platforms: string[] = useMemo(() => [...new Set<string>((data?.courses ?? []).map((c: any) => c.platform))], [data]);
   // her language first among equally good fits
-  const picks = useMemo(() => rankFor<any>(data?.courses ?? [], g, (c) => (String(c.language).toLowerCase() === LANGUAGE[lang] ? 0.5 : 0)), [data, g, lang]);
+  const picks = useMemo(() => rankFor<any>(data?.courses ?? [], g, (c) => (String(c.language).toLowerCase() === languageName(lang).toLowerCase() ? 0.5 : 0)), [data, g, lang]);
   const reasonOf = new Map<string, any>(picks.map((p) => [p.item.id, p.reason]));
   const showAll = all || picks.length === 0;
   const list = useMemo(() => {

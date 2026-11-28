@@ -16,7 +16,7 @@ function CompareView() {
   const b = sp.get("b") || data.plans[1]?.id;
   const [opts, setOpts] = useState<PlanOptions>({});
   const rs = useMemo(() => (profile ? [a, b].filter((x) => data.plans.some((p: any) => p.id === x)).map((id) => computePlan(data, profile, id, opts)) : []), [data, profile, a, b, opts]);
-  if (rs.length < 2) return <Card>Add at least two rows in Plan_Inputs.</Card>;
+  if (rs.length < 2) return <Card>{t("compare_need_two_plans")}</Card>;
   const rows: [string, (r: any) => React.ReactNode][] = [
     [t("months_training"), (r) => `${r.plan.course_months}${r.plan.earn_months ? ` + ${r.plan.earn_months}` : ""}`],
     [t("total_cost"), (r) => inr(r.costs.total)],
@@ -92,7 +92,7 @@ function CompareView() {
               onChange={(e) => setOpts({ ...opts, scholarships: e.target.checked ? null : [] })} /></label>
           <label className="flex items-center justify-between rounded-lg px-1 py-1 xl:bg-[var(--bg)] xl:px-3 xl:py-2"><span>{t("stay_in_hostel")}</span>
             <input type="checkbox" className="h-6 w-6" checked={!!opts.hostel} onChange={(e) => setOpts({ ...opts, hostel: e.target.checked })} /></label>
-          <label className="block rounded-lg px-1 py-1 xl:bg-[var(--bg)] xl:px-3 xl:py-2"><div className="flex justify-between"><span>{t("commute_km")}</span><b>{opts.commute_km ?? "auto"}</b></div>
+          <label className="block rounded-lg px-1 py-1 xl:bg-[var(--bg)] xl:px-3 xl:py-2"><div className="flex justify-between"><span>{t("commute_km")}</span><b>{opts.commute_km ?? t("compare_auto")}</b></div>
             <input type="range" min={0} max={60} className="w-full" value={opts.commute_km ?? 0} onChange={(e) => setOpts({ ...opts, commute_km: Number(e.target.value) })} /></label>
         </div>
       </Card>

@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { Icon } from "@/components/icon";
 import { Shell } from "@/components/ui";
 import { useApp } from "@/lib/store";
+import { languageLocale } from "@/lib/languages";
 
 const ICON: Record<string, string> = { today: "compass", ask: "chat", learned: "check", chose: "map", checkin: "check" };
 
@@ -30,7 +31,7 @@ export default function Activity() {
     const v = { ...r.vars, ...(r.vars?.career ? { career: name(r.vars.career) } : {}) };
     return r.kind === "today" ? t("act_today", { step: t(r.text_key, v) }) : t(r.text_key, v);
   };
-  const when = (s: number) => new Date(s * 1000).toLocaleString(lang === "en" ? "en-IN" : lang === "hi" ? "hi-IN" : "mr-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
+  const when = (s: number) => new Date(s * 1000).toLocaleString(languageLocale(lang), { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
 
   return (
     <Shell>

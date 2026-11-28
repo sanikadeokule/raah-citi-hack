@@ -1,0 +1,17 @@
+{
+  "default": "en",
+  "languages": [
+    { "code": "en", "name": "English", "nativeName": "English", "locale": "en-IN", "selectable": true },
+    { "code": "hi", "name": "Hindi", "nativeName": "हिन्दी", "locale": "hi-IN", "selectable": true },
+    { "code": "mr", "name": "Marathi", "nativeName": "मराठी", "locale": "mr-IN", "selectable": true },
+    { "code": "bn", "name": "Bengali", "nativeName": "বাংলা", "locale": "bn-IN", "selectable": true },
+    { "code": "ta", "name": "Tamil", "nativeName": "தமிழ்", "locale": "ta-IN", "selectable": true },
+    { "code": "te", "name": "Telugu", "nativeName": "తెలుగు", "locale": "te-IN", "selectable": true },
+    { "code": "gu", "name": "Gujarati", "nativeName": "ગુજરાતી", "locale": "gu-IN", "selectable": true },
+    { "code": "kn", "name": "Kannada", "nativeName": "ಕನ್ನಡ", "locale": "kn-IN", "selectable": true },
+    { "code": "ml", "name": "Malayalam", "nativeName": "മലയാളം", "locale": "ml-IN", "selectable": true },
+    { "code": "pa", "name": "Punjabi", "nativeName": "ਪੰਜਾਬੀ", "locale": "pa-IN", "selectable": true },
+    { "code": "or", "name": "Odia", "nativeName": "ଓଡ଼ିଆ", "locale": "or-IN", "selectable": true },
+    { "code": "as", "name": "Assamese", "nativeName": "অসমীয়া", "locale": "as-IN", "selectable": true }
+  ]
+}
