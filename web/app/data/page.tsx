@@ -31,8 +31,7 @@ export default function DataPage() {
           {data && Object.entries(data.assumptions).map(([k, a]: any) => (
             <tr key={k} className="border-b border-black/5 align-top">
               <td className="py-1 pr-2"><code className="text-xs">{k}</code><div className="text-xs text-[var(--muted)]">{a.note}</div></td>
-              <td className="py-1 text-right font-semibold">{a.value} <span className="text-xs font-normal text-[var(--muted)]">{a.unit}</span>
-                {String(a.source).toLowerCase().includes("estimate") && <div><Badge tone="amber">{t("data_estimate")}</Badge></div>}</td>
+              <td className="py-1 text-right font-semibold">{a.value} <span className="text-xs font-normal text-[var(--muted)]">{a.unit}</span></td>
             </tr>
           ))}
         </tbody></table>

@@ -143,7 +143,7 @@ export default function CareersPage() {
                 <div>
                   <div className="font-medium">{c.name}</div>
                   <div className="text-xs text-[var(--muted)]">{c.entry_path}</div>
-                  <div className="text-xs text-[var(--muted)]">{c.income_estimate && <Badge tone="amber">{t("estimate")}</Badge>} {c.income_text}</div>
+                  <div className="text-xs text-[var(--muted)]">{c.income_text}</div>
                 </div>
                 <span className="flex shrink-0 flex-col items-end gap-1">
                 <span className="rounded-full bg-[var(--brand)] px-3 py-1 text-xs font-semibold text-white"><Icon name="map" size={14} className="align-[-2px]" /></span>

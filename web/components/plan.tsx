@@ -29,7 +29,6 @@ export function paybackText(t: any, p: any, data: any) {
 
 export function PaybackCard({ r }: { r: any }) {
   const { t, data } = useApp();
-  const est = String(r.plan.status || "").toLowerCase().includes("estimate");
   const row = (label: string, v: number, extra?: React.ReactNode, sign = "") => (
     <div className="flex items-baseline justify-between gap-2 py-1">
       <span className="text-sm">{label}{extra}</span>
@@ -40,7 +39,6 @@ export function PaybackCard({ r }: { r: any }) {
     <Card>
       <div className="mb-2 flex items-center justify-between">
         <h2 className="text-lg font-bold">{t("total_cost")} → {t("payback")}</h2>
-        {est && <Badge tone="amber">{t("estimate")}</Badge>}
       </div>
       <div className="divide-y divide-black/5">
         {row(t("course_fees"), r.costs.course_fees, r.plan.fees_from !== "Plan_Inputs" ? <span className="ml-1 text-xs text-[var(--muted)]">({r.plan.fees_from})</span> : null)}
@@ -66,12 +64,11 @@ export function PaybackCard({ r }: { r: any }) {
       </div>
       {r.baseline_monthly > 0 && <p className="mt-2 text-xs text-[var(--muted)]">{t("plan_gain_baseline", { amount: inr(r.baseline_monthly), perMonth: t("per_month"), days: A(data, "working_days_per_month") })}</p>}
       <div className="mt-2 space-y-0.5">
-        {r.income && <div className="text-xs text-[var(--muted)]">{r.income.estimate && <Badge tone="amber">{t("estimate")}</Badge>} {t("income_note")}: {r.income.text}
+        {r.income && <div className="text-xs text-[var(--muted)]">{t("income_note")}: {r.income.text}
           {r.income.derived ? t("plan_assumption_factors", { low: A(data, "income_low_factor"), high: A(data, "income_high_factor") }) : ""}
           {r.income.spread === "rural_urban" ? ` · ${t("spread_rural_urban")}` : ""}
           {r.income.path ? ` · ${t("fixed_pay")}: ${r.income.path.filter((v: any) => v != null).map((v: number) => inr(v)).join(" → ")}` : ""}</div>}
         <div><Source url={r.career.sources?.[0]} label={r.career.income_type} date={r.career.last_checked} /></div>
-        <div className="text-xs text-[var(--muted)]">{t("plan_fees_status", { status: r.plan.status })}</div>
       </div>
     </Card>
   );

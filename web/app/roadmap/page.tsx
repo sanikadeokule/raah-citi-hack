@@ -108,7 +108,6 @@ function RoadmapView() {
           </div>
         )}
         {!compact && <p className="mt-2 text-xs text-[var(--muted)]">{t("rm_cost_note")}</p>}
-        {tot.estimated_stages > 0 && <p className="mt-1"><Badge tone="amber"> {t("rm_estimates", { n: tot.estimated_stages })}</Badge></p>}
       </Card>
       <MakeMine />
       {!compact && <p className="text-center text-xs text-[var(--muted)]">{t("rm_footer", { file: data.version.file })}</p>}
@@ -260,7 +259,6 @@ function RoadmapView() {
                   {s.scholarship && (
                     <span className="rounded-full bg-sky-100 px-2 py-0.5 font-semibold text-sky-900">{t("rm_scholarship_upto", { v: inr(s.scholarship.value) })}</span>
                   )}
-                  {s.estimate && s.kind !== "job" && <Badge tone="amber">{t("estimate")}</Badge>}
                 </div>
 
                 {s.kind === "job" && r.income && (
@@ -279,8 +277,8 @@ function RoadmapView() {
                 {s.stipend_text && <p className="mt-1 text-xs text-[var(--muted)]">{s.stipend_text}</p>}
                 {s.plan_id && <Link href={`/plan/?id=${s.plan_id}`} className="mt-1 inline-block text-xs font-semibold text-[var(--brand-ink)] underline">{t("rm_full_plan")} ›</Link>}
                 <div className="mt-1 text-[11px] text-[var(--muted)]">
-                  {s.estimate && s.kind !== "job" ? <span>{t("rm_fee_status")}: {s.status}</span> : <Source url={s.kind === "job" ? r.career.sources?.[0] : s.stipend_source || s.source}
-                    label={s.kind === "job" ? undefined : s.stipend_source || s.source ? undefined : s.fee_from} />}
+                  <Source url={s.kind === "job" ? r.career.sources?.[0] : s.stipend_source || s.source}
+                    label={s.kind === "job" ? undefined : s.stipend_source || s.source ? undefined : s.fee_from} />
                 </div>
               </div>
               </div>

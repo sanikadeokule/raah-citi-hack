@@ -202,7 +202,7 @@ function Calculator() {
               {L.subsidy > 0 && <div className="text-[11px] text-[var(--good)]">− {inr(L.subsidy)} {t("saved")}</div>}</div>
             <div className="rounded-xl bg-[var(--bg)] p-2.5"><div className="text-xs text-[var(--muted)]">{t("added")}</div><div className="font-bold">{inr(L.moratorium_interest)}</div></div>
             <div className="rounded-xl bg-[var(--bg)] p-2.5"><div className="text-xs text-[var(--muted)]">{t("total_interest")}</div><div className="font-bold">{inr(L.total_interest)}</div></div>
-            <div className="rounded-xl bg-[var(--bg)] p-2.5"><div className="text-xs text-[var(--muted)]">{t("salary")}{aid.job?.estimate ? ` (${t("estimate")})` : ""}</div>
+            <div className="rounded-xl bg-[var(--bg)] p-2.5"><div className="text-xs text-[var(--muted)]">{t("salary")}</div>
               <div className="font-bold">{aid.job?.salary ? `${inr(aid.job.salary)}/${t("month_short")}` : "—"}</div></div>
           </div>
 

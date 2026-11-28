@@ -23,7 +23,7 @@ function CompareView() {
     [t("scholarship_cover"), (r) => (r.scholarship.low ? `− ${inr(r.scholarship.low)}` : "—")],
     [t("stipend_during_training"), (r) => (r.stipend.total ? `− ${inr(r.stipend.total)}` : "—")],
     [t("net_cost"), (r) => <b>{inr(Math.max(0, r.net_cost))}</b>],
-    [t("monthly_income"), (r) => (r.income ? <>{inr(r.income.median)} <span className="text-xs text-[var(--muted)]">({incomeSub(t, r.income)})</span>{r.income.estimate && <> <Badge tone="amber">{t("estimate")}</Badge></>}</> : "—")],
+    [t("monthly_income"), (r) => (r.income ? <>{inr(r.income.median)} <span className="text-xs text-[var(--muted)]">({incomeSub(t, r.income)})</span></> : "—")],
     [t("payback"), (r) => <b>{paybackText(t, r.payback.median, data)}</b>],
     [`${t("payback")} (${t("low")})`, (r) => paybackText(t, r.payback.low, data)],
   ];

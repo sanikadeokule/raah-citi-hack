@@ -240,7 +240,6 @@ function Dashboard({ token, studentName, onSignOut, onExpired }: { token: string
               <div><dt className="text-xs text-(--muted)">{t("scholarship")}</dt><dd className="font-bold">₹{plan.scholarship.toLocaleString("en-IN")}</dd></div>
               <div><dt className="text-xs text-(--muted)">{t("paid_back")}</dt><dd className="font-bold">{plan.payback_months != null ? t("months", { n: plan.payback_months }) : "-"}</dd></div>
             </dl>
-            {plan.estimate && <p className="mt-2 text-xs text-(--muted)">{t("estimate")}</p>}
           </div>)}
       </Card>
       </div>
