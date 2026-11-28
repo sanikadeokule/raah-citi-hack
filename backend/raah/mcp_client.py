@@ -8,7 +8,7 @@ agent.py then calls `tools()` (every server's tools together) and `call(name, ar
 has that tool); both are plain synchronous functions, because each session lives on its own asyncio loop in a
 background thread.
 
-RAAH_MCP_TRANSPORT picks how the servers are reached:
+RAAH_MCP_TRANSPORT picks how the servers are reached (default stdio, or memory when running on Render):
   stdio   (default) real child processes, exactly how Claude Desktop or any MCP client would run them
   memory  the same servers and MCP protocol over in-memory streams (no child process; used by the tests)
   direct  no MCP at all, the tool functions are called in-process (only if the mcp package is missing)
@@ -104,7 +104,8 @@ class _Server:
         with self.lock:
             if self.transport and (self.transport == "direct" or self.session is not None):
                 return self.transport
-            want = os.environ.get("RAAH_MCP_TRANSPORT", "stdio").strip().lower()
+            # on Render (512 MB) the two helper processes would nearly double memory, so the servers run inside the app there
+            want = os.environ.get("RAAH_MCP_TRANSPORT", "memory" if os.environ.get("RENDER") else "stdio").strip().lower()
             order = {"stdio": ["stdio", "memory"], "memory": ["memory"], "direct": []}.get(want, ["stdio", "memory"])
             errors = []
             for transport in order:

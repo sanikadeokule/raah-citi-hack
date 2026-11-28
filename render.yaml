@@ -23,6 +23,8 @@ services:
           property: connectionString
       - key: RAAH_SIGNING_KEY
         generateValue: true
+      - key: RAAH_MCP_TRANSPORT
+        value: memory  # run the MCP servers inside the app, not as extra processes (512 MB limit)
       - key: LLM_PROVIDERS
         value: groq,openai
       - key: OPENAI_API_KEY
